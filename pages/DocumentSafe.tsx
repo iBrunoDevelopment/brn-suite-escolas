@@ -1,0 +1,476 @@
+
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabaseClient';
+import { User, UserRole, TransactionNature } from '../types';
+
+interface DocumentFile {
+    id: string;
+    name: string;
+    url: string;
+    type: string;
+    category: string;
+    entry_id: string;
+    entry_description: string;
+    entry_date: string;
+    school_name: string;
+    program_name: string;
+    value: number;
+    checklist?: {
+        has_signature: boolean;
+        has_stamp: boolean;
+        is_legible: boolean;
+        is_correct_value: boolean;
+        is_correct_date: boolean;
+        notes: string;
+    };
+    process_id?: string;
+    process_info?: string;
+}
+
+const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
+    const [documents, setDocuments] = useState<DocumentFile[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [filterSearch, setFilterSearch] = useState('');
+    const [filterCategory, setFilterCategory] = useState('');
+    const [filterSchool, setFilterSchool] = useState('');
+    const [filterProcess, setFilterProcess] = useState('');
+    const [schools, setSchools] = useState<any[]>([]);
+    const [processes, setProcesses] = useState<any[]>([]);
+    const [selectedDoc, setSelectedDoc] = useState<DocumentFile | null>(null);
+    const [showChecklist, setShowChecklist] = useState(false);
+    const [isSavingChecklist, setIsSavingChecklist] = useState(false);
+
+    // Initial load
+    useEffect(() => {
+        fetchInitialData();
+        fetchDocuments();
+    }, []);
+
+    const fetchInitialData = async () => {
+        const [schoolsRes, procsRes] = await Promise.all([
+            supabase.from('schools').select('id, name'),
+            supabase.from('accountability_processes').select('id, description, financial_entry_id')
+        ]);
+        if (schoolsRes.data) setSchools(schoolsRes.data);
+        if (procsRes.data) setProcesses(procsRes.data);
+    };
+
+    const fetchDocuments = async () => {
+        setLoading(true);
+        try {
+            // Fetch entries with attachments
+            let query = supabase.from('financial_entries').select(`
+                id, date, description, value, attachments, 
+                schools(name), programs(name)
+            `).not('attachments', 'is', null);
+
+            if (user.role !== UserRole.ADMIN && user.role !== UserRole.OPERADOR) {
+                if (user.schoolId) query = query.eq('school_id', user.schoolId);
+                else if (user.assignedSchools?.length) query = query.in('school_id', user.assignedSchools);
+            }
+
+            const { data: entries } = await query;
+
+            // Fetch all checklists for these entries
+            const { data: checklists } = await supabase.from('document_checklists').select('*');
+            const { data: procs } = await supabase.from('accountability_processes').select('id, description, financial_entry_id');
+
+            const allDocs: DocumentFile[] = [];
+            (entries as any[])?.forEach(entry => {
+                const attachments = Array.isArray(entry.attachments) ? entry.attachments : [];
+                const process = procs?.find(p => p.financial_entry_id === entry.id);
+
+                attachments.forEach((att: any) => {
+                    const checklist = checklists?.find(c => c.attachment_id === att.id);
+                    allDocs.push({
+                        id: att.id,
+                        name: att.name || 'Sem nome',
+                        url: att.url,
+                        type: att.type,
+                        category: att.category || 'Outros',
+                        entry_id: entry.id,
+                        entry_description: entry.description,
+                        entry_date: entry.date,
+                        school_name: entry.schools?.name || 'Escola não vinculada',
+                        program_name: entry.programs?.name || 'Geral',
+                        value: entry.value,
+                        process_id: process?.id,
+                        process_info: process?.description,
+                        checklist: checklist ? {
+                            has_signature: checklist.has_signature,
+                            has_stamp: checklist.has_stamp,
+                            is_legible: checklist.is_legible,
+                            is_correct_value: checklist.is_correct_value,
+                            is_correct_date: checklist.is_correct_date,
+                            notes: checklist.notes || ''
+                        } : undefined
+                    });
+                });
+            });
+
+            setDocuments(allDocs);
+        } catch (error) {
+            console.error('Error fetching vault data:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSaveChecklist = async (doc: DocumentFile, checklist: any) => {
+        setIsSavingChecklist(true);
+        try {
+            const { error } = await supabase.from('document_checklists').upsert({
+                attachment_id: doc.id,
+                entry_id: doc.entry_id,
+                ...checklist,
+                checked_by: user.id,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'attachment_id' });
+
+            if (error) throw error;
+            fetchDocuments(); // Refresh list
+            setShowChecklist(false);
+        } catch (error) {
+            alert('Erro ao salvar conferência: ' + (error as any).message);
+        } finally {
+            setIsSavingChecklist(false);
+        }
+    };
+
+    const filteredDocs = documents.filter(doc => {
+        const matchesSearch = !filterSearch ||
+            doc.name.toLowerCase().includes(filterSearch.toLowerCase()) ||
+            doc.entry_description.toLowerCase().includes(filterSearch.toLowerCase());
+        const matchesCategory = !filterCategory || doc.category === filterCategory;
+        const matchesSchool = !filterSchool || doc.school_name === filterSchool;
+        const matchesProcess = !filterProcess || doc.process_id === filterProcess;
+        return matchesSearch && matchesCategory && matchesSchool && matchesProcess;
+    });
+
+    const stats = {
+        total: documents.length,
+        checked: documents.filter(d => !!d.checklist).length,
+        pending: documents.filter(d => !d.checklist).length
+    };
+
+    return (
+        <div className="flex flex-col gap-6 animate-in fade-in">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex flex-col">
+                    <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-3">
+                        <span className="w-12 h-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                            <span className="material-symbols-outlined text-3xl">folder_managed</span>
+                        </span>
+                        Cofre Digital de Documentos
+                    </h1>
+                    <p className="text-slate-400 text-sm mt-1 italic">Conferência e checklist para Prestação de Contas.</p>
+                </div>
+            </div>
+
+            {/* Audit Indicators */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-card-dark/40 border border-white/5 p-6 rounded-3xl flex flex-col gap-2">
+                    <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total de Arquivos</span>
+                        <span className="material-symbols-outlined text-slate-500">inventory_2</span>
+                    </div>
+                    <span className="text-3xl font-black text-white">{stats.total}</span>
+                    <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden mt-2">
+                        <div className="h-full bg-slate-500" style={{ width: '100%' }}></div>
+                    </div>
+                </div>
+                <div className="bg-emerald-500/5 border border-emerald-500/10 p-6 rounded-3xl flex flex-col gap-2">
+                    <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-black text-emerald-500/70 uppercase tracking-widest">Conferidos</span>
+                        <span className="material-symbols-outlined text-emerald-500">task_alt</span>
+                    </div>
+                    <span className="text-3xl font-black text-emerald-400">{stats.checked}</span>
+                    <div className="h-1.5 w-full bg-emerald-500/10 rounded-full overflow-hidden mt-2">
+                        <div className="h-full bg-emerald-500" style={{ width: `${(stats.checked / (stats.total || 1)) * 100}%` }}></div>
+                    </div>
+                </div>
+                <div className="bg-amber-500/5 border border-amber-500/10 p-6 rounded-3xl flex flex-col gap-2">
+                    <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-black text-amber-500/70 uppercase tracking-widest">Pendentes</span>
+                        <span className="material-symbols-outlined text-amber-500">pending_actions</span>
+                    </div>
+                    <span className="text-3xl font-black text-amber-400">{stats.pending}</span>
+                    <div className="h-1.5 w-full bg-amber-500/10 rounded-full overflow-hidden mt-2">
+                        <div className="h-full bg-amber-500" style={{ width: `${(stats.pending / (stats.total || 1)) * 100}%` }}></div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Filters */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 bg-card-dark/50 p-4 rounded-2xl border border-surface-border">
+                <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Buscar Termo</label>
+                    <input
+                        type="text"
+                        value={filterSearch}
+                        onChange={e => setFilterSearch(e.target.value)}
+                        placeholder="Nome ou descrição..."
+                        className="bg-surface-dark border border-surface-border rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-indigo-500 transition-all"
+                    />
+                </div>
+                <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Categoria</label>
+                    <select
+                        value={filterCategory}
+                        onChange={e => setFilterCategory(e.target.value)}
+                        className="bg-surface-dark border border-surface-border rounded-xl px-4 py-2 text-xs text-white outline-none"
+                    >
+                        <option value="">Todas</option>
+                        {['Nota Fiscal', 'Comprovante', 'Certidão', 'Outros'].map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                </div>
+                <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Escola</label>
+                    <select
+                        value={filterSchool}
+                        onChange={e => setFilterSchool(e.target.value)}
+                        className="bg-surface-dark border border-surface-border rounded-xl px-4 py-2 text-xs text-white outline-none"
+                    >
+                        <option value="">Todas as Escolas</option>
+                        {schools.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+                    </select>
+                </div>
+                <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Prestação (Processo)</label>
+                    <select
+                        value={filterProcess}
+                        onChange={e => setFilterProcess(e.target.value)}
+                        className="bg-surface-dark border border-surface-border rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-indigo-500"
+                    >
+                        <option value="">Todas as Prestações</option>
+                        {processes.map(p => <option key={p.id} value={p.id}>{p.description || 'Sem descrição'}</option>)}
+                    </select>
+                </div>
+                <div className="flex items-end">
+                    <button
+                        onClick={() => { setFilterSearch(''); setFilterCategory(''); setFilterSchool(''); setFilterProcess(''); }}
+                        className="w-full h-10 rounded-xl bg-white/5 border border-white/10 text-slate-400 text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+                    >
+                        Limpar Filtros
+                    </button>
+                </div>
+            </div>
+
+            {/* Documents Grid/Table */}
+            <div className="bg-card-dark rounded-3xl border border-surface-border overflow-hidden shadow-2xl">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="bg-surface-dark/50 border-b border-surface-border">
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Documento</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Contexto (Escola/Programa)</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Lançamento / Valor</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Checklist</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-surface-border">
+                            {loading ? (
+                                [1, 2, 3].map(i => (
+                                    <tr key={i} className="animate-pulse">
+                                        <td colSpan={4} className="px-6 py-8"><div className="h-4 bg-surface-dark rounded w-full"></div></td>
+                                    </tr>
+                                ))
+                            ) : filteredDocs.length === 0 ? (
+                                <tr>
+                                    <td colSpan={4} className="px-6 py-12 text-center text-slate-500 italic">Nenhum documento encontrado com os filtros aplicados.</td>
+                                </tr>
+                            ) : filteredDocs.map(doc => (
+                                <tr key={doc.id} className="group hover:bg-white/[0.02] transition-all">
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 group-hover:text-indigo-400 transition-colors">
+                                                <span className="material-symbols-outlined">description</span>
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-bold text-white line-clamp-1">{doc.name}</span>
+                                                <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{doc.category}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex flex-col">
+                                            <span className="text-xs text-white font-bold">{doc.school_name}</span>
+                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                <span className="material-symbols-outlined text-[12px] text-indigo-400">account_balance_wallet</span>
+                                                <span className="text-[10px] text-slate-400 font-medium truncate">{doc.program_name}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex flex-col">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs text-white font-mono font-bold">{new Date(doc.entry_date).toLocaleDateString('pt-BR')}</span>
+                                                <span className="bg-emerald-500/10 text-emerald-400 text-[10px] px-1.5 py-0.5 rounded font-black">{doc.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 mt-1">
+                                                <span className="material-symbols-outlined text-[12px] text-slate-500">description</span>
+                                                <span className="text-[10px] text-slate-400 italic line-clamp-1 max-w-[180px]">{doc.process_info || doc.entry_description}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex justify-center flex-wrap gap-1 max-w-[120px] mx-auto">
+                                            {doc.checklist ? (
+                                                <>
+                                                    <span title="Assinatura" className={`w-6 h-6 rounded flex items-center justify-center text-[14px] material-symbols-outlined ${doc.checklist.has_signature ? 'bg-emerald-500/20 text-emerald-500' : 'bg-red-500/10 text-slate-600'}`}>{doc.checklist.has_signature ? 'fountain_pen' : 'fountain_pen'}</span>
+                                                    <span title="Carimbo" className={`w-6 h-6 rounded flex items-center justify-center text-[14px] material-symbols-outlined ${doc.checklist.has_stamp ? 'bg-emerald-500/20 text-emerald-500' : 'bg-red-500/10 text-slate-600'}`}>approval</span>
+                                                    <span title="Legível" className={`w-6 h-6 rounded flex items-center justify-center text-[14px] material-symbols-outlined ${doc.checklist.is_legible ? 'bg-emerald-500/20 text-emerald-500' : 'bg-red-500/10 text-slate-600'}`}>visibility</span>
+                                                </>
+                                            ) : (
+                                                <span className="text-[10px] font-black text-amber-500 border border-amber-500/20 px-2 py-0.5 rounded uppercase">Não Conferido</span>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 text-right">
+                                        <div className="flex items-center justify-end gap-2">
+                                            <button
+                                                onClick={() => { setSelectedDoc(doc); setShowChecklist(true); }}
+                                                className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white transition-all flex items-center justify-center border border-indigo-500/20"
+                                                title="Fazer Checklist"
+                                            >
+                                                <span className="material-symbols-outlined text-[20px]">fact_check</span>
+                                            </button>
+                                            <a
+                                                href={doc.url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="w-10 h-10 rounded-xl bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white transition-all flex items-center justify-center border border-white/5"
+                                                title="Visualizar Arquivo"
+                                            >
+                                                <span className="material-symbols-outlined text-[20px]">visibility</span>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Checklist Modal */}
+            {showChecklist && selectedDoc && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+                    <div className="w-full max-w-2xl bg-[#0f172a] border border-indigo-500/30 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95">
+                        <div className="p-6 border-b border-white/5 bg-indigo-500/5 flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                                    <span className="material-symbols-outlined">fact_check</span>
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black text-white tracking-tight">Checklist de Auditoria</h3>
+                                    <p className="text-slate-500 text-xs">Conferência técnica para Prestação de Contas.</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowChecklist(false)} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5 text-slate-400 transition-colors"><span className="material-symbols-outlined">close</span></button>
+                        </div>
+
+                        <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {/* File Preview Card */}
+                            <div className="bg-white/[0.03] p-6 rounded-2xl border border-white/5 flex flex-col gap-4">
+                                <div className="text-center">
+                                    <span className="material-symbols-outlined text-5xl text-indigo-400 opacity-50 mb-2">description</span>
+                                    <h4 className="text-sm font-bold text-white line-clamp-2">{selectedDoc.name}</h4>
+                                    <span className="text-[10px] text-slate-500 uppercase tracking-widest font-black">{selectedDoc.category}</span>
+                                </div>
+                                <div className="space-y-3 mt-4 pt-4 border-t border-white/5">
+                                    <div className="flex justify-between text-xs">
+                                        <span className="text-slate-500">Escola:</span>
+                                        <span className="text-white font-bold">{selectedDoc.school_name}</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs">
+                                        <span className="text-slate-500">Data Lanç.:</span>
+                                        <span className="text-white font-bold">{new Date(selectedDoc.entry_date).toLocaleDateString('pt-BR')}</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs">
+                                        <span className="text-slate-500">Valor Doc.:</span>
+                                        <span className="text-emerald-400 font-mono font-bold">{selectedDoc.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                                    </div>
+                                </div>
+                                <a
+                                    href={selectedDoc.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="mt-4 w-full h-10 rounded-xl bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 hover:bg-indigo-600 transition-all active:scale-95"
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+                                    Ver Arquivo Completo
+                                </a>
+                            </div>
+
+                            {/* Checklist Inputs */}
+                            <div className="flex flex-col gap-5">
+                                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5 pb-2">Critérios de Conferência</h4>
+
+                                <CheckItem
+                                    label="Possui Assinatura do Diretor?"
+                                    checked={selectedDoc.checklist?.has_signature || false}
+                                    onChange={(v) => setSelectedDoc({ ...selectedDoc, checklist: { ...(selectedDoc.checklist || {}), has_signature: v } as any })}
+                                />
+                                <CheckItem
+                                    label="Possui Carimbo do Conselho?"
+                                    checked={selectedDoc.checklist?.has_stamp || false}
+                                    onChange={(v) => setSelectedDoc({ ...selectedDoc, checklist: { ...(selectedDoc.checklist || {}), has_stamp: v } as any })}
+                                />
+                                <CheckItem
+                                    label="Documento está legível?"
+                                    checked={selectedDoc.checklist?.is_legible || false}
+                                    onChange={(v) => setSelectedDoc({ ...selectedDoc, checklist: { ...(selectedDoc.checklist || {}), is_legible: v } as any })}
+                                />
+                                <CheckItem
+                                    label="Valor bate com sistema?"
+                                    checked={selectedDoc.checklist?.is_correct_value || false}
+                                    onChange={(v) => setSelectedDoc({ ...selectedDoc, checklist: { ...(selectedDoc.checklist || {}), is_correct_value: v } as any })}
+                                />
+                                <CheckItem
+                                    label="Data bate com o semestre?"
+                                    checked={selectedDoc.checklist?.is_correct_date || false}
+                                    onChange={(v) => setSelectedDoc({ ...selectedDoc, checklist: { ...(selectedDoc.checklist || {}), is_correct_date: v } as any })}
+                                />
+
+                                <div className="flex flex-col gap-1 mt-2">
+                                    <label className="text-[10px] font-black text-slate-500 uppercase">Observações Técnicas</label>
+                                    <textarea
+                                        className="bg-surface-dark border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-indigo-500 h-20 resize-none"
+                                        placeholder="Ex: Nota fiscal com rasura no CNPJ..."
+                                        value={selectedDoc.checklist?.notes || ''}
+                                        onChange={(e) => setSelectedDoc({ ...selectedDoc, checklist: { ...(selectedDoc.checklist || {}), notes: e.target.value } as any })}
+                                    />
+                                </div>
+
+                                <button
+                                    onClick={() => handleSaveChecklist(selectedDoc, selectedDoc.checklist)}
+                                    disabled={isSavingChecklist}
+                                    className="w-full h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-widest text-xs shadow-lg shadow-emerald-500/20 transition-all active:scale-95 disabled:opacity-50 mt-2"
+                                >
+                                    {isSavingChecklist ? 'Sincronizando...' : 'Finalizar Conferência'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// Helper Sub-component for Checklist Items
+const CheckItem: React.FC<{ label: string, checked: boolean, onChange: (v: boolean) => void }> = ({ label, checked, onChange }) => (
+    <div className="flex items-center justify-between p-2 hover:bg-white/[0.02] rounded-lg group transition-all">
+        <span className="text-xs text-slate-300 font-medium">{label}</span>
+        <button
+            onClick={() => onChange(!checked)}
+            className={`w-10 h-6 rounded-full relative transition-all duration-300 ${checked ? 'bg-emerald-500/80 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-slate-700'}`}
+        >
+            <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform duration-300 ${checked ? 'translate-x-4' : ''}`}></div>
+        </button>
+    </div>
+);
+
+export default DocumentSafe;

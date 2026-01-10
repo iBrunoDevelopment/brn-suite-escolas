@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Recibo de Pagamento - BRN Suite Escolas</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#0f766e", // Teal-700 for a professional, financial feel
+                        "background-light": "#f3f4f6", // Gray-100
+                        "background-dark": "#111827", // Gray-900
+                        "card-light": "#ffffff",
+                        "card-dark": "#1f2937",
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Inter', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace'],
+                    },
+                    boxShadow: {
+                        'receipt': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0,0,0,0.05)',
+                    }
+                },
+            },
+        };
+    </script>
+<style>
+        @media print {
+            body {
+                background-color: white !important;
+                color: black !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .shadow-receipt {
+                box-shadow: none !important;
+                border: 1px solid #e5e7eb;
+            }
+            .dark\:bg-background-dark {
+                background-color: white !important;
+            }
+            .dark\:text-white {
+                color: black !important;
+            }
+            .bg-primary {
+                background-color: transparent !important;
+                color: black !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-gray-800 dark:text-gray-200 font-sans antialiased min-h-screen flex flex-col transition-colors duration-300">
+<header class="bg-white dark:bg-card-dark border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-6 no-print sticky top-0 z-50">
+<div class="flex items-center gap-3">
+<div class="h-8 w-8 rounded bg-primary flex items-center justify-center text-white font-bold text-xl">
+                B
+            </div>
+<span class="font-semibold text-lg text-gray-900 dark:text-white">BRN Suite Escolas</span>
+<span class="hidden md:inline-flex px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 ml-2">Financeiro</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400" onclick="document.documentElement.classList.toggle('dark')">
+<span class="material-icons-outlined">dark_mode</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-600 overflow-hidden border border-gray-300 dark:border-gray-500">
+<img alt="User Profile" class="h-full w-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBAYPmaRk8WGemO_YfYInxFQGSHypUf2vxVH4UYQH07nbZnxMWcgzFDNvNUHGw5SBgbZv4Dg0mPPOLkoDHOlXPpO0sLe8_Y8htA8J2Olv-QIVHqsDTNpdERwzH6-no2tayppsLh9ib07BGkXgw2aLjM8Y54fm88ZD2MtRPUcxrqb3KOTx5X8zrCzrLqWO_RzhbT04vTetR57iS2jpiVL6HPnBQLhUB-6J52mJfC5g9ZZcK7MjlMWciNRstbSO63DEeoE7Ffyl-DkFc"/>
+</div>
+</div>
+</header>
+<main class="flex-grow p-4 md:p-8 flex flex-col items-center">
+<div class="w-full max-w-4xl mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 no-print">
+<div>
+<nav aria-label="Breadcrumb" class="flex text-sm text-gray-500 dark:text-gray-400 mb-1">
+<ol class="inline-flex items-center space-x-1 md:space-x-3">
+<li class="inline-flex items-center">
+<a class="hover:text-primary dark:hover:text-primary-light" href="#">Financeiro</a>
+</li>
+<li>
+<span class="mx-1">/</span>
+</li>
+<li class="inline-flex items-center">
+<span class="text-gray-900 dark:text-white font-medium">Recibo #205037</span>
+</li>
+</ol>
+</nav>
+<h1 class="text-2xl font-bold text-gray-900 dark:text-white">Detalhes do Recibo</h1>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-card-dark border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition shadow-sm">
+<span class="material-icons-outlined text-sm">edit</span>
+                    Editar
+                </button>
+<button class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-opacity-90 transition shadow-sm" onclick="window.print()">
+<span class="material-icons-outlined text-sm">print</span>
+                    Imprimir / PDF
+                </button>
+</div>
+</div>
+<div class="w-full max-w-[850px] bg-white dark:bg-card-dark shadow-receipt rounded-sm p-8 md:p-12 text-gray-900 dark:text-gray-100 relative print:shadow-none print:w-full print:max-w-none print:p-0">
+<div class="absolute inset-0 opacity-[0.03] pointer-events-none flex items-center justify-center overflow-hidden">
+<span class="text-[150px] font-bold transform -rotate-12 select-none">RECIBO</span>
+</div>
+<div class="relative z-10">
+<div class="text-center mb-12 border-b border-gray-200 dark:border-gray-700 pb-8">
+<h2 class="text-xl md:text-2xl font-bold uppercase tracking-wide text-gray-900 dark:text-white mb-4">
+                        Supermercado Econômico União LTDA
+                    </h2>
+<div class="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+<p class="font-mono">CNPJ: 24.327.850/0001-67</p>
+<p>Prq Infantil Antenor Uchoa, Nº74 - Centro - Anexo Galpão 40</p>
+<p>CEP: 57.800-000 - União Dos Palmares/AL</p>
+</div>
+</div>
+<div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
+<h1 class="text-3xl md:text-4xl font-extrabold tracking-widest text-gray-900 dark:text-white uppercase">Recibo</h1>
+<div class="bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-lg px-6 py-3 shadow-inner">
+<span class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Valor Total</span>
+<span class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white font-mono">R$ 5.349,30</span>
+</div>
+</div>
+<div class="bg-gray-50 dark:bg-gray-800/50 p-6 md:p-8 rounded-lg border border-gray-100 dark:border-gray-700 mb-10 text-justify leading-loose text-base md:text-lg text-gray-800 dark:text-gray-200">
+<p>
+                        RECEBEMOS DO <span class="font-bold">CONSELHO ESCOLAR DA ESCOLA ESTADUAL ROCHA CAVALCANTI</span>, 
+                        CNPJ <span class="font-mono font-medium">00.769.360/0001-52</span>, 
+                        SITUADO NA RUA CORREIA DE OLIVEIRA, Nº200 - CENTRO, UNIÃO DOS PALMARES, A IMPORTÂNCIA DE 
+                        <span class="font-bold bg-yellow-100 dark:bg-yellow-900/30 px-1 rounded mx-1">R$ 5.349,30 (CINCO MIL TREZENTOS E QUARENTA E NOVE REAIS E TRINTA CENTAVOS)</span>, 
+                        REFERENTE A COMPRA DE PRODUTOS CONFORME NOTA FISCAL DE Nº <span class="font-bold">25908</span>, 
+                        DATADA DE <span class="font-medium">15/12/2025</span>.
+                    </p>
+<p class="mt-4 pt-4 border-t border-dashed border-gray-300 dark:border-gray-600">
+                        PAGO COM RECURSO <span class="font-bold text-primary dark:text-teal-400">PNAE/FNDE</span>, 
+                        AUTORIZAÇÃO Nº <span class="font-bold">205037</span>, DATADA DE 17/12/2025.
+                    </p>
+</div>
+<div class="mt-16 flex flex-col gap-16">
+<div class="text-right text-gray-700 dark:text-gray-300 font-medium italic">
+                        União dos Palmares/AL, 17 de Dezembro de 2025
+                    </div>
+<div class="flex flex-col items-center justify-center mt-8">
+<div class="w-full md:w-2/3 border-b-2 border-gray-800 dark:border-gray-400 mb-4 relative">
+</div>
+<p class="font-bold text-gray-900 dark:text-white uppercase tracking-wide">Assinatura do Fornecedor</p>
+<p class="text-sm text-gray-500 dark:text-gray-400">Supermercado Econômico União LTDA</p>
+</div>
+</div>
+<div class="mt-20 pt-4 border-t border-gray-100 dark:border-gray-800 flex justify-between text-[10px] text-gray-400 uppercase tracking-wider">
+<span>Gerado via BRN Suite Escolas</span>
+<span>Hash: 8a7f9c2d1e4b</span>
+</div>
+</div>
+</div>
+<div class="w-full max-w-4xl mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 no-print">
+<div class="bg-white dark:bg-card-dark p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+<div class="flex items-center gap-3 mb-2">
+<div class="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">
+<span class="material-icons-outlined text-xl">account_balance_wallet</span>
+</div>
+<h3 class="text-sm font-semibold text-gray-900 dark:text-white">Fonte de Recurso</h3>
+</div>
+<p class="text-2xl font-bold text-gray-800 dark:text-gray-200">PNAE/FNDE</p>
+<p class="text-xs text-gray-500 mt-1">Programa Nacional de Alimentação Escolar</p>
+</div>
+<div class="bg-white dark:bg-card-dark p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+<div class="flex items-center gap-3 mb-2">
+<div class="p-2 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg">
+<span class="material-icons-outlined text-xl">check_circle</span>
+</div>
+<h3 class="text-sm font-semibold text-gray-900 dark:text-white">Status</h3>
+</div>
+<p class="text-2xl font-bold text-green-600 dark:text-green-400">Pago</p>
+<p class="text-xs text-gray-500 mt-1">Autorizado em 17/12/2025</p>
+</div>
+<div class="bg-white dark:bg-card-dark p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+<div class="flex items-center gap-3 mb-2">
+<div class="p-2 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg">
+<span class="material-icons-outlined text-xl">receipt_long</span>
+</div>
+<h3 class="text-sm font-semibold text-gray-900 dark:text-white">Nota Fiscal</h3>
+</div>
+<p class="text-2xl font-bold text-gray-800 dark:text-gray-200">#25908</p>
+<p class="text-xs text-gray-500 mt-1">Ver documento anexo</p>
+</div>
+</div>
+</main>
+
+</body></html>

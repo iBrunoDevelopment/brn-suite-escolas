@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Planilha de Pesquisa de Preços - PNAE/FNDE | BRN Suite Escolas</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#3b82f6", // Blue for a trustworthy financial/school feel
+                        "primary-dark": "#2563eb",
+                        "background-light": "#f3f4f6", // Light gray background
+                        "background-dark": "#111827", // Dark gray/almost black background
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1f2937",
+                        "border-light": "#e5e7eb",
+                        "border-dark": "#374151",
+                        "text-light": "#1f2937",
+                        "text-dark": "#f9fafb",
+                        "text-muted-light": "#6b7280",
+                        "text-muted-dark": "#9ca3af",
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                        body: ["Inter", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.5rem",
+                    },
+                },
+            },
+        };
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background-color: white !important;
+                color: black !important;
+            }
+            .card {
+                box-shadow: none !important;
+                border: 1px solid #ccc !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark font-body antialiased transition-colors duration-200">
+<nav class="bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark shadow-sm sticky top-0 z-50">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex justify-between h-16">
+<div class="flex items-center gap-3">
+<div class="flex-shrink-0 flex items-center gap-2">
+<span class="material-icons text-primary text-3xl">school</span>
+<span class="font-bold text-xl tracking-tight hidden md:block">BRN Suite <span class="text-primary">Escolas</span></span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-full text-text-muted-light dark:text-text-muted-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+<span class="material-icons">notifications</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-bold">
+                        AD
+                    </div>
+</div>
+</div>
+</div>
+</nav>
+<main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+<div>
+<nav aria-label="Breadcrumb" class="flex text-sm text-text-muted-light dark:text-text-muted-dark mb-1">
+<ol class="flex items-center space-x-2">
+<li><a class="hover:text-primary transition-colors" href="#">Financeiro</a></li>
+<li><span class="material-icons text-xs">chevron_right</span></li>
+<li><a class="hover:text-primary transition-colors" href="#">Compras</a></li>
+<li><span class="material-icons text-xs">chevron_right</span></li>
+<li class="font-medium text-text-light dark:text-text-dark">Orçamento PNAE</li>
+</ol>
+</nav>
+<h1 class="text-2xl font-bold text-text-light dark:text-text-dark">Pesquisa de Preços</h1>
+</div>
+<div class="flex gap-2 no-print">
+<button class="flex items-center gap-2 px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark rounded-DEFAULT hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm" onclick="window.print()">
+<span class="material-icons text-sm">print</span>
+                    Imprimir
+                </button>
+<button class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-DEFAULT hover:bg-primary-dark transition-all shadow-md shadow-blue-500/20">
+<span class="material-icons text-sm">save</span>
+                    Salvar Orçamento
+                </button>
+</div>
+</div>
+<div class="card bg-surface-light dark:bg-surface-dark shadow-lg rounded-xl border border-border-light dark:border-border-dark overflow-hidden">
+<div class="bg-gray-50 dark:bg-gray-800 border-b border-border-light dark:border-border-dark p-4 text-center">
+<h2 class="text-lg md:text-xl font-bold text-gray-800 dark:text-white uppercase tracking-wide">
+                    PNAE/FNDE - Planilha de Pesquisa de Preços - Orçamento
+                </h2>
+</div>
+<div class="p-6 md:p-8 space-y-8">
+<section class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 border border-border-light dark:border-border-dark">
+<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+<div class="md:col-span-8 flex flex-col justify-center">
+<label class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase mb-1">Nome do Fornecedor</label>
+<div class="text-base font-semibold text-text-light dark:text-text-dark">SUPERMERCADO ECONÔMICO UNIÃO LTDA</div>
+</div>
+<div class="md:col-span-4 flex flex-col justify-center">
+<label class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase mb-1">CNPJ</label>
+<div class="font-mono text-sm text-text-light dark:text-text-dark bg-white dark:bg-gray-700 px-3 py-1.5 rounded border border-border-light dark:border-border-dark">
+                                24.327.850/0001-67
+                            </div>
+</div>
+<div class="md:col-span-12">
+<label class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase mb-1">Endereço</label>
+<div class="text-sm text-text-light dark:text-text-dark border-b border-dashed border-border-light dark:border-border-dark pb-1">
+                                PRQ INFANTIL ANTENOR UCHOA, Nº74 - CENTRO - ANEXO GALPAO 40
+                            </div>
+</div>
+<div class="md:col-span-1">
+<label class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase mb-1">UF</label>
+<div class="text-sm font-medium">AL</div>
+</div>
+<div class="md:col-span-7">
+<label class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase mb-1">Município</label>
+<div class="text-sm font-medium">UNIÃO DOS PALMARES</div>
+</div>
+<div class="md:col-span-4">
+<label class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase mb-1">Telefone</label>
+<div class="text-sm font-medium flex items-center gap-2">
+<span class="material-icons text-sm text-primary">phone</span>
+                                (82) 3311-9422
+                            </div>
+</div>
+</div>
+</section>
+<section class="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-4 border border-blue-100 dark:border-blue-900/30">
+<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+<div class="md:col-span-8 flex flex-col justify-center">
+<label class="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase mb-1">Nome do Cliente</label>
+<div class="text-base font-semibold text-text-light dark:text-text-dark">CONSELHO ESCOLAR DA ESCOLA ESTADUAL ROCHA CAVALCANTI</div>
+</div>
+<div class="md:col-span-4 flex flex-col justify-center">
+<label class="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase mb-1">CNPJ</label>
+<div class="font-mono text-sm text-text-light dark:text-text-dark bg-white dark:bg-gray-700 px-3 py-1.5 rounded border border-blue-200 dark:border-blue-800">
+                                00.769.360/0001-52
+                            </div>
+</div>
+<div class="md:col-span-12">
+<label class="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase mb-1">Endereço</label>
+<div class="text-sm text-text-light dark:text-text-dark border-b border-dashed border-blue-200 dark:border-blue-800 pb-1">
+                                RUA CORREIA DE OLIVEIRA, Nº200 - CENTRO
+                            </div>
+</div>
+<div class="md:col-span-1">
+<label class="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase mb-1">UF</label>
+<div class="text-sm font-medium">AL</div>
+</div>
+<div class="md:col-span-7">
+<label class="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase mb-1">Município</label>
+<div class="text-sm font-medium">UNIÃO DOS PALMARES</div>
+</div>
+<div class="md:col-span-4">
+<label class="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase mb-1">Telefone</label>
+<div class="text-sm font-medium flex items-center gap-2">
+<span class="material-icons text-sm text-primary">phone</span>
+                                (82) 3281-2324
+                            </div>
+</div>
+</div>
+</section>
+<div class="overflow-x-auto rounded-lg border border-border-light dark:border-border-dark">
+<table class="w-full text-sm text-left">
+<thead class="text-xs text-text-light dark:text-text-dark uppercase bg-gray-100 dark:bg-gray-700">
+<tr>
+<th class="px-4 py-3 text-center border-r border-border-light dark:border-border-dark w-16" scope="col">Item</th>
+<th class="px-4 py-3 border-r border-border-light dark:border-border-dark" scope="col">Descrição</th>
+<th class="px-4 py-3 text-center border-r border-border-light dark:border-border-dark w-20" scope="col">Und.</th>
+<th class="px-4 py-3 text-right border-r border-border-light dark:border-border-dark w-24" scope="col">Qtd.</th>
+<th class="px-4 py-3 text-right border-r border-border-light dark:border-border-dark w-32" scope="col">Valor Unit.</th>
+<th class="px-4 py-3 text-right w-32" scope="col">Valor Total</th>
+</tr>
+</thead>
+<tbody class="bg-surface-light dark:bg-surface-dark divide-y divide-border-light dark:divide-border-dark text-text-light dark:text-text-dark">
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+<td class="px-4 py-2.5 text-center font-mono text-xs text-text-muted-light dark:text-text-muted-dark border-r border-border-light dark:border-border-dark">01</td>
+<td class="px-4 py-2.5 font-medium border-r border-border-light dark:border-border-dark">ACUCAR</td>
+<td class="px-4 py-2.5 text-center text-xs border-r border-border-light dark:border-border-dark">KG</td>
+<td class="px-4 py-2.5 text-right font-mono border-r border-border-light dark:border-border-dark">150,00</td>
+<td class="px-4 py-2.5 text-right font-mono border-r border-border-light dark:border-border-dark">R$ 3,79</td>
+<td class="px-4 py-2.5 text-right font-mono font-semibold">R$ 568,50</td>
+</tr>
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+<td class="px-4 py-2.5 text-center font-mono text-xs text-text-muted-light dark:text-text-muted-dark border-r border-border-light dark:border-border-dark">02</td>
+<td class="px-4 py-2.5 font-medium border-r border-border-light dark:border-border-dark">ALHO</td>
+<td class="px-4 py-2.5 text-center text-xs border-r border-border-light dark:border-border-dark">KG</td>
+<td class="px-4 py-2.5 text-right font-mono border-r border-border-light dark:border-border-dark">10,00</td>
+<td class="px-4 py-2.5 text-right font-mono border-r border-border-light dark:border-border-dark">R$ 39,90</td>
+<td class="px-4 py-2.5 text-right font-mono font-semibold">R$ 399,00</td>
+</tr>
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+<td class="px-4 py-2.5 text-center font-mono text-xs text-text-muted-light dark:text-text-muted-dark border-r border-border-light dark:border-border-dark">03</td>
+<td class="px-4 py-2.5 font-medium border-r border-border-light dark:border-border-dark">ARROZ PARBOLIZADO</td>
+<td class="px-4 py-2.5 text-center text-xs border-r border-border-light dark:border-border-dark">UN</td>
+<td class="px-4 py-2.5 text-right font-mono border-r border-border-light dark:border-border-dark">90,00</td>
+<td class="px-4 py-2.5 text-right font-mono border-r border-border-light dark:border-border-dark">R$ 3,99</td>
+<td class="px-4 py-2.5 text-right font-mono font-semibold">R$ 359,10</td>
+</tr>
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+<td class="px-4 py-2.5 text-center font-mono text-xs text-text-muted-light dark:text-text-muted-dark border-r border-border-light dark:border-border-dark">04</td>
+<td class="px-4 py-2.5 font-medium border-r border-border-light dark:border-border-dark">AVEIA</td>
+<td class="px-4 py-2.5 text-center text-xs border-r border-border-light dark:border-border-dark">UN</td>
+<td class="px-4 py-2.5 text-right font-mono border-r border-border-light dark:border-border-dark">24,00</td>
+<td class="px-4 py-2.5 text-right font-mono border-r border-border-light dark:border-border-dark">R$ 3,99</td>
+<td class="px-4 py-2.5 text-right font-mono font-semibold">R$ 95,76</td>
+</tr>
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+<td class="px-4 py-2.5 text-center font-mono text-xs text-text-muted-light dark:text-text-muted-dark border-r border-border-light dark:border-border-dark">05</td>
+<td class="px-4 py-2.5 font-medium border-r border-border-light dark:border-border-dark">BISC. C. CRACKER</td>
+<td class="px-4 py-2.5 text-center text-xs border-r border-border-light dark:border-border-dark">UN</td>
+<td class="px-4 py-2.5 text-right font-mono border-r border-border-light dark:border-border-dark">200,00</td>
+<td class="px-4 py-2.5 text-right font-mono border-r border-border-light dark:border-border-dark">R$ 5,99</td>
+<td class="px-4 py-2.5 text-right font-mono font-semibold">R$ 1.198,00</td>
+</tr>
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+<td class="px-4 py-2.5 text-center font-mono text-xs text-text-muted-light dark:text-text-muted-dark border-r border-border-light dark:border-border-dark">06</td>
+<td class="px-4 py-2.5 font-medium border-r border-border-light dark:border-border-dark">BISC. MARIA</td>
+<td class="px-4 py-2.5 text-center text-xs border-r border-border-light dark:border-border-dark">UN</td>
+<td class="px-4 py-2.5 text-right font-mono border-r border-border-light dark:border-border-dark">200,00</td>
+<td class="px-4 py-2.5 text-right font-mono border-r border-border-light dark:border-border-dark">R$ 6,90</td>
+<td class="px-4 py-2.5 text-right font-mono font-semibold">R$ 1.380,00</td>
+</tr>
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+<td class="px-4 py-2.5 text-center font-mono text-xs text-text-muted-light dark:text-text-muted-dark border-r border-border-light dark:border-border-dark">07</td>
+<td class="px-4 py-2.5 font-medium border-r border-border-light dark:border-border-dark">BOLO TRADICIONA</td>
+<td class="px-4 py-2.5 text-center text-xs border-r border-border-light dark:border-border-dark">UN</td>
+<td class="px-4 py-2.5 text-right font-mono border-r border-border-light dark:border-border-dark">70,00</td>
+<td class="px-4 py-2.5 text-right font-mono border-r border-border-light dark:border-border-dark">R$ 17,90</td>
+<td class="px-4 py-2.5 text-right font-mono font-semibold">R$ 1.253,00</td>
+</tr>
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+<td class="px-4 py-2.5 text-center font-mono text-xs text-text-muted-light dark:text-text-muted-dark border-r border-border-light dark:border-border-dark">08</td>
+<td class="px-4 py-2.5 font-medium border-r border-border-light dark:border-border-dark">CANELA EM PO</td>
+<td class="px-4 py-2.5 text-center text-xs border-r border-border-light dark:border-border-dark">UN</td>
+<td class="px-4 py-2.5 text-right font-mono border-r border-border-light dark:border-border-dark">6,00</td>
+<td class="px-4 py-2.5 text-right font-mono border-r border-border-light dark:border-border-dark">R$ 5,99</td>
+<td class="px-4 py-2.5 text-right font-mono font-semibold">R$ 35,94</td>
+</tr>
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+<td class="px-4 py-2.5 text-center font-mono text-xs text-text-muted-light dark:text-text-muted-dark border-r border-border-light dark:border-border-dark">09</td>
+<td class="px-4 py-2.5 font-medium border-r border-border-light dark:border-border-dark">COLORIFICO S/SAL</td>
+<td class="px-4 py-2.5 text-center text-xs border-r border-border-light dark:border-border-dark">UN</td>
+<td class="px-4 py-2.5 text-right font-mono border-r border-border-light dark:border-border-dark">50,00</td>
+<td class="px-4 py-2.5 text-right font-mono border-r border-border-light dark:border-border-dark">R$ 1,20</td>
+<td class="px-4 py-2.5 text-right font-mono font-semibold">R$ 60,00</td>
+</tr>
+<tr class="h-8">
+<td class="border-r border-border-light dark:border-border-dark bg-gray-50/30 dark:bg-gray-800/20"></td>
+<td class="border-r border-border-light dark:border-border-dark bg-gray-50/30 dark:bg-gray-800/20"></td>
+<td class="border-r border-border-light dark:border-border-dark bg-gray-50/30 dark:bg-gray-800/20"></td>
+<td class="border-r border-border-light dark:border-border-dark bg-gray-50/30 dark:bg-gray-800/20"></td>
+<td class="border-r border-border-light dark:border-border-dark bg-gray-50/30 dark:bg-gray-800/20"></td>
+<td class="bg-gray-50/30 dark:bg-gray-800/20"></td>
+</tr>
+<tr class="h-8">
+<td class="border-r border-border-light dark:border-border-dark bg-gray-50/30 dark:bg-gray-800/20"></td>
+<td class="border-r border-border-light dark:border-border-dark bg-gray-50/30 dark:bg-gray-800/20"></td>
+<td class="border-r border-border-light dark:border-border-dark bg-gray-50/30 dark:bg-gray-800/20"></td>
+<td class="border-r border-border-light dark:border-border-dark bg-gray-50/30 dark:bg-gray-800/20"></td>
+<td class="border-r border-border-light dark:border-border-dark bg-gray-50/30 dark:bg-gray-800/20"></td>
+<td class="bg-gray-50/30 dark:bg-gray-800/20"></td>
+</tr>
+</tbody>
+<tfoot class="font-bold border-t-2 border-border-light dark:border-border-dark bg-gray-100 dark:bg-gray-900 text-text-light dark:text-text-dark">
+<tr>
+<td class="px-4 py-3 text-right uppercase text-sm tracking-wider" colspan="5">Valor Total</td>
+<td class="px-4 py-3 text-right text-base text-primary">R$ 5.349,30</td>
+</tr>
+</tfoot>
+</table>
+</div>
+<div class="pt-6 border-t border-border-light dark:border-border-dark">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-sm uppercase font-bold text-text-muted-light dark:text-text-muted-dark tracking-wide">Condições do Orçamento</h3>
+<div class="flex items-center gap-2 text-sm">
+<span class="font-semibold text-text-light dark:text-text-dark">DATA:</span>
+<span class="bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded border border-border-light dark:border-border-dark">25/11/2025</span>
+</div>
+</div>
+<div class="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900/30 rounded-lg p-5">
+<p class="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+<span class="material-icons text-yellow-600 text-sm">info</span>
+                            Serão atendidas as seguintes condições:
+                        </p>
+<ul class="list-none space-y-2 text-sm text-gray-700 dark:text-gray-300 pl-6 relative">
+<li class="relative before:content-[''] before:absolute before:-left-4 before:top-2 before:w-1.5 before:h-1.5 before:bg-yellow-500 before:rounded-full">
+                                Todos os itens da planilha deverão ser cotados;
+                            </li>
+<li class="relative before:content-[''] before:absolute before:-left-4 before:top-2 before:w-1.5 before:h-1.5 before:bg-yellow-500 before:rounded-full">
+                                Período de validade da proposta: <strong class="text-gray-900 dark:text-white">30 dias</strong> da data da assinatura;
+                            </li>
+<li class="relative before:content-[''] before:absolute before:-left-4 before:top-2 before:w-1.5 before:h-1.5 before:bg-yellow-500 before:rounded-full">
+                                Prazo máximo de entrega/execução: <strong class="text-gray-900 dark:text-white">02 dias</strong> a partir da ordem de compra/serviço pela Unidade Executora;
+                            </li>
+<li class="relative before:content-[''] before:absolute before:-left-4 before:top-2 before:w-1.5 before:h-1.5 before:bg-yellow-500 before:rounded-full">
+                                Recebimento mediante apresentação de nota fiscal e certidões;
+                            </li>
+<li class="relative before:content-[''] before:absolute before:-left-4 before:top-2 before:w-1.5 before:h-1.5 before:bg-yellow-500 before:rounded-full">
+                                Pagamento após conferência a atesto da nota fiscal, mediante apresentação de recibo.
+                            </li>
+</ul>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-12 mt-12 pt-12">
+<div class="text-center">
+<div class="border-b border-gray-400 dark:border-gray-600 mb-2 mx-8"></div>
+<p class="text-sm font-semibold text-text-light dark:text-text-dark">Responsável pelo Fornecedor</p>
+<p class="text-xs text-text-muted-light dark:text-text-muted-dark">Assinatura e Carimbo</p>
+</div>
+<div class="text-center">
+<div class="border-b border-gray-400 dark:border-gray-600 mb-2 mx-8"></div>
+<p class="text-sm font-semibold text-text-light dark:text-text-dark">Responsável pela Unidade Executora</p>
+<p class="text-xs text-text-muted-light dark:text-text-muted-dark">Assinatura e Carimbo</p>
+</div>
+</div>
+</div>
+</div>
+<footer class="mt-8 text-center text-xs text-text-muted-light dark:text-text-muted-dark pb-8">
+<p>© 2025 BRN Suite Escolas. Todos os direitos reservados.</p>
+</footer>
+</main>
+<script>
+        // Simple dark mode toggle logic for demonstration purposes if needed later
+        // Currently relies on system preference or manual class addition to html tag
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+
+</body></html>

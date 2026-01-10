@@ -1,0 +1,8 @@
+
+{
+  "name": "BRN Suite Escolas",
+  "description": "Sistema integrado de gestão escolar com foco em controle financeiro, rateio de custos e conformidade RBAC.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
