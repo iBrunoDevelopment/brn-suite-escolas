@@ -49,10 +49,51 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
   const [rawData, setRawData] = useState<any[]>([]);
   const [rawProcesses, setRawProcesses] = useState<any[]>([]);
   const [rawReprogrammed, setRawReprogrammed] = useState<any[]>([]);
+  const [pendingUsersCount, setPendingUsersCount] = useState(0);
+  const [selectedAlert, setSelectedAlert] = useState<any | null>(null);
+
+  // Broadcast State
+  const [showBroadcast, setShowBroadcast] = useState(false);
+  const [broadcastForm, setBroadcastForm] = useState({ title: '', message: '', targetRole: 'Todos' });
+  const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
 
   // Permissions
   const dashPerm = usePermissions(user, 'entries');
+  // ... (omitted lines for brevity, will use full block in tool call)
   const accessibleSchools = useAccessibleSchools(user, availableOptions.schools);
+
+  const handleSendBroadcast = async () => {
+    if (!broadcastForm.title || !broadcastForm.message) return alert('Preencha o título e a mensagem.');
+    setIsSendingBroadcast(true);
+    try {
+      // Buscar usuários destino
+      let query = supabase.from('users').select('id');
+      if (broadcastForm.targetRole !== 'Todos') {
+        query = query.eq('role', broadcastForm.targetRole);
+      }
+      const { data: targetUsers } = await query;
+
+      if (targetUsers && targetUsers.length > 0) {
+        const notifications = targetUsers.map(u => ({
+          user_id: u.id,
+          title: `📢 COMUNICADO: ${broadcastForm.title}`,
+          message: broadcastForm.message,
+          type: 'info',
+          is_read: false
+        }));
+
+        const { error } = await supabase.from('notifications').insert(notifications);
+        if (error) throw error;
+        alert('Comunicado enviado com sucesso!');
+        setShowBroadcast(false);
+        setBroadcastForm({ title: '', message: '', targetRole: 'Todos' });
+      }
+    } catch (error: any) {
+      alert('Erro ao enviar comunicado: ' + error.message);
+    } finally {
+      setIsSendingBroadcast(false);
+    }
+  };
 
   useEffect(() => {
     fetchDashboardData();
@@ -61,7 +102,7 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
   useEffect(() => {
     processData();
     generateAlerts();
-  }, [filters, rawData, rawProcesses]); // Re-process when filters or data change
+  }, [filters, rawData, rawProcesses, pendingUsersCount]); // Re-process when filters or data change
 
   const fetchDashboardData = async () => {
     // 1. Fetch Basic Data (Schools, Programs, Rubrics)
@@ -83,6 +124,18 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
       rubrics: rubricsData,
       suppliers: suppliersData
     });
+
+    // Fetch Pending Users Count and Launch Reminders if Admin
+    if (user.role === UserRole.ADMIN) {
+      const { count } = await supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .or('active.eq.false,and(role.eq.Cliente,school_id.is.null)');
+      setPendingUsersCount(count || 0);
+
+      // Trigger automatic monthly reminders
+      await supabase.rpc('launch_monthly_reminders');
+    }
 
     // 2. Fetch Entries with visibility restrictions
     let entriesQuery = supabase.from('financial_entries').select('*');
@@ -234,6 +287,17 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
     if (!rawData) return;
     const newAlerts: any[] = [];
     const today = new Date();
+
+    // 0. Usuários Pendentes (Apenas para Admin)
+    if (user.role === UserRole.ADMIN && pendingUsersCount > 0) {
+      newAlerts.push({
+        id: 'pending-users-alert',
+        title: 'Usuários Aguardando Aprovação',
+        description: `Existem ${pendingUsersCount} usuários que ainda não foram vinculados a uma escola ou estão desativados.`,
+        severity: 'Médio',
+        timestamp: today.toISOString()
+      });
+    }
 
     // 1. Pendências Antigas (> 15 dias)
     const longPending = rawData.filter(e => {
@@ -435,17 +499,28 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
         </div>
 
         <div className="flex items-center gap-2">
+
+
+          {user.role === UserRole.ADMIN && (
+            <button
+              onClick={() => setShowBroadcast(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+            >
+              <span className="material-symbols-outlined text-sm">campaign</span>
+              Comunicado
+            </button>
+          )}
+
           {(filters.schoolId !== (user.schoolId || '') || filters.program || filters.rubric || filters.nature || filters.supplier) && (
             <button
               onClick={() => setFilters({ schoolId: user.schoolId || '', program: '', rubric: '', nature: '', supplier: '' })}
-              className="text-text-secondary hover:text-white text-sm px-3 py-2 transition-colors"
+              className="text-text-secondary hover:text-white text-sm px-3 py-2 transition-colors font-bold"
             >
-              Limpar Filtros
+              Limpar
             </button>
           )}
-          <button onClick={fetchDashboardData} className="flex items-center justify-center gap-2 bg-primary hover:bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-blue-500/20">
+          <button onClick={fetchDashboardData} className="flex items-center justify-center gap-2 bg-primary hover:bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-blue-500/20 active:scale-95">
             <span className="material-symbols-outlined text-[18px]">refresh</span>
-            Atualizar
           </button>
         </div>
       </div>
@@ -476,9 +551,9 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
             value: formatCurrency(stats.despesa),
             subtitle: 'Pagamentos realizados',
             icon: 'trending_down',
-            color: 'text-orange-400',
-            bg: 'bg-orange-500/5',
-            border: 'border-orange-500/20'
+            color: 'text-red-400',
+            bg: 'bg-red-500/5',
+            border: 'border-red-500/20'
           },
           {
             label: 'Itens Pendentes',
@@ -525,7 +600,7 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
                   />
                   <Legend iconType="circle" />
                   <Bar dataKey="receita" fill="#10b981" radius={[4, 4, 0, 0]} name="Receita" />
-                  <Bar dataKey="despesa" fill="#f97316" radius={[4, 4, 0, 0]} name="Despesa" />
+                  <Bar dataKey="despesa" fill="#ef4444" radius={[4, 4, 0, 0]} name="Despesa" />
                   <Line type="monotone" dataKey="saldoAcumulado" stroke="#3b82f6" strokeWidth={3} name="Saldo em Conta" dot={{ r: 4 }} />
                 </ComposedChart>
               ) : (
@@ -592,31 +667,158 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {alerts.map(alert => (
-                <div key={alert.id} className={`bg-card-dark border rounded-lg p-5 flex flex-col gap-3 hover:bg-background-dark/30 transition-colors shadow-lg relative group ${alert.severity === 'Crítico' ? 'border-red-500/30 hover:border-red-500/60' : 'border-orange-500/30 hover:border-orange-500/60'
-                  }`}>
-                  <div className="absolute top-4 right-4 flex gap-2">
-                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${alert.severity === 'Crítico' ? 'text-red-400 bg-red-400/10 border-red-400/20' : 'text-orange-400 bg-orange-400/10 border-orange-400/20'
+                <button
+                  key={alert.id}
+                  onClick={() => setSelectedAlert(alert)}
+                  className={`bg-card-dark border rounded-2xl p-5 flex flex-col gap-4 hover:bg-background-dark/30 transition-all shadow-lg text-left group animate-in fade-in zoom-in duration-300 ${alert.severity === 'Crítico' ? 'border-red-500/20 hover:border-red-500/50' : 'border-orange-500/20 hover:border-orange-500/50'
+                    }`}
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${alert.severity === 'Crítico' ? 'bg-red-500/10 text-red-500' : 'bg-orange-500/10 text-orange-500'
+                      }`}>
+                      <span className="material-symbols-outlined">{alert.severity === 'Crítico' ? 'error' : 'warning'}</span>
+                    </div>
+                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md border ${alert.severity === 'Crítico' ? 'text-red-400 bg-red-400/5 border-red-400/20' : 'text-orange-400 bg-orange-400/5 border-orange-400/20'
                       }`}>
                       {alert.severity}
                     </span>
                   </div>
-                  <div className="flex items-start gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${alert.severity === 'Crítico' ? 'bg-red-500/10 text-red-500' : 'bg-orange-500/10 text-orange-500'
-                      }`}>
-                      <span className="material-symbols-outlined">{alert.severity === 'Crítico' ? 'error' : 'warning'}</span>
-                    </div>
-                    <div>
-                      <h4 className="text-white font-bold text-sm">{alert.title}</h4>
-                      <p className="text-text-secondary text-xs mt-1 leading-relaxed">{alert.description}</p>
-                    </div>
+                  <div>
+                    <h4 className="text-white font-bold text-sm leading-tight line-clamp-2 group-hover:text-primary transition-colors">{alert.title}</h4>
+                    <p className="text-text-secondary text-xs mt-2 leading-relaxed line-clamp-2">{alert.description}</p>
                   </div>
-                </div>
+                  <div className="pt-2 border-t border-border-dark/50 flex items-center justify-between mt-auto">
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      {new Date(alert.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    <span className="text-[10px] text-primary font-black uppercase tracking-tighter flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      Detalhes
+                      <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                    </span>
+                  </div>
+                </button>
               ))}
             </div>
           )}
         </div>
-      </section >
-    </div >
+      </section>
+
+      {/* Alert Detail Modal */}
+      {selectedAlert && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-[#1e293b] border border-[#334155] w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+            <div className={`h-2 w-full ${selectedAlert.severity === 'Crítico' ? 'bg-red-500' : 'bg-orange-500'}`}></div>
+            <div className="p-8">
+              <div className="flex justify-between items-start mb-6">
+                <div className={`p-4 rounded-2xl ${selectedAlert.severity === 'Crítico' ? 'bg-red-500/10 text-red-500' : 'bg-orange-500/10 text-orange-500'}`}>
+                  <span className="material-symbols-outlined text-3xl">{selectedAlert.severity === 'Crítico' ? 'error' : 'warning'}</span>
+                </div>
+                <button onClick={() => setSelectedAlert(null)} className="p-2 hover:bg-white/5 rounded-full text-slate-500 hover:text-white transition-all">
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${selectedAlert.severity === 'Crítico' ? 'text-red-400 border-red-400/30' : 'text-orange-400 border-orange-400/30'
+                    }`}>
+                    Alerta {selectedAlert.severity}
+                  </span>
+                  <span className="text-slate-500 text-xs font-mono">{new Date(selectedAlert.timestamp).toLocaleString('pt-BR')}</span>
+                </div>
+
+                <h3 className="text-2xl font-black text-white leading-tight">
+                  {selectedAlert.title}
+                </h3>
+
+                <p className="text-slate-400 text-sm leading-relaxed bg-[#0f172a]/50 p-6 rounded-3xl border border-[#334155]/50 italic">
+                  "{selectedAlert.description}"
+                </p>
+
+                <div className="pt-6 flex flex-col gap-3">
+                  <button
+                    onClick={() => {
+                      setSelectedAlert(null);
+                      window.dispatchEvent(new CustomEvent('changePage', { detail: 'notifications' }));
+                    }}
+                    className="w-full bg-primary hover:bg-blue-600 text-white font-bold py-4 rounded-2xl transition-all shadow-xl shadow-blue-500/20 flex items-center justify-center gap-3"
+                  >
+                    <span className="material-symbols-outlined">notifications</span>
+                    Ir para Central de Notificações
+                  </button>
+                  <button
+                    onClick={() => setSelectedAlert(null)}
+                    className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-4 rounded-2xl transition-all"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Broadcast Modal */}
+      {showBroadcast && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="w-full max-w-lg bg-[#0f172a] border border-white/10 rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="p-6 border-b border-white/5 bg-primary/5 flex justify-between items-center text-primary">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined font-black">campaign</span>
+                <h3 className="font-bold">Comunicado aos Usuários</h3>
+              </div>
+              <button onClick={() => setShowBroadcast(false)} className="text-slate-500 hover:text-white"><span className="material-symbols-outlined">close</span></button>
+            </div>
+
+            <div className="p-8 flex flex-col gap-6">
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Público Alvo</label>
+                <select
+                  value={broadcastForm.targetRole}
+                  onChange={e => setBroadcastForm({ ...broadcastForm, targetRole: e.target.value })}
+                  className="bg-background-dark text-white border border-border-dark rounded-xl px-4 py-3 text-sm focus:border-primary outline-none"
+                >
+                  <option value="Todos">Todos os Usuários</option>
+                  {Object.values(UserRole).map(role => <option key={role} value={role}>{role}</option>)}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Título do Comunicado</label>
+                <input
+                  type="text"
+                  value={broadcastForm.title}
+                  onChange={e => setBroadcastForm({ ...broadcastForm, title: e.target.value.toUpperCase() })}
+                  className="bg-background-dark text-white border border-border-dark rounded-xl px-4 py-3 text-sm focus:border-primary outline-none"
+                  placeholder="ASSUNTO DA MENSAGEM"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Conteúdo da Mensagem</label>
+                <textarea
+                  rows={4}
+                  value={broadcastForm.message}
+                  onChange={e => setBroadcastForm({ ...broadcastForm, message: e.target.value })}
+                  className="bg-background-dark text-white border border-border-dark rounded-xl px-4 py-3 text-sm focus:border-primary outline-none resize-none"
+                  placeholder="Escreva aqui as orientações ou avisos importantes..."
+                />
+              </div>
+
+              <button
+                onClick={handleSendBroadcast}
+                disabled={isSendingBroadcast}
+                className="w-full bg-primary hover:bg-primary-hover text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isSendingBroadcast ? <span className="material-symbols-outlined animate-spin">sync</span> : <span className="material-symbols-outlined text-sm">send</span>}
+                Disparar Mensagem Agora
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
   );
 };
 

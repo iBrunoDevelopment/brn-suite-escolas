@@ -19,21 +19,21 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Entradas do Período</span>
                     <span className="material-symbols-outlined text-green-500 text-[20px] opacity-50 group-hover:opacity-100">trending_up</span>
                 </div>
-                <div className="text-2xl font-black text-white">{stats.income.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                <div className="text-2xl font-black text-green-400">{stats.income.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
                 <div className="mt-2 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
                     <span className="text-[10px] text-slate-400 font-bold uppercase">Confirmado em Conta</span>
                 </div>
             </div>
 
-            <div className="group bg-surface-dark border border-surface-border p-6 rounded-2xl shadow-xl transition-all hover:border-orange-500/30 hover:bg-orange-500/5">
+            <div className="group bg-surface-dark border border-surface-border p-6 rounded-2xl shadow-xl transition-all hover:border-red-500/30 hover:bg-red-500/5">
                 <div className="flex justify-between items-start mb-2">
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Saídas do Período</span>
-                    <span className="material-symbols-outlined text-orange-500 text-[20px] opacity-50 group-hover:opacity-100">trending_down</span>
+                    <span className="material-symbols-outlined text-red-500 text-[20px] opacity-50 group-hover:opacity-100">trending_down</span>
                 </div>
-                <div className="text-2xl font-black text-white">{stats.expense.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                <div className="text-2xl font-black text-red-400">{stats.expense.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
                 <div className="mt-2 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
                     <span className="text-[10px] text-slate-400 font-bold uppercase">Pagamentos Efetuados</span>
                 </div>
             </div>

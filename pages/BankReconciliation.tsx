@@ -30,26 +30,32 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
     const [programs, setPrograms] = useState<any[]>([]);
     const [rubrics, setRubrics] = useState<any[]>([]);
     const [showQuickCreate, setShowQuickCreate] = useState(false);
+    const [showManualMatch, setShowManualMatch] = useState(false);
     const [showHelp, setShowHelp] = useState(false);
     const [showReport, setShowReport] = useState(false);
     const [quickCreateBT, setQuickCreateBT] = useState<BankTransaction | null>(null);
-    const [quickForm, setQuickForm] = useState({ program_id: '', rubric_id: '', description: '', nature: 'Custeio' });
+    const [manualMatchBT, setManualMatchBT] = useState<BankTransaction | null>(null);
+    const [manualSearch, setManualSearch] = useState('');
+    const [suppliers, setSuppliers] = useState<any[]>([]);
+    const [quickForm, setQuickForm] = useState({ program_id: '', rubric_id: '', supplier_id: '', description: '', nature: 'Custeio' });
 
     useEffect(() => {
         fetchInitialData();
     }, []);
 
     const fetchInitialData = async () => {
-        const [{ data: schoolsData }, { data: banksData }, { data: progs }, { data: rubs }] = await Promise.all([
+        const [{ data: schoolsData }, { data: banksData }, { data: progs }, { data: rubs }, { data: suppliersData }] = await Promise.all([
             supabase.from('schools').select('id, name').order('name'),
             supabase.from('bank_accounts').select('*').order('name'),
             supabase.from('programs').select('id, name').order('name'),
-            supabase.from('rubrics').select('id, name, program_id').order('name')
+            supabase.from('rubrics').select('id, name, program_id').order('name'),
+            supabase.from('suppliers').select('id, name').order('name')
         ]);
         if (schoolsData) setSchools(schoolsData);
         if (banksData) setBankAccounts(banksData);
         if (progs) setPrograms(progs);
         if (rubs) setRubrics(rubs);
+        if (suppliersData) setSuppliers(suppliersData);
     };
 
     const fetchSystemEntries = async () => {
@@ -75,6 +81,10 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
     };
 
     const parseFile = async (file: File) => {
+        if (!selectedSchoolId || !selectedBankAccountId) {
+            alert('Por favor, selecione a Escola e a Conta Bancária antes de importar o extrato.');
+            return;
+        }
         setLoading(true);
         try {
             const text = await file.text();
@@ -126,7 +136,13 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
             }
         });
 
-        const combined = [...transactions, ...newTransactions];
+        const combined = [...transactions];
+        newTransactions.forEach(nt => {
+            if (!combined.some(t => t.fitid === nt.fitid)) {
+                combined.push(nt);
+            }
+        });
+
         setTransactions(combined);
         fetchSystemEntries().then(() => {
             autoMatch(combined);
@@ -179,7 +195,13 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
             }
         });
 
-        const combined = [...transactions, ...newTransactions];
+        const combined = [...transactions];
+        newTransactions.forEach(nt => {
+            if (!combined.some(t => t.fitid === nt.fitid)) {
+                combined.push(nt);
+            }
+        });
+
         setTransactions(combined);
         fetchSystemEntries().then(() => {
             autoMatch(combined);
@@ -204,8 +226,9 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
         setTransactions(updated);
     };
 
-    const handleConfirmMatch = async (bt: BankTransaction) => {
-        if (!bt.matched_entry_id) return;
+    const handleConfirmMatch = async (bt: BankTransaction, customEntryId?: string) => {
+        const entryId = customEntryId || bt.matched_entry_id;
+        if (!entryId) return;
 
         setIsMatching(true);
         try {
@@ -215,14 +238,16 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
                     is_reconciled: true,
                     reconciled_at: new Date().toISOString(),
                     bank_transaction_ref: bt.fitid,
-                    status: 'Pago' // Confirm as paid if reconciled
+                    status: 'Pago'
                 })
-                .eq('id', bt.matched_entry_id);
+                .eq('id', entryId);
 
             if (error) throw error;
 
             setTransactions(prev => prev.filter(t => t.id !== bt.id));
-            setSystemEntries(prev => prev.filter(e => e.id !== bt.matched_entry_id));
+            setSystemEntries(prev => prev.filter(e => e.id !== entryId));
+            setShowManualMatch(false);
+            setManualMatchBT(null);
         } catch (error) {
             alert('Erro ao conciliar: ' + (error as any).message);
         } finally {
@@ -323,6 +348,7 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
                 nature: quickForm.nature,
                 program_id: quickForm.program_id,
                 rubric_id: quickForm.rubric_id,
+                supplier_id: quickForm.supplier_id || null,
                 status: 'Pago',
                 is_reconciled: true,
                 reconciled_at: new Date().toISOString(),
@@ -508,35 +534,55 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         {bt.status === 'matched' && matchedEntry ? (
-                                                            <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/20 p-2 rounded-xl">
-                                                                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
-                                                                    <span className="material-symbols-outlined text-sm">link</span>
+                                                            <div className="flex flex-col gap-2 bg-emerald-500/5 border border-emerald-500/20 p-3 rounded-2xl relative group/card overflow-hidden">
+                                                                <div className="absolute top-0 right-0 p-1 bg-emerald-500 text-[8px] font-black text-white uppercase tracking-tighter rounded-bl-lg transform translate-x-1 -translate-y-1 group-hover/card:translate-x-0 group-hover/card:translate-y-0 transition-transform">95% Match</div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="w-6 h-6 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                                                                        <span className="material-symbols-outlined text-[14px]">account_balance_wallet</span>
+                                                                    </div>
+                                                                    <span className="text-[10px] text-emerald-400 font-bold uppercase truncate max-w-[150px]">{matchedEntry.description}</span>
                                                                 </div>
-                                                                <div className="flex flex-col">
-                                                                    <span className="text-[10px] text-emerald-400 font-black uppercase tracking-tighter line-clamp-1">Sugestão: {matchedEntry.description}</span>
-                                                                    <span className="text-[9px] text-slate-500">Valor: {Number(matchedEntry.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                                                                <div className="flex justify-between items-center text-[9px]">
+                                                                    <span className="text-slate-500 flex items-center gap-1">
+                                                                        <span className="material-symbols-outlined text-[10px]">calendar_today</span>
+                                                                        {new Date(matchedEntry.date).toLocaleDateString('pt-BR')}
+                                                                    </span>
+                                                                    <span className="text-emerald-500 font-black">
+                                                                        {Number(matchedEntry.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                                    </span>
                                                                 </div>
                                                             </div>
                                                         ) : (
-                                                            <span className="text-[10px] font-black text-amber-500 border border-amber-500/20 px-3 py-1 rounded-full uppercase tracking-tighter">Não Encontrado</span>
+                                                            <div className="flex items-center gap-2 text-amber-500/50 italic p-3 border border-dashed border-amber-500/20 rounded-2xl">
+                                                                <span className="material-symbols-outlined text-sm">search</span>
+                                                                <span className="text-[10px] font-medium uppercase tracking-tighter">Nenhuma correspondência exata</span>
+                                                            </div>
                                                         )}
                                                     </td>
                                                     <td className="px-6 py-4 text-right">
-                                                        {bt.status === 'matched' ? (
+                                                        <div className="flex flex-col gap-1">
+                                                            {bt.status === 'matched' ? (
+                                                                <button
+                                                                    onClick={() => handleConfirmMatch(bt)}
+                                                                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 whitespace-nowrap"
+                                                                >
+                                                                    Confirmar Lançamento
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => handleQuickCreateStart(bt)}
+                                                                    className="px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500 hover:text-white text-indigo-400 border border-indigo-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap"
+                                                                >
+                                                                    Criar Novo Lançamento
+                                                                </button>
+                                                            )}
                                                             <button
-                                                                onClick={() => handleConfirmMatch(bt)}
-                                                                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
+                                                                onClick={() => { setManualMatchBT(bt); setShowManualMatch(true); }}
+                                                                className="px-4 py-1 text-slate-500 hover:text-white text-[9px] font-black uppercase tracking-widest transition-all"
                                                             >
-                                                                Confirmar
+                                                                Vincular Manualmente
                                                             </button>
-                                                        ) : (
-                                                            <button
-                                                                onClick={() => handleQuickCreateStart(bt)}
-                                                                className="px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500 hover:text-white text-indigo-400 border border-indigo-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
-                                                            >
-                                                                Lançamento Rápido
-                                                            </button>
-                                                        )}
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             );
@@ -615,6 +661,18 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
                                     </select>
                                 </div>
 
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Fornecedor (Opcional)</label>
+                                    <select
+                                        value={quickForm.supplier_id}
+                                        onChange={e => setQuickForm({ ...quickForm, supplier_id: e.target.value })}
+                                        className="bg-card-dark border border-white/10 rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-indigo-500"
+                                    >
+                                        <option value="">Selecione o Fornecedor</option>
+                                        {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    </select>
+                                </div>
+
                                 <button
                                     onClick={handleQuickCreate}
                                     disabled={isMatching || !quickForm.program_id || !quickForm.rubric_id}
@@ -622,6 +680,86 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
                                 >
                                     {isMatching ? 'Processando...' : 'Confirmar Lançamento e Conciliar'}
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+            {/* Manual Match Modal */}
+            {
+                showManualMatch && manualMatchBT && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                        <div className="w-full max-w-2xl bg-[#0f172a] border border-white/10 rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95">
+                            <div className="p-6 border-b border-white/5 bg-white/5 flex justify-between items-center">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                                        <span className="material-symbols-outlined">link</span>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-white font-bold">Vincular Manualmente</h3>
+                                        <p className="text-slate-500 text-[10px] uppercase font-black">Conciliando: {manualMatchBT.description} ({manualMatchBT.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowManualMatch(false)} className="text-slate-500 hover:text-white"><span className="material-symbols-outlined">close</span></button>
+                            </div>
+                            <div className="p-6 flex flex-col gap-4">
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 text-sm">search</span>
+                                    <input
+                                        type="text"
+                                        value={manualSearch}
+                                        onChange={e => setManualSearch(e.target.value)}
+                                        placeholder="Buscar por descrição, valor ou código..."
+                                        className="w-full bg-card-dark border border-white/10 rounded-2xl pl-10 pr-4 py-3 text-xs text-white outline-none focus:border-indigo-500 transition-all"
+                                    />
+                                </div>
+
+                                <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                    <div className="flex flex-col gap-2">
+                                        {systemEntries
+                                            .filter(e =>
+                                                e.description.toLowerCase().includes(manualSearch.toLowerCase()) ||
+                                                e.value.toString().includes(manualSearch) ||
+                                                (manualMatchBT.type === 'C' ? e.type === 'Entrada' : e.type === 'Saída')
+                                            )
+                                            .sort((a, b) => {
+                                                // Sort by similarity to the target value and date
+                                                const aValDiff = Math.abs(Number(a.value) - manualMatchBT.value);
+                                                const bValDiff = Math.abs(Number(b.value) - manualMatchBT.value);
+                                                if (aValDiff !== bValDiff) return aValDiff - bValDiff;
+                                                return new Date(b.date).getTime() - new Date(a.date).getTime();
+                                            })
+                                            .map(entry => (
+                                                <button
+                                                    key={entry.id}
+                                                    onClick={() => handleConfirmMatch(manualMatchBT, entry.id)}
+                                                    className="w-full text-left p-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl flex justify-between items-center transition-all group"
+                                                >
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="text-xs text-white font-bold group-hover:text-indigo-400 transition-colors uppercase">{entry.description}</span>
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-[10px] text-slate-500 font-mono">{new Date(entry.date).toLocaleDateString('pt-BR')}</span>
+                                                            <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 text-slate-400 font-black uppercase tracking-tighter">
+                                                                {entry.program}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex flex-col items-end gap-1">
+                                                        <span className={`text-xs font-black ${entry.type === 'Entrada' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                            {Number(entry.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                        </span>
+                                                        <span className="text-[9px] text-slate-600 uppercase font-black tracking-widest">Selecionar</span>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        {systemEntries.length === 0 && (
+                                            <div className="py-12 text-center text-slate-500">
+                                                <span className="material-symbols-outlined text-4xl mb-2 block opacity-20">inventory_2</span>
+                                                <p className="text-xs">Nenhum lançamento em aberto encontrado para esta escola/conta.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

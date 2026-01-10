@@ -607,13 +607,16 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
     <div className="flex flex-col gap-8 w-full p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex flex-col gap-1">
+          <h1 className="text-3xl font-black text-white">Prestação de Contas</h1>
           <p className="text-slate-400 text-sm">Controle de cotações, itens de nota e finalização documental.</p>
         </div>
-        {(activeTab === 'list' && reportPerm.canCreate) && (
-          <button onClick={() => { resetModal(); setShowNewProcessModal(true) }} className="h-12 px-6 bg-primary hover:bg-primary-hover text-white rounded-xl font-bold shadow-lg shadow-primary/20 transition-all flex items-center gap-2">
-            <span className="material-symbols-outlined">add_circle</span> Novo Processo
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {(activeTab === 'list' && reportPerm.canCreate && user.role !== UserRole.DIRETOR) && (
+            <button onClick={() => { resetModal(); setShowNewProcessModal(true) }} className="h-12 px-6 bg-primary hover:bg-primary-hover text-white rounded-xl font-bold shadow-lg shadow-primary/20 transition-all flex items-center gap-2">
+              <span className="material-symbols-outlined">add_circle</span> Novo Processo
+            </button>
+          )}
+        </div>
       </div>
 
       {activeTab === 'list' ? (
@@ -740,7 +743,7 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
                 <p className="text-slate-400 font-medium">Processo de Prestação de Contas • {currentProcess?.financial_entry?.schools?.name}</p>
               </div>
               <div className="flex gap-3">
-                {reportPerm.canEdit && (
+                {(reportPerm.canEdit && user.role !== UserRole.DIRETOR) && (
                   <button
                     onClick={() => handleEdit(currentProcess)}
                     className="h-12 px-6 bg-primary hover:bg-primary-hover text-white rounded-xl font-bold flex items-center gap-2 transition-all"
@@ -1413,6 +1416,7 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
           </div>
         </div>
       )}
+
     </div>
   );
 };

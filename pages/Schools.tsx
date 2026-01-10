@@ -7,15 +7,29 @@ import { usePermissions, useAccessibleSchools } from '../hooks/usePermissions';
 const Schools: React.FC<{ user: User }> = ({ user }) => {
     const [schools, setSchools] = useState<School[]>([]);
     const [cities, setCities] = useState<string[]>([]);
+    const [gees, setGees] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [isLoadingCities, setIsLoadingCities] = useState(false);
 
+    // Verificação de Acesso
+    const isAuthorized = user.role === UserRole.ADMIN || user.role === UserRole.OPERADOR || user.role === UserRole.TECNICO_GEE;
+
     // Permissions
     const schoolPerm = usePermissions(user, 'schools');
     const filteredSchools = useAccessibleSchools(user, schools);
+
+    if (!isAuthorized) {
+        return (
+            <div className="flex flex-col items-center justify-center h-[60vh] gap-4 text-slate-500">
+                <span className="material-symbols-outlined text-6xl opacity-20">lock</span>
+                <p className="text-xl font-bold">Acesso Restrito</p>
+                <p className="text-sm">Você não tem permissão para gerenciar escolas.</p>
+            </div>
+        );
+    }
 
     // Form fields
     const [formData, setFormData] = useState({
@@ -31,11 +45,13 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
         city: '',
         uf: '',
         image_url: '',
-        gee: ''
+        gee: '',
+        gee_id: ''
     });
 
     useEffect(() => {
         fetchSchools();
+        fetchGEEs();
     }, []);
 
     useEffect(() => {
@@ -45,6 +61,11 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
             setCities([]);
         }
     }, [formData.uf]);
+
+    const fetchGEEs = async () => {
+        const { data } = await supabase.from('gee').select('id, name').order('name');
+        if (data) setGees(data);
+    };
 
     const fetchSchools = async () => {
         setLoading(true);
@@ -88,12 +109,12 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
             return cleanValue
                 .replace(/(\d{2})(\d)/, '($1) $2')
                 .replace(/(\d{4})(\d)/, '$1-$2')
-                .replace(/(-\d{4})\d+?$/, '$1');
+                .slice(0, 14);
         }
         return cleanValue
             .replace(/(\d{2})(\d)/, '($1) $2')
-            .replace(/(\d{5})(\d)/, '$1-$2')
-            .replace(/(-\d{4})\d+?$/, '$1');
+            .replace(/(\d{1})(\d{4})(\d)/, '$1 $2-$3')
+            .slice(0, 16);
     };
 
     const handleSave = async () => {
@@ -142,7 +163,8 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
             city: school.city || '',
             uf: school.uf || '',
             image_url: school.image_url || '',
-            gee: school.gee || ''
+            gee: school.gee || '',
+            gee_id: school.gee_id || ''
         });
         setShowForm(true);
     };
@@ -206,7 +228,8 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
             city: '',
             uf: '',
             image_url: '',
-            gee: ''
+            gee: '',
+            gee_id: ''
         });
     };
 
@@ -217,6 +240,7 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                     Escolas
                     <span className="text-sm font-normal text-slate-400 block">Gestão de Unidades Escolares</span>
                 </h1>
+
                 {schoolPerm.canCreate && (
                     <button
                         onClick={() => { resetForm(); setShowForm(true); }}
@@ -253,9 +277,13 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                         </div>
                         <div className="p-8 pt-10">
                             <h3 className="text-xl font-bold text-white mb-1">{school.name}</h3>
-                            <div className="flex items-center gap-2 text-xs text-primary font-bold uppercase tracking-wider mb-4">
+                            <div className="flex items-center gap-2 text-xs text-primary font-bold uppercase tracking-wider mb-2">
                                 <span className="material-symbols-outlined text-sm">info</span>
                                 Codes: {school.inep || 'N/A'} / {school.seec || 'N/A'}
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] text-slate-500 font-black uppercase mb-4">
+                                <span className="material-symbols-outlined text-xs">map</span>
+                                {school.gee || 'SEM REGIONAL'}
                             </div>
 
                             <div className="space-y-3">
@@ -320,7 +348,7 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Telefone</label>
-                                    <input type="text" value={formData.phone} onChange={e => setFormData({ ...formData, phone: formatPhone(e.target.value) })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" placeholder="(00) 00000-0000" maxLength={15} />
+                                    <input type="text" value={formData.phone} onChange={e => setFormData({ ...formData, phone: formatPhone(e.target.value) })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" placeholder="(00) 0 0000-0000" maxLength={16} />
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Código INEP</label>
@@ -331,9 +359,19 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                                     <input type="text" value={formData.seec} onChange={e => setFormData({ ...formData, seec: e.target.value })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" />
                                 </div>
                                 <div className="md:col-span-2">
-                                    <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">GEE (Gerência Executiva de Educação)</label>
-                                    <input type="text" value={formData.gee} onChange={e => setFormData({ ...formData, gee: e.target.value.toUpperCase() })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" placeholder="Ex: GEE METROPOLITANA SUL" />
-                                    <p className="text-xs text-slate-500 mt-1">Usado para vincular Técnicos GEE às escolas</p>
+                                    <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Regional (GEE)</label>
+                                    <select
+                                        value={formData.gee_id}
+                                        onChange={e => {
+                                            const selected = gees.find(g => g.id === e.target.value);
+                                            setFormData({ ...formData, gee_id: e.target.value, gee: selected ? selected.name : '' });
+                                        }}
+                                        className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none"
+                                    >
+                                        <option value="">Selecione uma regional...</option>
+                                        {gees.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                                    </select>
+                                    <p className="text-xs text-slate-500 mt-1">Vincule esta escola a uma Gerência Executiva para gestão de técnicos.</p>
                                 </div>
                                 <div className="md:col-span-2">
                                     <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Conselho Escolar</label>
@@ -375,6 +413,8 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                     </div>
                 </div>
             )}
+
+
         </div>
     );
 };

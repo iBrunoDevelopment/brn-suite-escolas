@@ -9,6 +9,7 @@ interface FinancialTableProps {
     loading: boolean;
     selectedIds: string[];
     canEdit: boolean;
+    isAdmin: boolean;
     onToggleSelect: (id: string) => void;
     onToggleSelectAll: () => void;
     onEdit: (entry: FinancialEntryExtended) => void;
@@ -21,6 +22,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({
     loading,
     selectedIds,
     canEdit,
+    isAdmin,
     onToggleSelect,
     onToggleSelectAll,
     onEdit,
@@ -50,9 +52,9 @@ const FinancialTable: React.FC<FinancialTableProps> = ({
 
     const StatusBadge = ({ s }: { s: string }) => (
         <span className={`px-2 py-0.5 rounded text-[10px] font-bold border border-white/10 ${s === TransactionStatus.PAGO || s === TransactionStatus.RECEBIDO ? 'text-green-500 bg-green-500/10' :
-                s === TransactionStatus.PENDENTE ? 'text-yellow-500 bg-yellow-500/10' :
-                    s === TransactionStatus.CONSOLIDADO ? 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' :
-                        'text-blue-500 bg-blue-500/10'
+            s === TransactionStatus.PENDENTE ? 'text-yellow-500 bg-yellow-500/10' :
+                s === TransactionStatus.CONSOLIDADO ? 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' :
+                    'text-blue-500 bg-blue-500/10'
             }`}>
             {s}
         </span>
@@ -137,7 +139,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({
                                         </div>
                                     </td>
                                     <td className="p-5 text-right font-mono">
-                                        <div className={`text-sm font-black ${entry.type === 'Entrada' ? 'text-green-400' : 'text-white'}`}>
+                                        <div className={`text-sm font-black ${entry.type === 'Entrada' ? 'text-green-400' : 'text-red-400'}`}>
                                             {entry.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                         </div>
                                         <div className="text-[9px] text-slate-500 mt-0.5 font-bold uppercase tracking-tighter">
@@ -163,8 +165,10 @@ const FinancialTable: React.FC<FinancialTableProps> = ({
                                                 <button onClick={() => onEdit(entry)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-primary/20 text-slate-400 hover:text-primary transition-all flex items-center justify-center">
                                                     <span className="material-symbols-outlined text-[18px]">edit</span>
                                                 </button>
-                                                <button onClick={() => onDelete(entry)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-red-500/20 text-slate-400 hover:text-red-500 transition-all flex items-center justify-center">
-                                                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                                                <button onClick={() => onDelete(entry)} className={`w-8 h-8 rounded-lg bg-white/5 transition-all flex items-center justify-center ${!isAdmin && entry.status === TransactionStatus.ESTORNADO ? 'hover:bg-blue-500/20 text-slate-400 hover:text-blue-500' : 'hover:bg-red-500/20 text-slate-400 hover:text-red-500'}`} title={isAdmin ? 'Excluir permanentemente' : (entry.status === TransactionStatus.ESTORNADO ? 'Reativar Lançamento' : 'Desativar/Estornar')}>
+                                                    <span className="material-symbols-outlined text-[18px]">
+                                                        {isAdmin ? 'delete' : (entry.status === TransactionStatus.ESTORNADO ? 'restore_from_trash' : 'block')}
+                                                    </span>
                                                 </button>
                                             </div>
                                         </td>

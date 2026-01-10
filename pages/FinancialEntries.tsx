@@ -199,11 +199,28 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
     };
 
     const handleDelete = async (entry: any) => {
-        if (!confirm("Excluir este lançamento?")) return;
-        const { error } = entry.batch_id ?
-            await supabase.from('financial_entries').delete().eq('batch_id', entry.batch_id) :
-            await supabase.from('financial_entries').delete().eq('id', entry.id);
-        if (error) alert(error.message); else refresh({ ...filters, quick: quickFilter });
+        const isAdmin = user.role === UserRole.ADMIN;
+        const msg = isAdmin
+            ? "Excluir permanentemente este lançamento?"
+            : (entry.status === TransactionStatus.ESTORNADO ? "Reativar este lançamento? Ele voltará para o status 'Pendente'." : "Desativar (Estornar) este lançamento?");
+
+        if (!confirm(msg)) return;
+
+        if (isAdmin) {
+            // ADM: Deleta permanentemente
+            const { error } = entry.batch_id ?
+                await supabase.from('financial_entries').delete().eq('batch_id', entry.batch_id) :
+                await supabase.from('financial_entries').delete().eq('id', entry.id);
+            if (error) alert(error.message); else refresh({ ...filters, quick: quickFilter });
+        } else {
+            // OPERADOR / DIRETOR: Toggle Status (Estornar <-> Pendente)
+            const newStatus = entry.status === TransactionStatus.ESTORNADO ? TransactionStatus.PENDENTE : TransactionStatus.ESTORNADO;
+
+            const { error } = entry.batch_id ?
+                await supabase.from('financial_entries').update({ status: newStatus }).eq('batch_id', entry.batch_id) :
+                await supabase.from('financial_entries').update({ status: newStatus }).eq('id', entry.id);
+            if (error) alert(error.message); else refresh({ ...filters, quick: quickFilter });
+        }
     };
 
     const handleConciliate = async (id: string, currentStatus: string) => {
@@ -257,6 +274,10 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
     const handleSave = async () => {
         if (!selectedSchoolId || !date || !selectedProgramId || !totalValue || !mainDescription) {
             return alert('Preencha os campos obrigatórios: Escola, Data, Programa, Valor e Descritivo.');
+        }
+
+        if (user.role === UserRole.DIRETOR && (editingId || editingBatchId)) {
+            return alert('O perfil de Diretor não tem permissão para editar lançamentos existentes.');
         }
 
         const valNum = parseFloat(totalValue);
@@ -414,7 +435,7 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
 
             <FilterBar filters={filters} setFilters={setFilters} showFilters={showFilters} setShowFilters={setShowFilters} quickFilter={quickFilter} setQuickFilter={setQuickFilter} auxData={auxData} onPrintReport={handlePrintReport} onExportCSV={exportToCSV} />
 
-            <FinancialTable entries={entries} loading={loading} selectedIds={selectedIds} canEdit={entryPerm.canEdit} onToggleSelect={toggleSelect} onToggleSelectAll={toggleSelectAll} onEdit={handleEdit} onDelete={handleDelete} onConciliate={handleConciliate} />
+            <FinancialTable entries={entries} loading={loading} selectedIds={selectedIds} canEdit={entryPerm.canEdit} isAdmin={user.role === UserRole.ADMIN} onToggleSelect={toggleSelect} onToggleSelectAll={toggleSelectAll} onEdit={handleEdit} onDelete={handleDelete} onConciliate={handleConciliate} />
 
             {/* Modals (Reprogrammed & Form) - Keeping these in page for now as they are very tied to local state */}
             {showReprogrammedModal && (
@@ -530,6 +551,7 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                                             <option value={TransactionStatus.PENDENTE}>Pendente</option>
                                             <option value={TransactionStatus.PAGO}>Pago / Recebido</option>
                                             <option value={TransactionStatus.CONCILIADO}>Conciliado</option>
+                                            <option value={TransactionStatus.ESTORNADO}>Estornado / Cancelado</option>
                                         </select>
                                     </div>
                                     <div className="flex flex-col gap-2">
@@ -850,6 +872,7 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                     </div>
                 </div>
             )}
+
         </div>
     );
 };

@@ -98,6 +98,9 @@ export interface FinancialEntry {
     bank_account?: string; // Display name
     payment_method_id?: string;
     payment_method?: string; // Display name
+    is_reconciled?: boolean;
+    reconciled_at?: string;
+    bank_transaction_ref?: string;
     logs?: any[];
 }
 
@@ -126,6 +129,7 @@ export interface School {
     uf?: string;
     image_url?: string;
     gee?: string; // Gerência Executiva de Educação
+    gee_id?: string;
 }
 
 export interface Program {

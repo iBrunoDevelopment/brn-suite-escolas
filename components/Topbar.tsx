@@ -7,68 +7,131 @@ interface TopbarProps {
   activePageName: string;
 }
 
-const HELP_CONTENT: Record<string, { title: string, text: React.ReactNode }> = {
+import HelpModal from './common/HelpModal';
+
+const HELP_CONTENT: Record<string, { title: string, description: string, sections: any[] }> = {
   dashboard: {
-    title: 'Visão Geral e Alertas',
-    text: (
-      <div className="flex flex-col gap-2">
-        <p>Esta tela é o seu painel de controle principal. Aqui você pode:</p>
-        <ul className="list-disc pl-5 text-sm text-slate-300 space-y-1">
-          <li>Monitorar o <strong>Saldo em Caixa</strong> e totais de Receitas/Despesas.</li>
-          <li>Visualizar gráficos de fluxo de caixa mensal.</li>
-          <li>Acompanhar alertas críticos no painel de <strong>Alertas do Sistema</strong>.</li>
-        </ul>
-        <p className="mt-2 text-xs text-amber-500 font-bold">Dica: Fique atento ao indicador de "Pendências Antigas" para não perder prazos.</p>
-      </div>
-    )
+    title: "Painel de Controle",
+    description: "Monitoramento Estratégico e Saúde Bancária",
+    sections: [
+      {
+        title: "Visão Geral de Ganhos e Gastos",
+        icon: "insights",
+        items: [
+          { label: "Receita", desc: "Soma de todos os repasses, rendimentos e doações do período selecionado." },
+          { label: "Despesa", desc: "Total de pagamentos e saídas confirmadas." },
+          { label: "Saldo Real", desc: "Diferença entre receita e despesa, somando o saldo reprogramado." }
+        ]
+      },
+      {
+        title: "Sistema de Alertas",
+        icon: "warning",
+        items: [
+          { label: "Pendências Antigas", desc: "Avisos sobre lançamentos pendentes que podem ter sido esquecidos no banco." },
+          { label: "Falta de Prestação", desc: "Identifica pagamentos confirmados sem documentação anexada." }
+        ]
+      }
+    ]
   },
   entries: {
-    title: 'Lançamentos Financeiros',
-    text: (
-      <div className="flex flex-col gap-2">
-        <p>Aqui é onde a mágica acontece. Registre toda a movimentação financeira:</p>
-        <ul className="list-disc pl-5 text-sm text-slate-300 space-y-1">
-          <li><strong>Receitas:</strong> Repasses recebidos (ex: PDDE, Merenda).</li>
-          <li><strong>Despesas:</strong> Pagamentos a fornecedores, tarifas, etc.</li>
-          <li><strong>Filtros:</strong> Use a barra superior para filtrar por escola, programa ou data.</li>
-        </ul>
-        <p className="mt-2 text-xs text-amber-500 font-bold">Importante: Para pagamentos de prestadores de serviço (PJ), lembre-se de cadastrar o fornecedor primeiro em Configurações.</p>
-      </div>
-    )
+    title: "Manual de Lançamentos",
+    description: "Gestão de Entradas, Saídas e Rateios",
+    sections: [
+      {
+        title: "Fluxo de Trabalho",
+        icon: "account_tree",
+        items: [
+          { label: "Status", desc: "Pendentes (aguardando), Pagos (concluídos no banco), Conciliados (conferidos no extrato)." },
+          { label: "Rateio", desc: "Use quando um único pagamento deve ser dividido entre diferentes rubricas." }
+        ]
+      },
+      {
+        title: "Segurança",
+        icon: "security",
+        items: [
+          { label: "Exclusão", desc: "Operadores desativam lançamentos. Apenas Admins excluem permanentemente." },
+          { label: "Auditoria", desc: "Cada modificação gera um registro no histórico para rastreabilidade." }
+        ]
+      }
+    ]
   },
   reports: {
-    title: 'Prestação de Contas (REX)',
-    text: (
-      <div className="flex flex-col gap-2">
-        <p>Gere a documentação oficial para o FNDE/Tribunais:</p>
-        <ul className="list-disc pl-5 text-sm text-slate-300 space-y-1">
-          <li>Selecione um lançamento de despesa "Pago".</li>
-          <li>Clique em <strong>Novo Processo</strong> para vincular orçamentos (3 cotações).</li>
-          <li>O sistema gera automaticamente: <strong>Ata, Mapa Comparativo, Ordem de Compra e Recibo</strong>.</li>
-        </ul>
-      </div>
-    )
-  },
-  settings: {
-    title: 'Configurações',
-    text: (
-      <div className="flex flex-col gap-2">
-        <p>Ajuste os parâmetros do sistema:</p>
-        <ul className="list-disc pl-5 text-sm text-slate-300 space-y-1">
-          <li>Cadastre <strong>Fornecedores</strong>, <strong>Contas Bancárias</strong> e <strong>Rubricas</strong>.</li>
-          <li>Gerencie usuários e permissões (se for Admin).</li>
-        </ul>
-      </div>
-    )
+    title: "Guia de Prestação de Contas",
+    description: "Fluxo Documental e Cotações",
+    sections: [
+      {
+        title: "Processo de Cotação",
+        icon: "payments",
+        items: [
+          { label: "Mínimo de Orçamentos", desc: "Todo processo exige no mínimo 3 cotações de fornecedores distintos." },
+          { label: "Vencedor", desc: "O sistema seleciona o menor preço. Justifique caso escolha outro." }
+        ]
+      },
+      {
+        title: "Documentação",
+        icon: "fact_check",
+        items: [
+          { label: "Documentos", desc: "Gere Ata, Mapa e Ordem de Compra automaticamente após as cotações." },
+          { label: "Checklist", desc: "Certifique-se de anexar Notas Fiscais e Certidões vigentes." }
+        ]
+      }
+    ]
   },
   schools: {
-    title: 'Gestão Escolar',
-    text: (
-      <div className="flex flex-col gap-2">
-        <p>Cadastre e gerencie as unidades escolares.</p>
-        <p>É fundamental manter os dados da escola (CNPJ, Endereço, Diretor) atualizados, pois eles saem no cabeçalho de todos os documentos oficiais.</p>
-      </div>
-    )
+    title: "Gestão de Escolas",
+    description: "Configuração de Unidades",
+    sections: [
+      {
+        title: "Cadastro e Acesso",
+        icon: "school",
+        items: [
+          { label: "Dados Oficiais", desc: "Mantenha CNPJ e Códigos INEP/SEEC atualizados para os relatórios." },
+          { label: "Regionais", desc: "Vincule a escola a um GEE para monitoramento técnico correto." }
+        ]
+      }
+    ]
+  },
+  users: {
+    title: "Gestão de Usuários",
+    description: "Controle de Acessos e Perfis",
+    sections: [
+      {
+        title: "Aprovação e Perfis",
+        icon: "manage_accounts",
+        items: [
+          { label: "Novos Usuários", desc: "Aprove ou rejeite cadastros pendentes. Defina o papel (ADM, Diretor, etc.) corretamente." },
+          { label: "Vínculo Escolar", desc: "Certifique-se de associar diretores e técnicos às suas respectivas escolas ou regionais." }
+        ]
+      }
+    ]
+  },
+  reconciliation: {
+    title: "Conciliação Bancária",
+    description: "Sincronização com Extrato OFX/CSV",
+    sections: [
+      {
+        title: "Processo de Importação",
+        icon: "upload_file",
+        items: [
+          { label: "Formatos", desc: "Importe extratos em formato OFX ou CSV gerados pelo seu Internet Banking." },
+          { label: "Manual de Match", desc: "O sistema tenta cruzar valores automaticamente. Use o manual para ajustes finos." }
+        ]
+      }
+    ]
+  },
+  vault: {
+    title: "Cofre de Documentos",
+    description: "Repositório Seguro de Arquivos",
+    sections: [
+      {
+        title: "Organização",
+        icon: "folder",
+        items: [
+          { label: "Pesquisa Rápida", desc: "Localize notas fiscais, atas e comprovantes por escola ou período." },
+          { label: "Segurança", desc: "Documentos aqui armazenados são protegidos por criptografia e backups diários." }
+        ]
+      }
+    ]
   }
 };
 
@@ -84,7 +147,13 @@ const Topbar: React.FC<TopbarProps> = ({ user, activePageName }) => {
     reports: 'Relatórios & Auditoria',
     settings: 'Configurações do Sistema',
     schools: 'Gestão de Escolas',
-    help: 'Ajuda & Suporte'
+    help: 'Ajuda & Suporte',
+    waiting: 'Introdução ao Sistema',
+    users: 'Gestão de Usuários',
+    vault: 'Cofre de Documentos',
+    reconciliation: 'Conciliação Bancária',
+    gee: 'Regionais (GEE)',
+    notifications: 'Central de Alertas'
   };
 
   useEffect(() => {
@@ -97,7 +166,7 @@ const Topbar: React.FC<TopbarProps> = ({ user, activePageName }) => {
       .subscribe();
 
     return () => { supabase.removeChannel(subscription); };
-  }, []);
+  }, [user.id]);
 
   const fetchNotifications = async () => {
     setLoadingNotifications(true);
@@ -112,17 +181,44 @@ const Topbar: React.FC<TopbarProps> = ({ user, activePageName }) => {
     setLoadingNotifications(false);
   };
 
+  const getBreadcrumbs = () => {
+    const categories: Record<string, { label: string, icon: string }> = {
+      dashboard: { label: 'Operações', icon: 'dashboard' },
+      entries: { label: 'Operações', icon: 'receipt_long' },
+      reports: { label: 'Operações', icon: 'description' },
+      vault: { label: 'Operações', icon: 'folder_managed' },
+      reconciliation: { label: 'Operações', icon: 'account_balance' },
+      schools: { label: 'Gestão', icon: 'school' },
+      gee: { label: 'Gestão', icon: 'map' },
+      users: { label: 'Gestão', icon: 'group' },
+      notifications: { label: 'Suporte', icon: 'notifications' },
+      settings: { label: 'Suporte', icon: 'settings' },
+      help: { label: 'Suporte', icon: 'help' },
+      waiting: { label: 'Início', icon: 'hourglass_empty' }
+    };
+
+    const cat = categories[activePageName] || { label: 'Sistema', icon: 'grid_view' };
+    const page = pageTitles[activePageName] || 'Página';
+
+    return (
+      <nav className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] font-black text-slate-500 mb-1">
+        <span className="material-symbols-outlined text-[14px]">{cat.icon}</span>
+        <span>{cat.label}</span>
+        <span className="text-slate-700">/</span>
+        <span className="text-primary">{page}</span>
+      </nav>
+    );
+  };
+
   return (
     <>
-      <header className="flex items-center justify-between border-b border-surface-border bg-background-dark/95 backdrop-blur px-6 py-4 sticky top-0 z-20">
+      <header className="flex items-center justify-between border-b border-white/5 bg-[#0f172a]/80 backdrop-blur-xl px-6 py-4 sticky top-0 z-[55]">
         <div className="flex items-center gap-4">
           <div className="flex flex-col">
-            <h2 className="text-white text-xl font-bold leading-tight">
+            {getBreadcrumbs()}
+            <h2 className="text-white text-xl font-black tracking-tight leading-none overflow-hidden truncate">
               {pageTitles[activePageName] || 'BRN Suite'}
             </h2>
-            <p className="text-text-secondary text-sm hidden sm:block">
-              {activePageName === 'dashboard' ? `Bem-vindo de volta, ${user.name.split(' ')[0]}.` : 'Controle financeiro inteligente.'}
-            </p>
           </div>
         </div>
 
@@ -132,17 +228,19 @@ const Topbar: React.FC<TopbarProps> = ({ user, activePageName }) => {
             {/* Notifications Button */}
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className={`relative flex h-10 w-10 items-center justify-center rounded-lg border transition-colors ${showNotifications ? 'bg-primary text-white border-primary' : 'bg-card-dark border-border-dark text-white hover:bg-border-dark'}`}
+              className={`relative flex h-10 w-10 items-center justify-center rounded-lg border transition-colors ${showNotifications ? 'bg-primary text-white border-primary' : 'bg-[#1e293b] border-white/5 text-white hover:bg-white/10'}`}
             >
               <span className="material-symbols-outlined text-[20px]">notifications</span>
-              {notifications.some(n => !n.is_read) && (
-                <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500 border border-card-dark shadow-[0_0_8px_rgba(239,68,68,0.8)]"></span>
+              {notifications.filter(n => !n.is_read).length > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-black text-white ring-2 ring-[#0f172a] shadow-lg animate-pulse">
+                  {notifications.filter(n => !n.is_read).length}
+                </span>
               )}
             </button>
 
             {/* Notifications Popup */}
             {showNotifications && (
-              <div className="absolute top-12 right-0 w-80 bg-[#0f172a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+              <div className="absolute top-12 right-0 w-80 bg-[#0f172a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-20 animate-in fade-in slide-in-from-top-2">
                 <div className="p-4 border-b border-white/5 bg-white/[0.02] flex justify-between items-center">
                   <span className="text-xs font-black text-white uppercase tracking-widest">Alertas Recentes</span>
                   <div className="flex items-center gap-2">
@@ -162,9 +260,9 @@ const Topbar: React.FC<TopbarProps> = ({ user, activePageName }) => {
                       {notifications.map((n) => (
                         <div key={n.id} className={`p-4 transition-colors flex gap-3 ${!n.is_read ? 'bg-primary/5' : 'opacity-60'}`}>
                           <div className={`mt-0.5 rounded-lg w-8 h-8 flex items-center justify-center ${n.type === 'error' ? 'bg-red-500/20 text-red-500' :
-                              n.type === 'warning' ? 'bg-amber-500/20 text-amber-500' :
-                                n.type === 'success' ? 'bg-emerald-500/20 text-emerald-500' :
-                                  'bg-blue-500/20 text-blue-500'
+                            n.type === 'warning' ? 'bg-amber-500/20 text-amber-500' :
+                              n.type === 'success' ? 'bg-emerald-500/20 text-emerald-500' :
+                                'bg-blue-500/20 text-blue-500'
                             }`}>
                             <span className="material-symbols-outlined text-sm">{
                               n.type === 'error' ? 'error' :
@@ -185,7 +283,7 @@ const Topbar: React.FC<TopbarProps> = ({ user, activePageName }) => {
                 </div>
                 <div className="p-3 bg-white/[0.02] border-t border-white/5 text-center">
                   <button
-                    onClick={() => { setShowNotifications(false); /* Assuming parent or current page changes */ window.dispatchEvent(new CustomEvent('changePage', { detail: 'notifications' })); }}
+                    onClick={() => { setShowNotifications(false); window.dispatchEvent(new CustomEvent('changePage', { detail: 'notifications' })); }}
                     className="text-[10px] font-black text-primary uppercase hover:underline tracking-widest"
                   >
                     Ver todas as notificações
@@ -197,7 +295,7 @@ const Topbar: React.FC<TopbarProps> = ({ user, activePageName }) => {
             {/* Help Button */}
             <button
               onClick={() => setShowHelp(true)}
-              className="flex h-10 w-10 items-center justify-center rounded-lg bg-card-dark border border-border-dark text-white hover:bg-border-dark transition-colors"
+              className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#1e293b] border border-white/5 text-white hover:bg-white/10 transition-colors"
             >
               <span className="material-symbols-outlined text-[20px]">contact_support</span>
             </button>
@@ -207,29 +305,14 @@ const Topbar: React.FC<TopbarProps> = ({ user, activePageName }) => {
       </header>
 
       {/* Help Modal */}
-      {showHelp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setShowHelp(false)}>
-          <div className="bg-[#1e293b] border border-slate-700 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="bg-primary p-6 flex items-start gap-4">
-              <div className="bg-white/20 p-2 rounded-lg text-white">
-                <span className="material-symbols-outlined text-2xl">school</span>
-              </div>
-              <div>
-                <h3 className="text-white font-bold text-lg">Como funciona?</h3>
-                <p className="text-blue-100 text-sm">{pageTitles[activePageName]}</p>
-              </div>
-              <button onClick={() => setShowHelp(false)} className="ml-auto text-white/70 hover:text-white"><span className="material-symbols-outlined">close</span></button>
-            </div>
-            <div className="p-6 text-slate-300 leading-relaxed text-sm">
-              {HELP_CONTENT[activePageName] ? HELP_CONTENT[activePageName].text : (
-                <p>Selecione uma página para ver as instruções específicas.</p>
-              )}
-            </div>
-            <div className="p-4 bg-black/20 border-t border-slate-700 flex justify-end">
-              <button onClick={() => setShowHelp(false)} className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg text-sm font-bold transition-colors">Entendi</button>
-            </div>
-          </div>
-        </div>
+      {HELP_CONTENT[activePageName] && (
+        <HelpModal
+          isOpen={showHelp}
+          onClose={() => setShowHelp(false)}
+          title={HELP_CONTENT[activePageName].title}
+          description={HELP_CONTENT[activePageName].description}
+          sections={HELP_CONTENT[activePageName].sections}
+        />
       )}
     </>
   );

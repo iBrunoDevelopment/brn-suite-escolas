@@ -45,7 +45,8 @@ const Settings: React.FC<{ user: User }> = ({ user }) => {
     { id: 'payment', label: 'Tipos de Pagamento', icon: 'payments', roles: ['Administrador', 'Operador'] },
     { id: 'periods', label: 'Períodos / Semestres', icon: 'calendar_month', roles: ['Administrador', 'Operador'] },
     { id: 'banks', label: 'Contas Bancárias', icon: 'account_balance', roles: ['Administrador', 'Operador'] },
-    { id: 'suppliers', label: 'Fornecedores', icon: 'local_shipping', roles: ['Administrador', 'Operador'] }
+    { id: 'suppliers', label: 'Fornecedores', icon: 'local_shipping', roles: ['Administrador', 'Operador'] },
+    { id: 'contacts', label: 'Contatos de Suporte', icon: 'contact_support', roles: ['Administrador'] }
   ].filter(tab => tab.roles.length === 0 || tab.roles.includes(user.role));
 
   // State for Cities
@@ -88,6 +89,17 @@ const Settings: React.FC<{ user: User }> = ({ user }) => {
   const [profileData, setProfileData] = useState({ name: user.name, email: user.email || '' });
   const [updatingProfile, setUpdatingProfile] = useState(false);
 
+  // Support Contacts State
+  const [supportContacts, setSupportContacts] = useState({
+    email: '',
+    phone: '',
+    whatsapp: '',
+    instagram: '',
+    website: ''
+  });
+  const [loadingContacts, setLoadingContacts] = useState(false);
+  const [savingContacts, setSavingContacts] = useState(false);
+
   useEffect(() => {
     if (activeTab === 'rubrics' || activeTab === 'banks') fetchAuxOptions();
     if (activeTab === 'rubrics') fetchRubricData();
@@ -95,7 +107,47 @@ const Settings: React.FC<{ user: User }> = ({ user }) => {
     if (activeTab === 'banks') fetchBankData();
     if (activeTab === 'payment') fetchPaymentData();
     if (activeTab === 'periods') fetchPeriodData();
+    if (activeTab === 'contacts') fetchSupportContacts();
   }, [activeTab]);
+
+  const fetchSupportContacts = async () => {
+    setLoadingContacts(true);
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'support_contacts')
+        .maybeSingle();
+
+      if (data?.value) {
+        setSupportContacts(data.value);
+      }
+    } catch (error) {
+      console.error('Error fetching support contacts:', error);
+    } finally {
+      setLoadingContacts(false);
+    }
+  };
+
+  const handleSaveContacts = async () => {
+    setSavingContacts(true);
+    try {
+      const { error } = await supabase
+        .from('system_settings')
+        .upsert({
+          key: 'support_contacts',
+          value: supportContacts,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+      alert('Contatos salvos com sucesso!');
+    } catch (error: any) {
+      alert(`Erro ao salvar contatos: ${error.message}`);
+    } finally {
+      setSavingContacts(false);
+    }
+  };
 
   // Effect to fetch cities when UF changes
   useEffect(() => {
@@ -231,12 +283,12 @@ const Settings: React.FC<{ user: User }> = ({ user }) => {
       return cleanValue
         .replace(/(\d{2})(\d)/, '($1) $2')
         .replace(/(\d{4})(\d)/, '$1-$2')
-        .replace(/(-\d{4})\d+?$/, '$1');
+        .slice(0, 14);
     }
     return cleanValue
       .replace(/(\d{2})(\d)/, '($1) $2')
-      .replace(/(\d{5})(\d)/, '$1-$2')
-      .replace(/(-\d{4})\d+?$/, '$1');
+      .replace(/(\d{1})(\d{4})(\d)/, '$1 $2-$3')
+      .slice(0, 16);
   };
 
   const formatCEP = (value: string) => {
@@ -969,9 +1021,9 @@ const Settings: React.FC<{ user: User }> = ({ user }) => {
                           type="text"
                           value={newSupplier.phone}
                           onChange={e => setNewSupplier({ ...newSupplier, phone: formatPhone(e.target.value) })}
-                          placeholder="(00) 00000-0000"
+                          placeholder="(00) 0 0000-0000"
                           className="bg-surface-dark border border-surface-border rounded px-3 py-2 text-sm text-white focus:border-primary outline-none"
-                          maxLength={15}
+                          maxLength={16}
                         />
                       </div>
                     </div>
@@ -1293,6 +1345,92 @@ const Settings: React.FC<{ user: User }> = ({ user }) => {
                       </div>
                     ))}
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'contacts' && (
+              <div className="flex flex-col gap-8 animate-in fade-in">
+                <div className="flex items-center gap-4 border-b border-surface-border pb-4">
+                  <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                    <span className="material-symbols-outlined text-3xl">contact_support</span>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white tracking-wider uppercase">Contatos Globais</h3>
+                    <p className="text-slate-400 text-sm italic">Estes contatos serão exibidos para todos os usuários na página de Ajuda e Suporte.</p>
+                  </div>
+                </div>
+
+                {loadingContacts ? (
+                  <div className="flex items-center justify-center py-12">
+                    <span className="material-symbols-outlined animate-spin text-primary text-4xl">sync</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-slate-400 font-bold uppercase">E-mail de Suporte</label>
+                      <input
+                        type="email"
+                        value={supportContacts.email}
+                        onChange={e => setSupportContacts({ ...supportContacts, email: e.target.value })}
+                        placeholder="contato@empresa.com"
+                        className="bg-[#111a22] border border-surface-border text-white rounded-lg px-4 py-2 focus:border-primary outline-none"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-slate-400 font-bold uppercase">Telefone de Contato</label>
+                      <input
+                        type="text"
+                        value={supportContacts.phone}
+                        onChange={e => setSupportContacts({ ...supportContacts, phone: formatPhone(e.target.value) })}
+                        placeholder="(00) 0 0000-0000"
+                        className="bg-[#111a22] border border-surface-border text-white rounded-lg px-4 py-2 focus:border-primary outline-none"
+                        maxLength={16}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-slate-400 font-bold uppercase">WhatsApp</label>
+                      <input
+                        type="text"
+                        value={supportContacts.whatsapp}
+                        onChange={e => setSupportContacts({ ...supportContacts, whatsapp: formatPhone(e.target.value) })}
+                        placeholder="(00) 0 0000-0000"
+                        className="bg-[#111a22] border border-surface-border text-white rounded-lg px-4 py-2 focus:border-primary outline-none"
+                        maxLength={16}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-slate-400 font-bold uppercase">Instagram</label>
+                      <input
+                        type="text"
+                        value={supportContacts.instagram}
+                        onChange={e => setSupportContacts({ ...supportContacts, instagram: e.target.value })}
+                        placeholder="@seunome"
+                        className="bg-[#111a22] border border-surface-border text-white rounded-lg px-4 py-2 focus:border-primary outline-none"
+                      />
+                    </div>
+                    <div className="md:col-span-2 flex flex-col gap-1">
+                      <label className="text-xs text-slate-400 font-bold uppercase">Site Oficial</label>
+                      <input
+                        type="text"
+                        value={supportContacts.website}
+                        onChange={e => setSupportContacts({ ...supportContacts, website: e.target.value })}
+                        placeholder="www.empresa.com.br"
+                        className="bg-[#111a22] border border-surface-border text-white rounded-lg px-4 py-2 focus:border-primary outline-none"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2 flex justify-end pt-4">
+                      <button
+                        onClick={handleSaveContacts}
+                        disabled={savingContacts}
+                        className="bg-primary hover:bg-primary-hover text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-primary/20 transition-all active:scale-95 flex items-center gap-2"
+                      >
+                        <span className="material-symbols-outlined">{savingContacts ? 'sync' : 'save'}</span>
+                        {savingContacts ? 'Salvando...' : 'Salvar Contatos Globais'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

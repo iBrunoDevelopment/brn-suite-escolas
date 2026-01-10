@@ -46,13 +46,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
     try {
       if (isRegistering) {
-        // Validação de escola selecionada
-        if (!selectedSchoolId) {
-          setErrorMsg('Por favor, selecione uma escola');
-          setLoading(false);
-          return;
-        }
-
         // --- REGISTER FLOW ---
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email,
@@ -62,7 +55,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         if (authError) throw authError;
 
         if (authData.user) {
-          // Create profile with Cliente role by default
+          // Create profile with Cliente role by default, no school assigned yet
           const { error: profileError } = await supabase
             .from('users')
             .insert({
@@ -70,13 +63,33 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               email: email,
               name: fullName,
               role: UserRole.CLIENTE, // Role padrão: Cliente (apenas visualização)
-              school_id: selectedSchoolId,
-              active: true // Ativo por padrão, mas com permissões limitadas
+              school_id: null, // Sem escola vinculada inicialmente
+              active: true // Permitir login para ver a página de espera
             });
 
           if (profileError) {
-            console.error("Profile creation failed:", profileError);
-            setErrorMsg("Conta criada, mas houve erro ao salvar perfil no banco. Contate o administrador.");
+            // Lógica de "Claim Profile": Se o perfil já foi criado pelo Admin (pré-cadastro)
+            if (profileError.code === '23505') { // Unique violation (email duplication)
+              console.log("Perfil pré-existente detectado. Executando vínculo seguro...");
+
+              // Chamada RPC Segura
+              const { data: claimSuccess, error: claimError } = await supabase.rpc('claim_profile_by_email');
+
+              if (claimSuccess && !claimError) {
+                setSuccessMsg('Conta vinculada com sucesso! Seu perfil pré-aprovado foi ativado.');
+                setIsRegistering(false);
+                setEmail('');
+                setPassword('');
+                setFullName('');
+                return;
+              } else {
+                console.error("Falha no vínculo RPC:", claimError);
+                setErrorMsg(`Erro ao vincular perfil: ${claimError?.message || 'Erro Desconhecido ao tentar vincular conta pré-existente.'}`);
+              }
+            } else {
+              console.error("Profile creation failed detail:", profileError);
+              setErrorMsg(`Erro ao salvar perfil: ${profileError.message}`);
+            }
           } else {
             setSuccessMsg('Conta criada com sucesso! Agora você pode fazer login.');
             setIsRegistering(false);
@@ -98,33 +111,64 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         if (authError) throw authError;
 
         if (authData.user) {
-          // Check if profile exists, if not, create it (Self-Healing)
-          const { data: profile, error: fetchError } = await supabase
+          // Check if profile exists
+          let { data: profile, error: fetchError } = await supabase
             .from('users')
             .select('*')
             .eq('id', authData.user.id)
             .maybeSingle();
 
-          if (!profile && !fetchError) {
-            console.log("User has no profile (legacy user?), creating one...");
-            const { data: firstSchool } = await supabase.from('schools').select('id').limit(1).single();
-            const { error: insertError } = await supabase.from('users').insert({
-              id: authData.user.id,
-              email: authData.user.email!,
-              name: 'Usuário Recuperado',
-              role: UserRole.CLIENTE, // Usuários recuperados também começam como Cliente
-              school_id: firstSchool?.id || null,
-              active: true
-            });
-            if (insertError) console.error("Self-healing failed:", insertError);
+          // Self-Healing & Vínculo RPC no Login
+          if (!profile) {
+            console.log("Perfil não encontrado via ID. Tentando vincular via RPC (Login Flow)...");
+
+            // 1. Tenta vincular conta legada
+            const { data: claimed } = await supabase.rpc('claim_profile_by_email');
+
+            if (claimed) {
+              // 2. Se vinculou, recarrega o perfil (agora deve existir no ID correto)
+              const { data: refreshed } = await supabase.from('users').select('*').eq('id', authData.user.id).single();
+              profile = refreshed;
+            } else {
+              // 3. Se não vinculou, cria novo perfil (Self-Healing Básico)
+              console.log("Nenhum perfil pré-existente. Criando novo...");
+              const newProfile = {
+                id: authData.user.id,
+                email: authData.user.email!,
+                name: fullName || 'Usuário',
+                role: UserRole.CLIENTE,
+                school_id: null,
+                active: true
+              };
+
+              const { error: insertError } = await supabase.from('users').insert(newProfile);
+
+              if (insertError) {
+                console.error("Self-healing failed:", insertError);
+                if (insertError.code === '23505') {
+                  // Isso é raro aqui se o RPC falhou, mas pode acontecer se houver race condition
+                  setErrorMsg('Erro de conflito. Seu email existe no cadastro administrativo mas o vínculo falhou. Contate o suporte.');
+                  return;
+                }
+                throw insertError;
+              }
+              profile = newProfile as any;
+            }
           }
 
-          // Verificar se o usuário está ativo
-          if (profile && profile.active === false) {
-            await supabase.auth.signOut();
-            setErrorMsg('Sua conta está desativada. Entre em contato com o administrador.');
-            setLoading(false);
-            return;
+          // Notificar o App.tsx sobre o login bem-sucedido
+          if (profile) {
+            onLogin({
+              id: profile.id,
+              name: profile.name,
+              email: profile.email,
+              role: profile.role as UserRole,
+              schoolId: profile.school_id,
+              assignedSchools: profile.assigned_schools,
+              active: profile.active,
+              gee: profile.gee,
+              avatar_url: profile.avatar_url
+            });
           }
         }
       }
@@ -161,14 +205,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         )}
 
         {isRegistering && !successMsg && (
-          <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400 text-xs animate-in slide-in-from-top-2 duration-300">
+          <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-xl text-primary text-xs animate-in slide-in-from-top-2 duration-300">
             <div className="flex items-start gap-3">
-              <span className="material-symbols-outlined text-xl">info</span>
+              <span className="material-symbols-outlined text-xl">rocket_launch</span>
               <div>
-                <p className="font-bold mb-1 uppercase tracking-wider text-[10px]">Informação de Cadastro</p>
-                <p className="text-blue-300 leading-relaxed">
-                  Novas contas são criadas com acesso de <strong>Cliente</strong> (somente leitura).
-                  Selecione sua escola abaixo para prosseguir.
+                <p className="font-bold mb-1 uppercase tracking-wider text-[10px]">Bem-vindo à Jornada!</p>
+                <p className="text-slate-300 leading-relaxed">
+                  Crie sua conta agora para conhecer todas as vantagens e funcionalidades do sistema.
+                  O acesso aos dados da sua escola será liberado após a validação do Administrador.
                 </p>
               </div>
             </div>
@@ -177,42 +221,20 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
         <form onSubmit={handleAuth} className="flex flex-col gap-5">
           {isRegistering && (
-            <>
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Nome Completo</label>
-                <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xl">person</span>
-                  <input
-                    type="text"
-                    required
-                    className="bg-[#0f172a] border border-[#334155] text-white text-sm rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary block w-full pl-11 p-3 transition-all outline-none"
-                    placeholder="Seu nome"
-                    value={fullName}
-                    onChange={e => setFullName(e.target.value)}
-                  />
-                </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Nome Completo</label>
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xl">person</span>
+                <input
+                  type="text"
+                  required
+                  className="bg-[#0f172a] border border-[#334155] text-white text-sm rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary block w-full pl-11 p-3 transition-all outline-none"
+                  placeholder="Seu nome"
+                  value={fullName}
+                  onChange={e => setFullName(e.target.value)}
+                />
               </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Sua Escola</label>
-                <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xl">school</span>
-                  <select
-                    required
-                    value={selectedSchoolId}
-                    onChange={e => setSelectedSchoolId(e.target.value)}
-                    className="bg-[#0f172a] border border-[#334155] text-white text-sm rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary block w-full pl-11 p-3 transition-all outline-none appearance-none"
-                  >
-                    <option value="">Selecione sua escola</option>
-                    {schools.map(school => (
-                      <option key={school.id} value={school.id}>
-                        {school.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </>
+            </div>
           )}
 
           <div className="flex flex-col gap-2">
