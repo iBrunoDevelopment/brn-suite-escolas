@@ -31,7 +31,7 @@ const App: React.FC = () => {
             try {
                 const { data, error } = await supabase.auth.getSession();
                 if (error) {
-                    console.warn("Auth check:", error.message);
+
                     setLoading(false);
                     return;
                 }
@@ -41,7 +41,7 @@ const App: React.FC = () => {
                     setLoading(false);
                 }
             } catch (err) {
-                console.error("Unexpected:", err);
+
                 setLoading(false);
             }
         };
@@ -73,7 +73,7 @@ const App: React.FC = () => {
     const fetchProfile = async (userId: string, email: string) => {
         setLoading(true);
         try {
-            console.log("Iniciando busca de perfil para ID:", userId);
+
 
             let { data, error } = await supabase
                 .from('users')
@@ -82,15 +82,15 @@ const App: React.FC = () => {
                 .maybeSingle();
 
             if (!data && !error) {
-                console.log("Perfil não encontrado. Iniciando Self-Healing no App...");
+
                 const { data: claimed } = await supabase.rpc('claim_profile_by_email');
 
                 if (claimed) {
-                    console.log("Perfil vinculado via RPC. Recarregando...");
+                    // Perfil vinculado via RPC. Recarregando...
                     const { data: refreshed } = await supabase.from('users').select('*').eq('id', userId).single();
                     data = refreshed;
                 } else {
-                    console.log("Criando novo perfil básico...");
+                    // Criando novo perfil básico...
                     const newProfile = {
                         id: userId,
                         email: email,
@@ -104,7 +104,8 @@ const App: React.FC = () => {
                     if (!insertError) {
                         data = newProfile as any;
                     } else {
-                        console.error("Falha ao criar perfil no self-healing:", insertError);
+                        // Falha ao criar perfil no self-healing
+
                     }
                 }
             }
@@ -125,7 +126,7 @@ const App: React.FC = () => {
                 setCurrentUser(null);
             }
         } catch (err) {
-            console.error('Erro inesperado ao carregar perfil:', err);
+
         } finally {
             setLoading(false);
         }
