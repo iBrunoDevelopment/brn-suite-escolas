@@ -24,13 +24,14 @@ const App: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
     useEffect(() => {
         const initSession = async () => {
             try {
                 const { data, error } = await supabase.auth.getSession();
                 if (error) {
-                    // Using console.warn instead of error to not alarm users if it's just a session expiry
-                    console.warn("Auth check:", error.message);
+
                     setLoading(false);
                     return;
                 }
@@ -40,7 +41,7 @@ const App: React.FC = () => {
                     setLoading(false);
                 }
             } catch (err) {
-                console.error("Unexpected:", err);
+
                 setLoading(false);
             }
         };
@@ -56,7 +57,10 @@ const App: React.FC = () => {
         });
 
         const handlePageChangeEvent = (e: any) => {
-            if (e.detail) setActivePage(e.detail);
+            if (e.detail) {
+                setActivePage(e.detail);
+                setIsMobileMenuOpen(false); // Close mobile menu on navigation
+            }
         };
         window.addEventListener('changePage', handlePageChangeEvent);
 
@@ -69,54 +73,44 @@ const App: React.FC = () => {
     const fetchProfile = async (userId: string, email: string) => {
         setLoading(true);
         try {
-            console.log("Iniciando busca de perfil para ID:", userId);
-            
-            // 1. Tenta buscar o perfil existente
+
+
             let { data, error } = await supabase
                 .from('users')
                 .select('*')
                 .eq('id', userId)
                 .maybeSingle();
 
-            // 2. SELF-HEALING: Se não encontrou, tenta recuperar ou criar
             if (!data && !error) {
-                console.log("Perfil não encontrado. Iniciando Self-Healing no App...");
-                
-                // Tenta vincular conta pré-existente (RPC)
+
                 const { data: claimed } = await supabase.rpc('claim_profile_by_email');
-                
+
                 if (claimed) {
-                   console.log("Perfil vinculado via RPC. Recarregando...");
-                   const { data: refreshed } = await supabase.from('users').select('*').eq('id', userId).single();
-                   data = refreshed;
+                    // Perfil vinculado via RPC. Recarregando...
+                    const { data: refreshed } = await supabase.from('users').select('*').eq('id', userId).single();
+                    data = refreshed;
                 } else {
-                   // Cria novo perfil se não existir
-                   console.log("Criando novo perfil básico...");
-                   const newProfile = {
-                       id: userId,
-                       email: email,
-                       name: email.split('@')[0], // Nome provisório
-                       role: UserRole.CLIENTE,
-                       school_id: null,
-                       active: true
-                   };
-                   
-                   const { error: insertError } = await supabase.from('users').insert(newProfile);
-                   if (!insertError) {
-                       data = newProfile as any;
-                   } else {
-                       console.error("Falha ao criar perfil no self-healing:", insertError);
-                   }
+                    // Criando novo perfil básico...
+                    const newProfile = {
+                        id: userId,
+                        email: email,
+                        name: email.split('@')[0],
+                        role: UserRole.CLIENTE,
+                        school_id: null,
+                        active: true
+                    };
+
+                    const { error: insertError } = await supabase.from('users').insert(newProfile);
+                    if (!insertError) {
+                        data = newProfile as any;
+                    } else {
+                        // Falha ao criar perfil no self-healing
+
+                    }
                 }
             }
 
-            if (error) {
-                console.error('Erro ao buscar perfil no banco:', error.message);
-                return;
-            }
-
             if (data) {
-                console.log("Perfil carregado com sucesso:", data.role);
                 setCurrentUser({
                     id: data.id,
                     name: data.name,
@@ -129,11 +123,10 @@ const App: React.FC = () => {
                     avatar_url: data.avatar_url
                 });
             } else {
-                console.warn('Perfil não pôde ser carregado ou criado.');
                 setCurrentUser(null);
             }
         } catch (err) {
-            console.error('Erro inesperado ao carregar perfil:', err);
+
         } finally {
             setLoading(false);
         }
@@ -189,17 +182,35 @@ const App: React.FC = () => {
     const isWaiting = currentUser.active === false || !isAuthorized;
 
     return (
-        <div className="flex h-screen w-full overflow-hidden bg-background-light dark:bg-background-dark font-display">
+        <div className="flex h-screen w-full overflow-hidden bg-background-light dark:bg-background-dark font-display relative">
+            {/* Mobile Sidebar Overlay */}
+            {isMobileMenuOpen && (
+                <div
+                    className="fixed inset-0 bg-black/60 z-50 md:hidden backdrop-blur-sm transition-opacity"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                />
+            )}
+
             <Sidebar
                 user={currentUser}
                 activePage={activePage}
-                onPageChange={setActivePage}
+                onPageChange={(page) => {
+                    setActivePage(page);
+                    setIsMobileMenuOpen(false);
+                }}
                 onLogout={handleLogout}
                 isCollapsed={isSidebarCollapsed}
                 onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                isMobileOpen={isMobileMenuOpen}
+                onMobileClose={() => setIsMobileMenuOpen(false)}
             />
+
             <div className={`flex flex-col flex-1 min-w-0 transition-all duration-500`}>
-                <Topbar user={currentUser} activePageName={isWaiting ? 'waiting' : activePage} />
+                <Topbar
+                    user={currentUser}
+                    activePageName={isWaiting ? 'waiting' : activePage}
+                    onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
+                />
                 <main className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
                     {renderContent()}
                 </main>

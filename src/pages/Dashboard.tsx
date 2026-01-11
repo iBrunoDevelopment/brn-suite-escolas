@@ -24,6 +24,7 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
   const [alerts, setAlerts] = useState<any[]>([]);
 
   // Filters State
+  const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     schoolId: user.schoolId || '',
     program: '', // Conta
@@ -409,120 +410,155 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
 
   return (
     <div className="flex flex-col gap-6 w-full">
-      {/* Filters Summary */}
-      <div className="flex flex-col xl:flex-row gap-4 items-end justify-between bg-card-dark/50 p-4 rounded-xl border border-border-dark">
-        <div className="flex flex-col md:flex-row gap-4 w-full xl:w-auto flex-wrap">
+      {/* Filters Summary & Actions */}
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between gap-4 bg-card-dark/50 p-3 rounded-xl border border-border-dark overflow-x-auto">
+          {/* Left side: Active Filters Summary or just toggle */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${showFilters ? 'bg-primary text-white border-primary' : 'bg-white/5 text-white border-white/10 hover:bg-white/10'}`}
+            >
+              <span className="material-symbols-outlined text-[18px]">{showFilters ? 'close' : 'filter_list'}</span>
+              {showFilters ? 'Fechar Filtros' : 'Filtros Avançados'}
+            </button>
 
-          {/* School Filter */}
-          <div className="flex flex-col gap-1.5 w-full md:w-56">
-            <label className="text-text-secondary text-xs font-semibold uppercase tracking-wider">Escola</label>
-            {user.schoolId ? (
-              <div className="text-white font-bold capitalize px-3 py-2 bg-background-dark rounded border border-border-dark truncate">
-                {/* Try to find name if possible, else ID */}
-                {availableOptions.schools.find(s => s.id === user.schoolId)?.name || 'Minha Escola'}
+            {/* Show active filter badges if collapsed */}
+            {!showFilters && (
+              <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+                {filters.schoolId && filters.schoolId !== (user.schoolId || '') && (
+                  <span className="px-2 py-1 rounded-lg bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 text-[10px] font-bold whitespace-nowrap">
+                    {availableOptions.schools.find(s => s.id === filters.schoolId)?.name?.substring(0, 15)}...
+                  </span>
+                )}
+                {filters.program && (
+                  <span className="px-2 py-1 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[10px] font-bold whitespace-nowrap">
+                    {availableOptions.programs.find(p => p.id === filters.program)?.name}
+                  </span>
+                )}
+                {filters.nature && (
+                  <span className="px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold whitespace-nowrap">
+                    {filters.nature}
+                  </span>
+                )}
               </div>
-            ) : (
-              <select
-                value={filters.schoolId}
-                onChange={(e) => setFilters(prev => ({ ...prev, schoolId: e.target.value }))}
-                className="bg-background-dark text-white border border-border-dark rounded-lg px-3 py-2 text-sm focus:border-primary outline-none"
-              >
-                <option value="">Todas as Escolas</option>
-                {accessibleSchools.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
             )}
           </div>
 
-          {/* Account/Program Filter */}
-          <div className="flex flex-col gap-1.5 w-full md:w-48">
-            <label className="text-text-secondary text-xs font-semibold uppercase tracking-wider">Conta / Programa</label>
-            <select
-              value={filters.program}
-              onChange={(e) => setFilters(prev => ({ ...prev, program: e.target.value, rubric: '' }))}
-              className="bg-background-dark text-white border border-border-dark rounded-lg px-3 py-2 text-sm focus:border-primary outline-none"
-            >
-              <option value="">Todas</option>
-              {availableOptions.programs.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+          {/* Right side: Actions */}
+          <div className="flex items-center gap-2">
+            {user.role === UserRole.ADMIN && (
+              <button
+                onClick={() => setShowBroadcast(true)}
+                className="flex items-center gap-2 px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap"
+              >
+                <span className="material-symbols-outlined text-sm">campaign</span>
+                <span className="hidden md:inline">Comunicado</span>
+              </button>
+            )}
+            <button onClick={fetchDashboardData} className="flex items-center justify-center gap-2 bg-primary hover:bg-blue-600 text-white w-10 h-10 md:w-auto md:h-auto md:px-5 md:py-2.5 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-blue-500/20 active:scale-95">
+              <span className="material-symbols-outlined text-[18px]">refresh</span>
+              <span className="hidden md:inline">Atualizar</span>
+            </button>
           </div>
+        </div>
 
-          {/* Rubric Filter */}
-          <div className="flex flex-col gap-1.5 w-full md:w-48">
-            <label className="text-text-secondary text-xs font-semibold uppercase tracking-wider">Rubrica</label>
-            <select
-              value={filters.rubric}
-              onChange={(e) => setFilters(prev => ({ ...prev, rubric: e.target.value }))}
-              className="bg-background-dark text-white border border-border-dark rounded-lg px-3 py-2 text-sm focus:border-primary outline-none"
-            >
-              <option value="">Todas</option>
-              {availableOptions.rubrics
-                .filter(r => !filters.program || r.program_id === filters.program)
-                .map(r => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
+        {/* Collapsible Filters Area */}
+        {showFilters && (
+          <div className="bg-[#111a22] border border-surface-border rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end animate-in fade-in slide-in-from-top-4">
+
+            {/* School Filter */}
+            <div className="flex flex-col gap-1.5 w-full">
+              <label className="text-text-secondary text-xs font-semibold uppercase tracking-wider">Escola</label>
+              {user.schoolId ? (
+                <div className="text-white font-bold capitalize px-3 py-2 bg-background-dark rounded border border-border-dark truncate text-xs">
+                  {availableOptions.schools.find(s => s.id === user.schoolId)?.name || 'Minha Escola'}
+                </div>
+              ) : (
+                <select
+                  value={filters.schoolId}
+                  onChange={(e) => setFilters(prev => ({ ...prev, schoolId: e.target.value }))}
+                  className="bg-background-dark text-white border border-border-dark rounded-lg px-3 py-2 text-xs focus:border-primary outline-none"
+                >
+                  <option value="">Todas as Escolas</option>
+                  {accessibleSchools.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* Account/Program Filter */}
+            <div className="flex flex-col gap-1.5 w-full">
+              <label className="text-text-secondary text-xs font-semibold uppercase tracking-wider">Conta / Programa</label>
+              <select
+                value={filters.program}
+                onChange={(e) => setFilters(prev => ({ ...prev, program: e.target.value, rubric: '' }))}
+                className="bg-background-dark text-white border border-border-dark rounded-lg px-3 py-2 text-xs focus:border-primary outline-none"
+              >
+                <option value="">Todas</option>
+                {availableOptions.programs.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
-            </select>
+              </select>
+            </div>
+
+            {/* Rubric Filter */}
+            <div className="flex flex-col gap-1.5 w-full">
+              <label className="text-text-secondary text-xs font-semibold uppercase tracking-wider">Rubrica</label>
+              <select
+                value={filters.rubric}
+                onChange={(e) => setFilters(prev => ({ ...prev, rubric: e.target.value }))}
+                className="bg-background-dark text-white border border-border-dark rounded-lg px-3 py-2 text-xs focus:border-primary outline-none"
+              >
+                <option value="">Todas</option>
+                {availableOptions.rubrics
+                  .filter(r => !filters.program || r.program_id === filters.program)
+                  .map(r => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+              </select>
+            </div>
+
+            {/* Natureza Filter */}
+            <div className="flex flex-col gap-1.5 w-full">
+              <label className="text-text-secondary text-xs font-semibold uppercase tracking-wider">Natureza</label>
+              <select
+                value={filters.nature}
+                onChange={(e) => setFilters(prev => ({ ...prev, nature: e.target.value }))}
+                className="bg-background-dark text-white border border-border-dark rounded-lg px-3 py-2 text-xs focus:border-primary outline-none"
+              >
+                <option value="">Todas</option>
+                <option value="Custeio">Custeio</option>
+                <option value="Capital">Capital</option>
+              </select>
+            </div>
+
+            {/* Supplier Filter */}
+            <div className="flex flex-col gap-1.5 w-full">
+              <label className="text-text-secondary text-xs font-semibold uppercase tracking-wider">Fornecedor</label>
+              <select
+                value={filters.supplier}
+                onChange={(e) => setFilters(prev => ({ ...prev, supplier: e.target.value }))}
+                className="bg-background-dark text-white border border-border-dark rounded-lg px-3 py-2 text-xs focus:border-primary outline-none"
+              >
+                <option value="">Todos</option>
+                {availableOptions.suppliers.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setFilters({ schoolId: user.schoolId || '', program: '', rubric: '', nature: '', supplier: '' })}
+                className="w-full bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-tighter h-9 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                Limpar Filtros
+              </button>
+            </div>
           </div>
-
-          {/* Natureza Filter */}
-          <div className="flex flex-col gap-1.5 w-full md:w-48">
-            <label className="text-text-secondary text-xs font-semibold uppercase tracking-wider">Natureza</label>
-            <select
-              value={filters.nature}
-              onChange={(e) => setFilters(prev => ({ ...prev, nature: e.target.value }))}
-              className="bg-background-dark text-white border border-border-dark rounded-lg px-3 py-2 text-sm focus:border-primary outline-none"
-            >
-              <option value="">Todas</option>
-              <option value="Custeio">Custeio</option>
-              <option value="Capital">Capital</option>
-            </select>
-          </div>
-
-          {/* Supplier Filter */}
-          <div className="flex flex-col gap-1.5 w-full md:w-48">
-            <label className="text-text-secondary text-xs font-semibold uppercase tracking-wider">Fornecedor</label>
-            <select
-              value={filters.supplier}
-              onChange={(e) => setFilters(prev => ({ ...prev, supplier: e.target.value }))}
-              className="bg-background-dark text-white border border-border-dark rounded-lg px-3 py-2 text-sm focus:border-primary outline-none"
-            >
-              <option value="">Todos</option>
-              {availableOptions.suppliers.map(s => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-          </div>
-
-        </div>
-
-        <div className="flex items-center gap-2">
-
-
-          {user.role === UserRole.ADMIN && (
-            <button
-              onClick={() => setShowBroadcast(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
-            >
-              <span className="material-symbols-outlined text-sm">campaign</span>
-              Comunicado
-            </button>
-          )}
-
-          {(filters.schoolId !== (user.schoolId || '') || filters.program || filters.rubric || filters.nature || filters.supplier) && (
-            <button
-              onClick={() => setFilters({ schoolId: user.schoolId || '', program: '', rubric: '', nature: '', supplier: '' })}
-              className="text-text-secondary hover:text-white text-sm px-3 py-2 transition-colors font-bold"
-            >
-              Limpar
-            </button>
-          )}
-          <button onClick={fetchDashboardData} className="flex items-center justify-center gap-2 bg-primary hover:bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-blue-500/20 active:scale-95">
-            <span className="material-symbols-outlined text-[18px]">refresh</span>
-          </button>
-        </div>
+        )}
       </div>
 
       {/* Stats Cards */}

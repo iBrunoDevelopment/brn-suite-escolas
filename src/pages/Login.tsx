@@ -34,7 +34,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       if (error) throw error;
       setSchools(data || []);
     } catch (error) {
-      console.error('Erro ao carregar escolas:', error);
+
     }
   };
 
@@ -70,7 +70,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           if (profileError) {
             // Lógica de "Claim Profile": Se o perfil já foi criado pelo Admin (pré-cadastro)
             if (profileError.code === '23505') { // Unique violation (email duplication)
-              console.log("Perfil pré-existente detectado. Executando vínculo seguro...");
+              // Perfil pré-existente detectado. Executando vínculo seguro...
 
               // Chamada RPC Segura
               const { data: claimSuccess, error: claimError } = await supabase.rpc('claim_profile_by_email');
@@ -83,11 +83,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 setFullName('');
                 return;
               } else {
-                console.error("Falha no vínculo RPC:", claimError);
+
                 setErrorMsg(`Erro ao vincular perfil: ${claimError?.message || 'Erro Desconhecido ao tentar vincular conta pré-existente.'}`);
               }
             } else {
-              console.error("Profile creation failed detail:", profileError);
+
               setErrorMsg(`Erro ao salvar perfil: ${profileError.message}`);
             }
           } else {
@@ -120,7 +120,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
           // Self-Healing & Vínculo RPC no Login
           if (!profile) {
-            console.log("Perfil não encontrado via ID. Tentando vincular via RPC (Login Flow)...");
+            // Perfil não encontrado via ID. Tentando vincular via RPC (Login Flow)...
 
             // 1. Tenta vincular conta legada
             const { data: claimed } = await supabase.rpc('claim_profile_by_email');
@@ -131,7 +131,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               profile = refreshed;
             } else {
               // 3. Se não vinculou, cria novo perfil (Self-Healing Básico)
-              console.log("Nenhum perfil pré-existente. Criando novo...");
+              // 3. Se não vinculou, cria novo perfil (Self-Healing Básico)
               const newProfile = {
                 id: authData.user.id,
                 email: authData.user.email!,
@@ -144,7 +144,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               const { error: insertError } = await supabase.from('users').insert(newProfile);
 
               if (insertError) {
-                console.error("Self-healing failed:", insertError);
+
                 if (insertError.code === '23505') {
                   // Isso é raro aqui se o RPC falhou, mas pode acontecer se houver race condition
                   setErrorMsg('Erro de conflito. Seu email existe no cadastro administrativo mas o vínculo falhou. Contate o suporte.');
