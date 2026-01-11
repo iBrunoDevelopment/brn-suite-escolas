@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '../types';
 import { supabase } from '../lib/supabaseClient';
+import HelpModal from './common/HelpModal';
 
 interface TopbarProps {
   user: User;
   activePageName: string;
+  onOpenMobileMenu?: () => void;
 }
-
-import HelpModal from './common/HelpModal';
 
 const HELP_CONTENT: Record<string, { title: string, description: string, sections: any[] }> = {
   dashboard: {
@@ -135,7 +135,7 @@ const HELP_CONTENT: Record<string, { title: string, description: string, section
   }
 };
 
-const Topbar: React.FC<TopbarProps> = ({ user, activePageName }) => {
+const Topbar: React.FC<TopbarProps> = ({ user, activePageName, onOpenMobileMenu }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
@@ -212,8 +212,16 @@ const Topbar: React.FC<TopbarProps> = ({ user, activePageName }) => {
 
   return (
     <>
-      <header className="flex items-center justify-between border-b border-white/5 bg-[#0f172a]/80 backdrop-blur-xl px-6 py-4 sticky top-0 z-[55]">
+      <header className="flex items-center justify-between border-b border-white/5 bg-[#0f172a]/80 backdrop-blur-xl px-4 md:px-6 py-4 sticky top-0 z-[55]">
         <div className="flex items-center gap-4">
+          {/* Mobile Menu Button */}
+          <button
+            onClick={onOpenMobileMenu}
+            className="md:hidden text-white p-1 hover:bg-white/10 rounded-lg"
+          >
+            <span className="material-symbols-outlined">menu</span>
+          </button>
+
           <div className="flex flex-col">
             {getBreadcrumbs()}
             <h2 className="text-white text-xl font-black tracking-tight leading-none overflow-hidden truncate">

@@ -10,9 +10,20 @@ interface SidebarProps {
     onLogout: () => void;
     isCollapsed: boolean;
     onToggleCollapse: () => void;
+    isMobileOpen?: boolean;
+    onMobileClose?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ user, activePage, onPageChange, onLogout, isCollapsed, onToggleCollapse }) => {
+const Sidebar: React.FC<SidebarProps> = ({
+    user,
+    activePage,
+    onPageChange,
+    onLogout,
+    isCollapsed,
+    onToggleCollapse,
+    isMobileOpen = false,
+    onMobileClose
+}) => {
     const [counts, setCounts] = React.useState({ notifications: 0, pendingUsers: 0 });
 
     React.useEffect(() => {
@@ -92,31 +103,47 @@ const Sidebar: React.FC<SidebarProps> = ({ user, activePage, onPageChange, onLog
 
     const navGroups = getNavGroups();
 
+    // Responsive classes
+    const mobileClasses = `fixed inset-y-0 left-0 transform ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out md:translate-x-0 md:relative`;
+    const desktopWidthClasses = `w-64 md:${isCollapsed ? 'w-20' : 'w-64'}`;
+
+    // Logic to show full content (labels, header text)
+    // Show if on mobile open OR if not collapsed on desktop
+    const showFull = isMobileOpen || !isCollapsed;
+
     return (
-        <aside className={`${isCollapsed ? 'w-20' : 'w-64'} bg-[#0f172a] border-r border-[#1e293b] flex flex-col transition-all duration-500 ease-in-out relative group/sidebar shadow-2xl z-[60]`}>
-            {/* Toggle Button */}
+        <aside className={`${mobileClasses} ${desktopWidthClasses} bg-[#0f172a] border-r border-[#1e293b] flex flex-col z-[60] shadow-2xl shrink-0`}>
+            {/* Toggle Button (Desktop Only) */}
             <button
                 onClick={onToggleCollapse}
-                className="absolute -right-3 top-20 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all z-50 border-2 border-[#0f172a]"
+                className="hidden md:flex absolute -right-3 top-20 w-6 h-6 bg-primary text-white rounded-full items-center justify-center shadow-lg hover:scale-110 transition-all z-50 border-2 border-[#0f172a]"
             >
                 <span className="material-symbols-outlined text-xs font-bold leading-none">
                     {isCollapsed ? 'chevron_right' : 'chevron_left'}
                 </span>
             </button>
 
+            {/* Close Button (Mobile Only) */}
+            <button
+                onClick={onMobileClose}
+                className="md:hidden absolute right-4 top-4 text-slate-400 hover:text-white"
+            >
+                <span className="material-symbols-outlined">close</span>
+            </button>
+
             {/* Header / Logo */}
-            <div className={`h-20 flex items-center ${isCollapsed ? 'justify-center' : 'px-6'} border-b border-[#1e293b]/50 overflow-hidden`}>
+            <div className={`h-20 flex items-center ${showFull ? 'px-6' : 'justify-center'} border-b border-[#1e293b]/50 overflow-hidden`}>
                 <div className="flex items-center gap-2 text-primary font-black text-2xl tracking-tighter shrink-0">
                     <span className="material-symbols-outlined text-3xl">account_balance</span>
-                    {!isCollapsed && <span className="animate-in fade-in slide-in-from-left-2">BRN <span className="text-white">Suite</span></span>}
+                    {showFull && <span className="animate-in fade-in slide-in-from-left-2">BRN <span className="text-white">Suite</span></span>}
                 </div>
             </div>
 
             {/* Navigation */}
-            <nav className={`flex-1 overflow-y-auto py-6 ${isCollapsed ? 'px-2' : 'px-4'} flex flex-col gap-6 scrollbar-hide`}>
+            <nav className={`flex-1 overflow-y-auto py-6 ${showFull ? 'px-4' : 'px-2'} flex flex-col gap-6 scrollbar-hide`}>
                 {navGroups.map((group, gIdx) => (
                     <div key={gIdx} className="flex flex-col gap-1.5">
-                        {!isCollapsed && (
+                        {showFull && (
                             <h5 className="px-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1 animate-in fade-in duration-500">
                                 {group.title}
                             </h5>
@@ -129,8 +156,8 @@ const Sidebar: React.FC<SidebarProps> = ({ user, activePage, onPageChange, onLog
                                 <button
                                     key={item.id}
                                     onClick={() => onPageChange(item.id)}
-                                    title={isCollapsed ? item.label : ''}
-                                    className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3 px-3'} py-2.5 rounded-xl text-sm font-bold transition-all duration-300 group/item relative ${activePage === item.id
+                                    title={!showFull ? item.label : ''}
+                                    className={`flex items-center ${showFull ? 'gap-3 px-3' : 'justify-center'} py-2.5 rounded-xl text-sm font-bold transition-all duration-300 group/item relative ${activePage === item.id
                                         ? 'bg-primary text-white shadow-xl shadow-primary/20 scale-[1.02]'
                                         : 'text-slate-400 hover:text-white hover:bg-white/5'
                                         }`}
@@ -138,11 +165,11 @@ const Sidebar: React.FC<SidebarProps> = ({ user, activePage, onPageChange, onLog
                                     <span className={`material-symbols-outlined text-[22px] shrink-0 ${activePage === item.id ? 'text-white' : 'text-slate-500 group-hover/item:text-primary transition-colors'}`}>
                                         {item.icon}
                                     </span>
-                                    {!isCollapsed && <span className="truncate animate-in fade-in slide-in-from-left-1">{item.label}</span>}
+                                    {showFull && <span className="truncate animate-in fade-in slide-in-from-left-1">{item.label}</span>}
 
                                     {/* Badge */}
                                     {hasBadge && (
-                                        <span className={`absolute ${isCollapsed ? '-top-1 -right-1' : 'right-3'} flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white ring-2 ring-[#0f172a] shadow-lg animate-bounce`}>
+                                        <span className={`absolute ${!showFull ? '-top-1 -right-1' : 'right-3'} flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white ring-2 ring-[#0f172a] shadow-lg animate-bounce`}>
                                             {badgeCount > 9 ? '9+' : badgeCount}
                                         </span>
                                     )}
@@ -155,7 +182,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, activePage, onPageChange, onLog
 
             {/* User Info / Footer Slim */}
             <div className={`p-4 border-t border-[#1e293b] bg-surface-dark/30 overflow-hidden`}>
-                <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3 p-2'} mb-3`}>
+                <div className={`flex items-center ${showFull ? 'gap-3 p-2' : 'justify-center'} mb-3`}>
                     {user?.avatar_url ? (
                         <img src={user.avatar_url} className="w-8 h-8 rounded-lg object-cover border border-primary/20 shrink-0" alt="" />
                     ) : (
@@ -163,7 +190,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, activePage, onPageChange, onLog
                             {user?.name?.charAt(0)}
                         </div>
                     )}
-                    {!isCollapsed && (
+                    {showFull && (
                         <div className="overflow-hidden animate-in fade-in">
                             <h4 className="text-xs font-bold text-white truncate">{user?.name}</h4>
                             <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest">{user?.role}</span>
@@ -173,11 +200,11 @@ const Sidebar: React.FC<SidebarProps> = ({ user, activePage, onPageChange, onLog
 
                 <button
                     onClick={onLogout}
-                    title={isCollapsed ? 'Sair' : ''}
-                    className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3 px-3'} py-2.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all text-xs font-bold w-full`}
+                    title={!showFull ? 'Sair' : ''}
+                    className={`flex items-center ${showFull ? 'gap-3 px-3' : 'justify-center'} py-2.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all text-xs font-bold w-full`}
                 >
                     <span className="material-symbols-outlined text-lg shrink-0">logout</span>
-                    {!isCollapsed && <span className="animate-in fade-in">Sair do Sistema</span>}
+                    {showFull && <span className="animate-in fade-in">Sair do Sistema</span>}
                 </button>
             </div>
         </aside>
