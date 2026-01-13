@@ -419,12 +419,12 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                     <p className="text-slate-400 text-sm mt-1">Gestão inteligente do fluxo de caixa e conformidade.</p>
                 </div>
 
-                <div className="flex items-center gap-3">
-                    <button onClick={() => setShowReprogrammedModal(true)} className="h-10 px-4 rounded-xl border border-blue-500/30 bg-blue-500/5 text-blue-400 font-bold text-xs flex items-center gap-2 hover:bg-blue-500/10 transition-all active:scale-95">
+                <div className="flex flex-col md:flex-row md:items-center gap-3 w-full md:w-auto">
+                    <button onClick={() => setShowReprogrammedModal(true)} className="h-12 md:h-10 px-4 rounded-xl border border-blue-500/30 bg-blue-500/5 text-blue-400 font-bold text-xs flex items-center justify-center gap-2 hover:bg-blue-500/10 transition-all active:scale-95 w-full md:w-auto">
                         <span className="material-symbols-outlined text-[18px]">history</span> Saldos Reprogramados
                     </button>
                     {entryPerm.canCreate && (
-                        <button onClick={() => { resetForm(); setShowForm(true) }} className="h-10 px-6 rounded-xl bg-primary hover:bg-primary-hover text-white font-black shadow-lg shadow-primary/25 flex items-center gap-2 transition-all active:scale-95">
+                        <button onClick={() => { resetForm(); setShowForm(true) }} className="h-12 md:h-10 px-6 rounded-xl bg-primary hover:bg-primary-hover text-white font-black shadow-lg shadow-primary/25 flex items-center justify-center gap-2 transition-all active:scale-95 w-full md:w-auto">
                             <span className="material-symbols-outlined text-[18px]">add</span> Adicionar Novo
                         </button>
                     )}
@@ -450,7 +450,7 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                             </div>
                             <button onClick={() => setShowReprogrammedModal(false)} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5 text-slate-400"><span className="material-symbols-outlined">close</span></button>
                         </div>
-                        <div className="p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 overflow-y-auto max-h-[85vh]">
                             <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5 flex flex-col gap-4 text-xs">
                                 <label className="text-slate-400 uppercase font-black">Escola</label>
                                 <select value={newReprogrammed.school_id} onChange={e => setNewReprogrammed({ ...newReprogrammed, school_id: e.target.value })} className="bg-[#1e293b] rounded-lg h-10 px-3 text-white border-none outline-none">
@@ -527,7 +527,7 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                                     <button onClick={() => setType('Saída')} className={`flex-1 py-3 font-bold rounded-xl transition-all ${type === 'Saída' ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20' : 'bg-surface-dark text-slate-400'}`}>Saída</button>
                                     <button onClick={() => setType('Entrada')} className={`flex-1 py-3 font-bold rounded-xl transition-all ${type === 'Entrada' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20' : 'bg-surface-dark text-slate-400'}`}>Entrada</button>
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="flex flex-col gap-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Valor R$</label><input type="number" value={totalValue} onChange={e => setTotalValue(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white text-lg font-mono outline-none border border-white/5 focus:border-primary" /></div>
                                     <div className="flex flex-col gap-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Data</label><input type="date" value={date} onChange={e => setDate(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" /></div>
                                 </div>
@@ -538,13 +538,13 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                                         {accessibleSchools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                     </select>
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="flex flex-col gap-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Programa</label><select value={selectedProgramId} onChange={e => setSelectedProgramId(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary"><option value="">Selecione...</option>{programs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
                                     <div className="flex flex-col gap-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Fornecedor</label><select value={selectedSupplierId} onChange={e => setSelectedSupplierId(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary"><option value="">Selecione...</option>{suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
                                 </div>
                                 <div className="flex flex-col gap-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Descrição do Lançamento</label><input type="text" value={mainDescription} onChange={e => setMainDescription(e.target.value.toUpperCase())} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" placeholder="EX: COMPRA DE MATERIAIS DE LIMPEZA" /></div>
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="flex flex-col gap-2">
                                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Status</label>
                                         <select value={status} onChange={e => setStatus(e.target.value as TransactionStatus)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary">
@@ -564,7 +564,7 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="flex flex-col gap-2">
                                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Conta Bancária</label>
                                         <select value={selectedBankAccountId} onChange={e => setSelectedBankAccountId(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary">
@@ -583,7 +583,7 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="flex flex-col gap-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Nº Documento</label><input type="text" value={documentNumber} onChange={e => setDocumentNumber(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" /></div>
                                     <div className="flex flex-col gap-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Nº Autenticação</label><input type="text" value={authNumber} onChange={e => setAuthNumber(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" /></div>
                                     <div className="flex flex-col gap-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Data da Nota</label><input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" /></div>
@@ -599,7 +599,7 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                                         <div className="flex flex-col gap-3">
                                             {splitItems.map((item, idx) => (
                                                 <div key={idx} className="flex flex-col gap-2 bg-white/[0.02] p-4 rounded-xl border border-white/5 relative group">
-                                                    <div className="flex gap-2">
+                                                    <div className="flex flex-col md:flex-row gap-2">
                                                         <div className="flex-1">
                                                             <label className="text-[9px] text-slate-500 font-bold uppercase mb-1 block">Rubrica</label>
                                                             <select value={item.rubricId} onChange={e => {
@@ -612,14 +612,14 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                                                                 {filteredRubrics.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                                                             </select>
                                                         </div>
-                                                        <div className="w-32">
+                                                        <div className="w-full md:w-32">
                                                             <label className="text-[9px] text-slate-500 font-bold uppercase mb-1 block">Natureza</label>
                                                             <select value={item.nature} onChange={e => { const ns = [...splitItems]; ns[idx].nature = e.target.value as TransactionNature; setSplitItems(ns) }} className="bg-[#1e293b] text-white text-xs h-10 rounded-lg px-3 w-full border border-white/5 outline-none focus:border-primary">
                                                                 <option value={TransactionNature.CUSTEIO}>Custeio</option>
                                                                 <option value={TransactionNature.CAPITAL}>Capital</option>
                                                             </select>
                                                         </div>
-                                                        <div className="w-32">
+                                                        <div className="w-full md:w-32">
                                                             <label className="text-[9px] text-slate-500 font-bold uppercase mb-1 block">Valor R$</label>
                                                             <input type="number" step="0.01" value={item.value} onChange={e => { const ns = [...splitItems]; ns[idx].value = parseFloat(e.target.value) || 0; setSplitItems(ns) }} className="bg-[#1e293b] text-white text-xs h-10 rounded-lg px-3 w-full border border-white/5 outline-none font-mono focus:border-primary" />
                                                         </div>
@@ -640,8 +640,8 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                                             </button>
                                         </div>
                                     ) : (
-                                        <div className="grid grid-cols-3 gap-4">
-                                            <div className="col-span-2"><select value={singleRubricId} onChange={e => { setSingleRubricId(e.target.value); const rub = allRubrics.find((r: any) => r.id === e.target.value); if (rub?.default_nature) setSingleNature(rub.default_nature as TransactionNature); }} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none w-full border border-white/5"><option value="">Rubrica...</option>{filteredRubrics.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select></div>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div className="md:col-span-2"><select value={singleRubricId} onChange={e => { setSingleRubricId(e.target.value); const rub = allRubrics.find((r: any) => r.id === e.target.value); if (rub?.default_nature) setSingleNature(rub.default_nature as TransactionNature); }} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none w-full border border-white/5"><option value="">Rubrica...</option>{filteredRubrics.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select></div>
                                             <select value={singleNature} onChange={e => setSingleNature(e.target.value as TransactionNature)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none w-full border border-white/5"><option value={TransactionNature.CUSTEIO}>Custeio</option><option value={TransactionNature.CAPITAL}>Capital</option></select>
                                         </div>
                                     )}
@@ -737,16 +737,16 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         {/* Anexos Financeiros */}
                                         <div className="space-y-4">
-                                            <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
+                                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white/5 p-3 rounded-xl border border-white/5 gap-3">
                                                 <span className="text-[10px] font-black uppercase text-primary tracking-widest">Documentos Financeiros</span>
-                                                <div className="flex gap-2">
+                                                <div className="flex flex-wrap gap-2">
                                                     {ATTACHMENT_CATEGORIES.slice(0, 3).map(cat => (
-                                                        <label key={cat} className="cursor-pointer bg-primary/10 text-primary px-2 py-1 rounded text-[9px] font-bold border border-primary/20 hover:bg-primary/20 transition-all">
+                                                        <label key={cat} className="cursor-pointer bg-primary/10 text-primary px-2 py-1 rounded text-[9px] font-bold border border-primary/20 hover:bg-primary/20 transition-all flex-grow md:flex-grow-0 text-center">
                                                             + {cat.split(' ')[0]}
                                                             <input type="file" className="hidden" onChange={e => handleFileUpload(e, cat)} />
                                                         </label>
                                                     ))}
-                                                    <label className="cursor-pointer bg-white/10 text-slate-400 px-2 py-1 rounded text-[9px] font-bold border border-white/10 hover:bg-white/20 transition-all">
+                                                    <label className="cursor-pointer bg-white/10 text-slate-400 px-2 py-1 rounded text-[9px] font-bold border border-white/10 hover:bg-white/20 transition-all flex-grow md:flex-grow-0 text-center">
                                                         Outros
                                                         <input type="file" className="hidden" onChange={e => handleFileUpload(e, 'Outros')} />
                                                     </label>
@@ -862,9 +862,9 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                         )}
 
                         <div className="p-6 border-t border-white/10 flex justify-end gap-3 bg-[#1e293b]">
-                            <button onClick={() => setShowForm(false)} className="px-6 py-2 rounded-xl text-white font-bold hover:bg-white/5 transition-colors">Cancelar</button>
+                            <button onClick={() => setShowForm(false)} className="w-full md:w-auto px-6 py-2 rounded-xl text-white font-bold hover:bg-white/5 transition-colors">Cancelar</button>
                             {activeTab === 'dados' && (
-                                <button onClick={handleSave} className="px-8 py-2 rounded-xl bg-primary text-white font-black shadow-lg shadow-primary/20 hover:bg-primary-hover active:scale-95 transition-all">
+                                <button onClick={handleSave} className="w-full md:w-auto px-8 py-2 rounded-xl bg-primary text-white font-black shadow-lg shadow-primary/20 hover:bg-primary-hover active:scale-95 transition-all">
                                     Salvar Lançamento
                                 </button>
                             )}

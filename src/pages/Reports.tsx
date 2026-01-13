@@ -568,33 +568,33 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
     const isOk = Math.abs(remaining) < 0.01;
 
     return (
-      <div className="flex gap-4 items-center bg-[#111a22] p-4 rounded-2xl border border-white/5 shadow-inner">
+      <div className="flex flex-col md:flex-row gap-4 md:items-center bg-[#111a22] p-4 rounded-2xl border border-white/5 shadow-inner">
         <div className="flex flex-col">
           <span className="text-[9px] uppercase font-black text-slate-500 tracking-tighter">Total do Lançamento</span>
           <span className="text-sm font-bold text-white">{target.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
         </div>
-        <div className="w-px h-8 bg-white/10"></div>
+        <div className="hidden md:block w-px h-8 bg-white/10"></div>
         <div className="flex flex-col">
           <span className="text-[9px] uppercase font-black text-slate-500 tracking-tighter">Soma dos Itens</span>
           <span className="text-sm font-bold text-white">{subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
         </div>
-        <div className="w-px h-8 bg-white/10"></div>
+        <div className="hidden md:block w-px h-8 bg-white/10"></div>
         <div className="flex flex-col">
           <span className="text-[9px] uppercase font-black text-amber-500 tracking-tighter">Desconto Aplicado</span>
           <span className="text-sm font-bold text-amber-500">-{discount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
         </div>
-        <div className="w-px h-8 bg-white/10"></div>
+        <div className="hidden md:block w-px h-8 bg-white/10"></div>
         <div className="flex flex-col">
           <span className="text-[9px] uppercase font-black text-slate-500 tracking-tighter">Total Líquido</span>
           <span className={`text-sm font-bold ${isOk ? 'text-green-400' : 'text-primary'}`}>{totalAfterDiscount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
         </div>
-        <div className="w-px h-8 bg-white/10"></div>
+        <div className="hidden md:block w-px h-8 bg-white/10"></div>
         <div className="flex flex-col">
           <span className="text-[9px] uppercase font-black text-slate-500 tracking-tighter">Falta Ratear</span>
           <span className={`text-sm font-bold ${isOk ? 'text-green-400' : 'text-red-400'}`}>{remaining.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
         </div>
         {isOk && (
-          <div className="ml-auto bg-green-500/10 text-green-500 px-3 py-1 rounded-lg flex items-center gap-1 border border-green-500/20">
+          <div className="md:ml-auto w-full md:w-auto bg-green-500/10 text-green-500 px-3 py-1 rounded-lg flex items-center justify-center md:justify-start gap-1 border border-green-500/20">
             <span className="material-symbols-outlined text-sm">check_circle</span>
             <span className="text-[9px] font-black uppercase">Batido</span>
           </div>
@@ -978,7 +978,7 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
             <div className="p-8 space-y-8">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <section className="bg-white/5 p-6 rounded-2xl border border-white/5">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-black uppercase text-primary tracking-widest mb-3 block">1. Lançamento Base (Pagamento)</label>
                       <div
@@ -1068,12 +1068,12 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
               {selectedEntry && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <section className="bg-white/5 p-6 rounded-2xl border border-white/5">
-                    <div className="flex justify-between items-center mb-6">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                       <h4 className="text-xs font-black uppercase text-primary tracking-widest flex items-center gap-2">
                         <span className="material-symbols-outlined text-[18px]">attach_file</span>
                         4. Documentação da Prestação (Anexos Técnicos)
                       </h4>
-                      <div className="flex gap-1">
+                      <div className="flex flex-wrap gap-1">
                         {ACCOUNTABILITY_DOC_CATEGORIES.slice(0, 3).map(cat => (
                           <label key={cat} className="flex items-center gap-2 bg-primary/10 text-primary px-3 py-1.5 rounded-xl text-[10px] font-bold border border-primary/20 cursor-pointer hover:bg-primary/20 transition-all">
                             + {cat.split(' ')[0]}
@@ -1131,7 +1131,7 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
 
                   {/* Documentos herdados do Lançamento */}
                   <section className="bg-white/5 p-6 rounded-2xl border border-white/5 border-dashed">
-                    <div className="flex justify-between items-center mb-6">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-6">
                       <h4 className="text-xs font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
                         <span className="material-symbols-outlined text-[18px]">history_edu</span>
                         Documentos Herdados do Lançamento
@@ -1167,8 +1167,8 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
               {selectedEntry && (
                 <div className="space-y-10">
                   <section>
-                    <div className="flex justify-between items-center mb-6">
-                      <h4 className="text-xs font-black uppercase text-primary tracking-widest flex items-center gap-2">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                      <h4 className="text-xs font-black uppercase text-primary tracking-widest flex items-center gap-2 mb-2 md:mb-0">
                         <span className="material-symbols-outlined">analytics</span>
                         2. Itens da Nota e Cotações Competidoras
                       </h4>
@@ -1186,22 +1186,22 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
                       {items.map((item, idx) => (
                         <div key={idx} className="bg-white/[0.02] border border-white/5 p-6 rounded-2xl space-y-6 shadow-sm group/item">
                           {/* Main Item Row */}
-                          <div className="grid grid-cols-12 gap-4 items-end relative">
-                            <div className="col-span-5">
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end relative">
+                            <div className="md:col-span-5">
                               <label className="text-[10px] font-black text-slate-500 uppercase mb-2 block tracking-tighter">Descrição do Item</label>
                               <input value={item.description} onChange={(e) => {
                                 const it = [...items]; it[idx].description = e.target.value; setItems(it);
                                 const cq = [...competitorQuotes]; cq.forEach(q => q.items[idx].description = e.target.value); setCompetitorQuotes(cq);
                               }} className="w-full bg-black/40 border-white/10 rounded-lg h-10 px-3 text-sm text-white focus:border-primary transition-all" placeholder="Ex: Monitor 24 Polegadas" />
                             </div>
-                            <div className="col-span-2">
+                            <div className="md:col-span-2">
                               <label className="text-[10px] font-black text-slate-500 uppercase mb-2 block">Qtd</label>
                               <input type="number" step="any" value={item.quantity} onChange={(e) => {
                                 const it = [...items]; it[idx].quantity = Number(e.target.value); setItems(it);
                                 const cq = [...competitorQuotes]; cq.forEach(q => q.items[idx].quantity = Number(e.target.value)); setCompetitorQuotes(cq);
                               }} className="w-full bg-black/40 border-white/10 rounded-lg h-10 px-3 text-sm text-white text-center" />
                             </div>
-                            <div className="col-span-1">
+                            <div className="md:col-span-1">
                               <label className="text-[10px] font-black text-slate-500 uppercase mb-2 block">Unid</label>
                               <input
                                 list="standard-units"
@@ -1218,16 +1218,16 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
                                 ))}
                               </datalist>
                             </div>
-                            <div className="col-span-3">
+                            <div className="md:col-span-3">
                               <label className="text-[10px] font-black text-primary uppercase mb-2 block">Preço Unit. GANHADOR (R$)</label>
                               <input type="number" step="any" value={item.winner_unit_price} onChange={(e) => {
                                 const it = [...items]; it[idx].winner_unit_price = Number(e.target.value); setItems(it);
                               }} className="w-full bg-primary/10 border-primary/20 rounded-lg h-10 px-3 text-sm text-primary font-black" />
                             </div>
-                            <div className="col-span-1 flex justify-end">
+                            <div className="md:col-span-1 flex justify-end">
                               <button
                                 onClick={() => handleRemoveItem(idx)}
-                                className={`w-10 h-10 flex items-center justify-center rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 transition-all hover:text-white ${items.length === 1 ? 'opacity-20 cursor-not-allowed' : 'opacity-0 group-hover/item:opacity-100'}`}
+                                className={`w-full md:w-10 h-10 flex items-center justify-center rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 transition-all hover:text-white ${items.length === 1 ? 'opacity-20 cursor-not-allowed' : 'opacity-100 group-hover/item:opacity-100'}`}
                                 title="Remover este item"
                               >
                                 <span className="material-symbols-outlined">delete</span>
@@ -1236,7 +1236,7 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
                           </div>
 
                           {/* Quotes Side-by-Side */}
-                          <div className="grid grid-cols-2 gap-6 pt-6 border-t border-white/5">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-white/5">
                             {competitorQuotes.map((q, qIdx) => (
                               <div key={qIdx} className="bg-black/20 p-5 rounded-2xl border border-white/5 space-y-4">
                                 <div className="flex justify-between items-center">
@@ -1279,12 +1279,12 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
               )}
             </div>
 
-            <div className="p-8 border-t border-surface-border bg-[#111a22] flex justify-end gap-4 sticky bottom-0 z-20">
-              <button onClick={() => setShowNewProcessModal(false)} className="px-8 h-12 bg-white/5 text-white font-bold rounded-xl hover:bg-white/10 transition-all">Cancelar</button>
+            <div className="p-8 border-t border-surface-border bg-[#111a22] flex flex-col md:flex-row justify-end gap-4 sticky bottom-0 z-20">
+              <button onClick={() => setShowNewProcessModal(false)} className="px-8 h-12 bg-white/5 text-white font-bold rounded-xl hover:bg-white/10 transition-all w-full md:w-auto">Cancelar</button>
               <button
                 onClick={handleCreateProcess}
                 disabled={loading || !selectedEntry}
-                className="px-12 h-12 bg-primary text-white font-bold rounded-xl shadow-2xl shadow-primary/30 hover:bg-primary-hover transition-all disabled:opacity-50"
+                className="px-12 h-12 bg-primary text-white font-bold rounded-xl shadow-2xl shadow-primary/30 hover:bg-primary-hover transition-all disabled:opacity-50 w-full md:w-auto"
               >
                 {loading ? 'Processando Dados...' : 'Finalizar Lançamento Técnico'}
               </button>
