@@ -965,7 +965,7 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
 
       {/* New Process Modal */}
       {showNewProcessModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/99 backdrop-blur-xl">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/99 backdrop-blur-xl">
           <div className="bg-surface-dark border border-surface-border w-full max-w-7xl max-h-[95vh] overflow-y-auto rounded-3xl shadow-2xl flex flex-col">
             <div className="px-8 py-6 border-b border-surface-border flex justify-between items-center sticky top-0 bg-surface-dark z-20">
               <div>
@@ -1295,7 +1295,7 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
 
       {/* Entry Selection Modal */}
       {showEntryModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
           <div className="bg-[#0f172a] border border-white/10 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
             <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#111a22]">
               <div>
@@ -1342,7 +1342,7 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
 
       {/* Supplier Selection Modal */}
       {showSupplierModal.open && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
           <div className="bg-[#0f172a] border border-white/10 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[70vh]">
             <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#111a22]">
               <h3 className="text-lg font-bold text-white">Selecionar Fornecedor</h3>
@@ -1380,7 +1380,7 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
 
       {/* Import Modal */}
       {showImportModal && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/99 backdrop-blur-md">
           <div className="bg-[#0f172a] border border-white/10 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col">
             <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#111a22]">
               <div>
