@@ -17,6 +17,7 @@ import DocumentSafe from './pages/DocumentSafe';
 import BankReconciliation from './pages/BankReconciliation';
 import WaitingPage from './pages/WaitingPage';
 import GEEPage from './pages/GEE';
+import ProgramsGuide from './pages/ProgramsGuide';
 import LandingPage from './pages/LandingPage';
 
 const App: React.FC = () => {
@@ -24,15 +25,15 @@ const App: React.FC = () => {
     const [activePage, setActivePage] = useState<string>('dashboard');
     const [loading, setLoading] = useState(true);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [showLogin, setShowLogin] = useState(false);
+    const [showGuide, setShowGuide] = useState(false);
 
     useEffect(() => {
         const initSession = async () => {
             try {
                 const { data, error } = await supabase.auth.getSession();
                 if (error) {
-
                     setLoading(false);
                     return;
                 }
@@ -42,7 +43,6 @@ const App: React.FC = () => {
                     setLoading(false);
                 }
             } catch (err) {
-
                 setLoading(false);
             }
         };
@@ -74,8 +74,6 @@ const App: React.FC = () => {
     const fetchProfile = async (userId: string, email: string) => {
         setLoading(true);
         try {
-
-
             let { data, error } = await supabase
                 .from('users')
                 .select('*')
@@ -83,15 +81,12 @@ const App: React.FC = () => {
                 .maybeSingle();
 
             if (!data && !error) {
-
                 const { data: claimed } = await supabase.rpc('claim_profile_by_email');
 
                 if (claimed) {
-                    // Perfil vinculado via RPC. Recarregando...
                     const { data: refreshed } = await supabase.from('users').select('*').eq('id', userId).single();
                     data = refreshed;
                 } else {
-                    // Criando novo perfil básico...
                     const newProfile = {
                         id: userId,
                         email: email,
@@ -104,9 +99,6 @@ const App: React.FC = () => {
                     const { error: insertError } = await supabase.from('users').insert(newProfile);
                     if (!insertError) {
                         data = newProfile as any;
-                    } else {
-                        // Falha ao criar perfil no self-healing
-
                     }
                 }
             }
@@ -127,7 +119,7 @@ const App: React.FC = () => {
                 setCurrentUser(null);
             }
         } catch (err) {
-
+            console.error(err);
         } finally {
             setLoading(false);
         }
@@ -137,9 +129,6 @@ const App: React.FC = () => {
         await supabase.auth.signOut();
         setCurrentUser(null);
     };
-
-
-    const [showLogin, setShowLogin] = useState(false);
 
     if (loading) {
         return <div className="h-screen w-full flex items-center justify-center bg-[#0f172a] text-white">
@@ -151,10 +140,13 @@ const App: React.FC = () => {
     }
 
     if (!currentUser) {
+        if (showGuide) {
+            return <ProgramsGuide onBack={() => setShowGuide(false)} />;
+        }
         if (showLogin) {
             return <Login onLogin={setCurrentUser} onBack={() => setShowLogin(false)} />;
         }
-        return <LandingPage onLoginClick={() => setShowLogin(true)} />;
+        return <LandingPage onLoginClick={() => setShowLogin(true)} onGuideClick={() => setShowGuide(true)} />;
     }
 
     const renderContent = () => {

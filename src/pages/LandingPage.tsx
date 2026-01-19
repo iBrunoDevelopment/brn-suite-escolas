@@ -3,9 +3,10 @@ import { supabase } from '../lib/supabaseClient';
 
 interface LandingPageProps {
     onLoginClick: () => void;
+    onGuideClick?: () => void;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onGuideClick }) => {
     const [activeFaq, setActiveFaq] = useState<number | null>(null);
 
     const defaultPlans = [
@@ -118,13 +119,24 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                                 BRN Suite Escolas
                             </span>
                         </div>
-                        <button
-                            onClick={onLoginClick}
-                            className="btn-primary flex items-center gap-2 group"
-                        >
-                            <span>Acessar Sistema</span>
-                            <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">login</span>
-                        </button>
+                        <div className="flex items-center gap-4">
+                            {onGuideClick && (
+                                <button
+                                    onClick={onGuideClick}
+                                    className="hidden md:flex items-center gap-2 px-4 py-2 text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition-colors"
+                                >
+                                    <span className="material-symbols-outlined text-lg">menu_book</span>
+                                    Manual do Gestor
+                                </button>
+                            )}
+                            <button
+                                onClick={onLoginClick}
+                                className="btn-primary flex items-center gap-2 group"
+                            >
+                                <span>Acessar Sistema</span>
+                                <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">login</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </nav>
@@ -245,6 +257,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                                     { title: "Segurança Jurídica", desc: "Todos os processos auditados e em conformidade com as leis vigentes.", icon: "gavel" },
                                     { title: "Agilidade Comprovada", desc: "Redução de até 70% no tempo gasto com burocracia.", icon: "speed" },
                                     { title: "Transparência Total", desc: "Acompanhe cada centavo e cada documento em tempo real.", icon: "visibility" },
+                                    { title: "Gestão Livre de Erros", desc: "Nosso sistema + assessoria eliminam riscos na execução financeira e na prestação de contas.", icon: "fact_check" },
                                     { title: "Suporte Especializado", desc: "Equipe que entende do dia a dia da gestão escolar.", icon: "support_agent" }
                                 ].map((feat, i) => (
                                     <div key={i} className="flex gap-4">
