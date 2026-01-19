@@ -28,7 +28,7 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
   ]);
   const [schools, setSchools] = useState<any[]>([]);
   const [programs, setPrograms] = useState<any[]>([]);
-  const ACCOUNTABILITY_DOC_CATEGORIES = ['Ata de Assembleia', 'Pesquisa de Preços', 'Certidão de Proponente', 'Ordem de Compra', 'Recibo / Quitação', 'Outros'];
+  const ACCOUNTABILITY_DOC_CATEGORIES = ['Ata de Assembleia', 'Pesquisa de Preços', 'Certidão de Proponente', 'Nota Fiscal', 'Certidão de Regularidade', 'Ordem de Compra', 'Recibo / Quitação', 'Outros'];
 
   // Permissions
   const reportPerm = usePermissions(user, 'reports');
@@ -61,25 +61,19 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
     { supplier_id: '', supplier_name: '', supplier_cnpj: '', items: [{ description: '', quantity: 1, unit: 'Unid.', unit_price: 0 }] },
     { supplier_id: '', supplier_name: '', supplier_cnpj: '', items: [{ description: '', quantity: 1, unit: 'Unid.', unit_price: 0 }] }
   ]);
+  const [templateUrl, setTemplateUrl] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchAvailableEntries();
-    fetchSuppliers();
-    fetchAuxData();
-  }, []);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchProcesses();
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [filterSchool, filterProgram, filterStatus, filterSearch]);
 
   const fetchAuxData = async () => {
     const { data: s } = await supabase.from('schools').select('id, name').order('name');
     const { data: p } = await supabase.from('programs').select('id, name').order('name');
     if (s) setSchools(s);
     if (p) setPrograms(p);
+
+    // Fetch template asset
+    const { data: t } = await supabase.from('system_settings').select('value').eq('key', 'import_template_url').maybeSingle();
+    if (t?.value) setTemplateUrl(t.value);
   };
 
   const fetchProcesses = async () => {
@@ -88,7 +82,8 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
       .select(`
         *, 
         financial_entries!inner(*, schools(*), programs(name), suppliers(*), payment_methods(name)),
-        accountability_items(*)
+        accountability_items(*),
+        accountability_quotes(*)
       `)
       .order('created_at', { ascending: false });
 
@@ -152,6 +147,19 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
     if (data) setAllSuppliers(data);
   };
 
+  useEffect(() => {
+    fetchAvailableEntries();
+    fetchSuppliers();
+    fetchAuxData();
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchProcesses();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [filterSchool, filterProgram, filterStatus, filterSearch]);
+
   const handleAddItem = () => {
     const newItem = { description: '', quantity: 1, unit: 'un', winner_unit_price: 0 };
     setItems([...items, newItem]);
@@ -198,45 +206,89 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
   };
 
   const downloadTemplate = () => {
+    // If a custom template is defined in the system settings, download it directly
+    if (templateUrl) {
+      const link = document.createElement("a");
+      link.href = templateUrl;
+      link.setAttribute("download", templateUrl.split('/').pop() || "modelo_importacao.xlsx");
+      link.setAttribute("target", "_blank");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+
+    // Fallback to generated CSV
     const BOM = "\uFEFF";
     const headers = ["Descrição Detalhada", "Quantidade", "Unidade", "Preço Vencedor (R$)", "Preço Concorrente 1 (R$)", "Preço Concorrente 2 (R$)"];
     const example = ["Arroz Parboilizado Tipo 1", "50", "kg", "5,50", "5,90", "6,15"];
 
+    // Use semicolon for better compatibility with Excel BR
     const csvContent = BOM + headers.join(';') + '\n' + example.join(';');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", "modelo_importacao_brn.csv");
+    link.setAttribute("download", "modelo_importacao_itens.csv");
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const processImport = () => {
-    if (!importText.trim()) return;
+  const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    const lines = importText.trim().split('\n');
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      if (text) {
+        setImportText(text);
+        // Auto process if it looks valid
+        setTimeout(() => processImport(text), 100);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const processImport = (overrideText?: string) => {
+    const textToProcess = overrideText || importText;
+    if (!textToProcess.trim()) return;
+
+    const lines = textToProcess.trim().split(/\r?\n/);
     const parsedRows: any[] = [];
 
     const parseNumber = (str: string) => {
       if (!str) return 0;
       let clean = str.replace(/[R$\s]/g, '');
-      // If has comma, assume PT-BR
       if (clean.includes(',')) {
         clean = clean.replace(/\./g, '').replace(',', '.');
       }
       return parseFloat(clean) || 0;
     };
 
-    lines.forEach(line => {
-      const cols = line.split('\t');
-      if (cols.length < 2) return; // Skip invalid lines
+    // Detect delimiter
+    const firstLine = lines[0] || '';
+    let delimiter = '\t';
+    if (firstLine.includes(';')) delimiter = ';';
+    else if (firstLine.includes(',')) delimiter = ',';
 
-      // Expected Order: Desc | Qty | Unit | WinnerPrice | Comp1Price | Comp2Price
-      let desc = cols[0].trim();
+    // If the first line is exactly the header, skip it
+    let startIndex = 0;
+    if (firstLine.toLowerCase().includes('descrição') || firstLine.toLowerCase().includes('quantidade')) {
+      startIndex = 1;
+    }
+
+    for (let i = startIndex; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line.trim()) continue;
+
+      const cols = line.split(delimiter);
+      if (cols.length < 2) continue;
+
+      let desc = cols[0]?.trim() || '';
       let qtyRaw = cols[1] ? cols[1].trim() : '1';
       let unit = cols[2] ? cols[2].trim() : 'Unid.';
       let priceWinnerRaw = cols[3] ? cols[3].trim() : '0';
@@ -253,31 +305,41 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
         comp1Price: parseNumber(priceComp1Raw),
         comp2Price: parseNumber(priceComp2Raw)
       });
-    });
+    }
+
+    if (parsedRows.length === 0) {
+      alert('Não foi possível identificar itens válidos. Verifique o formato das colunas (Descrição, Qtd, Unidade, Preço Ganhador...).');
+      return;
+    }
 
     const newItems = parsedRows.map(r => r.item);
 
-    if (newItems.length > 0) {
-      // Append to existing or replace?
-      // Usually append if existing items are empty/default, otherwise append.
-      // Let's append but remove the first empty default item if it exists and hasn't been touched.
+    // Filter out rows that are completely empty
+    const validNewItems = newItems.filter(it => it.description || it.winner_unit_price > 0);
+
+    if (validNewItems.length > 0) {
+      // Logic: If current items is just the initial empty one, replace. Otherwise, prepend/append.
+      // The user usually wants to REPLACE if they are doing a mass import.
+      // But we will ask or just replace if it's the first empty item.
       let currentItems = [...items];
       if (currentItems.length === 1 && !currentItems[0].description && currentItems[0].winner_unit_price === 0) {
         currentItems = [];
       }
 
-      const mergedItems = [...currentItems, ...newItems];
+      const mergedItems = [...currentItems, ...validNewItems];
       setItems(mergedItems);
 
-      // Update comps
+      // Update competitor quotes to match the new item list
       setCompetitorQuotes(competitorQuotes.map((q, qIdx) => ({
         ...q,
         items: mergedItems.map((mi, idx) => {
-          // If it's an existing item, preserve its quote price
+          // If it's an existing item (before import), preserve its quote price
           if (idx < currentItems.length) return q.items[idx];
 
-          // For new items, use imported competitor prices
-          const importedRow = parsedRows[idx - currentItems.length];
+          // For new items, find corresponding imported data
+          const importedIdx = idx - currentItems.length;
+          const importedRow = parsedRows[importedIdx];
+
           return {
             description: mi.description,
             quantity: mi.quantity,
@@ -287,11 +349,11 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
         })
       })));
 
-      alert(`${newItems.length} itens importados com sucesso!`);
+      alert(`${validNewItems.length} itens inseridos com sucesso!`);
       setShowImportModal(false);
       setImportText('');
     } else {
-      alert('Não foi possível identificar itens válidos. Verifique o formato.');
+      alert('Nenhum item válido encontrado para importação.');
     }
   };
 
@@ -331,15 +393,37 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
     setItems(docItems);
 
     // Set Competitor Quotes
-    const competitors = (process.quotes || [])
-      .filter(q => !q.is_winner)
-      .map(q => ({
-        supplier_id: q.supplier_id || '',
-        supplier_name: q.supplier_name,
-        supplier_cnpj: q.supplier_cnpj || '',
-        // Map from accountability_quote_items
-        items: (q as any).accountability_quote_items || q.items || []
-      }));
+    const competitors = ((process as any).accountability_quotes || process.quotes || [])
+      .filter((q: any) => !q.is_winner)
+      .map((q: any) => {
+        const rawItems = (q as any).accountability_quote_items || q.items || [];
+        // Align items with the master list (docItems) to ensure index consistency
+        const alignedItems = docItems.map((docItem: any) => {
+          const match = rawItems.find((ri: any) => ri.description === docItem.description);
+          if (match) {
+            return {
+              ...match,
+              // Force sync quantity/unit from master item just in case
+              quantity: docItem.quantity,
+              unit: docItem.unit
+            };
+          }
+          // Fallback if item missing in quote
+          return {
+            description: docItem.description,
+            quantity: docItem.quantity,
+            unit: docItem.unit,
+            unit_price: 0
+          };
+        });
+
+        return {
+          supplier_id: q.supplier_id || '',
+          supplier_name: q.supplier_name,
+          supplier_cnpj: q.supplier_cnpj || '',
+          items: alignedItems
+        };
+      });
 
     // Ensure we always have 2 competitor quotes for the UI
     if (competitors.length > 0) {
@@ -373,13 +457,13 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
       return;
     }
 
-    const currentTotal = items.reduce((acc, it) => acc + ((it.quantity || 0) * (it.winner_unit_price || 0)), 0);
+    const subtotal = items.reduce((acc, it) => acc + ((it.quantity || 0) * (it.winner_unit_price || 0)), 0);
+    const totalAfterDiscount = subtotal - discount;
     const targetValue = Math.abs(selectedEntry.value);
 
-    if (Math.abs(currentTotal - targetValue) > 0.01) {
-      if (!confirm(`O valor total dos itens (${currentTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}) é diferente do valor do lançamento (${targetValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}). Deseja prosseguir mesmo assim?`)) {
-        return;
-      }
+    if (Math.abs(totalAfterDiscount - targetValue) > 0.01) {
+      alert(`⚠️ Bloqueio de Segurança: O valor líquido calculado (${totalAfterDiscount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}) não corresponde ao valor exato da nota fiscal vinculada (${targetValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}).\n\nPor favor, verifique os preços unitários ou o valor do desconto antes de finalizar.`);
+      return;
     }
 
     setLoading(true);
@@ -423,9 +507,13 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
 
       if (!processId) throw new Error('Falha ao identificar o ID do processo.');
 
-      const { error: iError } = await supabase.from('accountability_items').insert(
-        items.map(it => ({ ...it, process_id: processId }))
-      );
+      // REMOVER ID antes de inserir para deixar o Supabase gerar novos (já que deletamos os antigos no edit)
+      const cleanItems = items.map(it => {
+        const { id, ...rest } = it as any;
+        return { ...rest, process_id: processId };
+      });
+
+      const { error: iError } = await supabase.from('accountability_items').insert(cleanItems);
       if (iError) throw iError;
 
       const { data: winnerQuote, error: wqError } = await supabase
@@ -436,7 +524,7 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
           supplier_name: selectedEntry.suppliers?.name || 'Fornecedor Ganhador',
           supplier_cnpj: selectedEntry.suppliers?.cnpj || null,
           is_winner: true,
-          total_value: currentTotal
+          total_value: subtotal
         })
         .select().single();
       if (wqError) throw wqError;
@@ -454,13 +542,16 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
 
         if (qe) throw qe;
 
-        const qItems = comp.items.map(it => ({
-          quote_id: q.id,
-          description: it.description,
-          quantity: it.quantity,
-          unit: it.unit,
-          unit_price: it.unit_price
-        }));
+        const qItems = comp.items.map(it => {
+          const { id, ...rest } = it as any;
+          return {
+            quote_id: q.id,
+            description: rest.description,
+            quantity: rest.quantity,
+            unit: rest.unit,
+            unit_price: rest.unit_price
+          };
+        });
         const { error: qie } = await supabase.from('accountability_quote_items').insert(qItems);
         if (qie) throw qie;
       }
@@ -568,44 +659,41 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
     const isOk = Math.abs(remaining) < 0.01;
 
     return (
-      <div className="flex flex-col md:flex-row gap-4 md:items-center bg-[#111a22] p-4 rounded-2xl border border-white/5 shadow-inner">
-        <div className="flex flex-col">
-          <span className="text-[9px] uppercase font-black text-slate-500 tracking-tighter">Total do Lançamento</span>
-          <span className="text-sm font-bold text-white">{target.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 bg-white/[0.02] p-4 md:p-6 rounded-3xl border border-white/5 shadow-2xl">
+        <div className="flex flex-col gap-1.5 p-3 bg-black/20 rounded-2xl border border-white/5">
+          <span className="text-[8px] uppercase font-black text-slate-500 tracking-widest leading-none">Lançamento</span>
+          <span className="text-[13px] font-bold text-white whitespace-nowrap">{target.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
         </div>
-        <div className="hidden md:block w-px h-8 bg-white/10"></div>
-        <div className="flex flex-col">
-          <span className="text-[9px] uppercase font-black text-slate-500 tracking-tighter">Soma dos Itens</span>
-          <span className="text-sm font-bold text-white">{subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+        <div className="flex flex-col gap-1.5 p-3 bg-black/20 rounded-2xl border border-white/5">
+          <span className="text-[8px] uppercase font-black text-slate-500 tracking-widest leading-none">Soma Itens</span>
+          <span className="text-[13px] font-bold text-white whitespace-nowrap">{subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
         </div>
-        <div className="hidden md:block w-px h-8 bg-white/10"></div>
-        <div className="flex flex-col">
-          <span className="text-[9px] uppercase font-black text-amber-500 tracking-tighter">Desconto Aplicado</span>
-          <span className="text-sm font-bold text-amber-500">-{discount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+        <div className="flex flex-col gap-1.5 p-3 bg-amber-500/5 rounded-2xl border border-amber-500/10">
+          <span className="text-[8px] uppercase font-black text-amber-500/70 tracking-widest leading-none">Desconto</span>
+          <span className="text-[13px] font-bold text-amber-500 whitespace-nowrap">
+            {discount > 0 ? `– ${discount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : 'R$ 0,00'}
+          </span>
         </div>
-        <div className="hidden md:block w-px h-8 bg-white/10"></div>
-        <div className="flex flex-col">
-          <span className="text-[9px] uppercase font-black text-slate-500 tracking-tighter">Total Líquido</span>
-          <span className={`text-sm font-bold ${isOk ? 'text-green-400' : 'text-primary'}`}>{totalAfterDiscount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+        <div className="flex flex-col gap-1.5 p-3 bg-primary/5 rounded-2xl border border-primary/10">
+          <span className="text-[8px] uppercase font-black text-primary/70 tracking-widest leading-none">Líquido</span>
+          <span className={`text-[13px] font-bold whitespace-nowrap ${isOk ? 'text-green-400' : 'text-primary'}`}>{totalAfterDiscount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
         </div>
-        <div className="hidden md:block w-px h-8 bg-white/10"></div>
-        <div className="flex flex-col">
-          <span className="text-[9px] uppercase font-black text-slate-500 tracking-tighter">Falta Ratear</span>
-          <span className={`text-sm font-bold ${isOk ? 'text-green-400' : 'text-red-400'}`}>{remaining.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-        </div>
-        {isOk && (
-          <div className="md:ml-auto w-full md:w-auto bg-green-500/10 text-green-500 px-3 py-1 rounded-lg flex items-center justify-center md:justify-start gap-1 border border-green-500/20">
-            <span className="material-symbols-outlined text-sm">check_circle</span>
-            <span className="text-[9px] font-black uppercase">Batido</span>
+        <div className={`flex flex-col gap-1.5 p-3 rounded-2xl border col-span-2 md:col-span-1 transition-all ${isOk ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/5 border-red-500/10'}`}>
+          <span className={`text-[8px] uppercase font-black tracking-widest leading-none ${isOk ? 'text-green-500' : 'text-red-400'}`}>Pendente</span>
+          <div className="flex items-center justify-between">
+            <span className={`text-[13px] font-black whitespace-nowrap ${isOk ? 'text-green-400' : 'text-red-400'}`}>
+              {remaining.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            </span>
+            {isOk && <span className="material-symbols-outlined text-green-500 text-sm">verified</span>}
           </div>
-        )}
+        </div>
       </div>
     );
   };
 
   return (
-    <div className="flex flex-col gap-8 w-full p-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="flex flex-col gap-6 w-full p-4 md:p-8 max-w-7xl mx-auto">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div className="flex flex-col gap-1">
           <h1 className="text-3xl font-black text-white">Prestação de Contas</h1>
           <p className="text-slate-400 text-sm">Controle de cotações, itens de nota e finalização documental.</p>
@@ -634,37 +722,37 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
           </div>
 
           {/* Filters Section */}
-          <div className="bg-[#111a22] border border-surface-border rounded-xl p-4 grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-            <div className="md:col-span-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase">Escola</label>
-              <select value={filterSchool} onChange={e => setFilterSchool(e.target.value)} className="w-full bg-[#1c2936] text-white text-xs h-9 rounded border border-surface-border">
+          <div className="bg-[#111a22] border border-surface-border rounded-2xl p-4 md:p-6 grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 items-end">
+            <div className="col-span-2 lg:col-span-1">
+              <label className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-widest">Escola</label>
+              <select value={filterSchool} onChange={e => setFilterSchool(e.target.value)} className="w-full bg-[#0a0f14] text-white text-xs h-10 px-3 rounded-xl border border-surface-border focus:border-primary outline-none transition-all">
                 <option value="">Todas as Escolas</option>
                 {accessibleSchools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
-            <div className="md:col-span-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase">Programa</label>
-              <select value={filterProgram} onChange={e => setFilterProgram(e.target.value)} className="w-full bg-[#1c2936] text-white text-xs h-9 rounded border border-surface-border">
-                <option value="">Todos os Programas</option>
+            <div className="col-span-1">
+              <label className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-widest">Programa</label>
+              <select value={filterProgram} onChange={e => setFilterProgram(e.target.value)} className="w-full bg-[#0a0f14] text-white text-xs h-10 px-3 rounded-xl border border-surface-border focus:border-primary outline-none transition-all">
+                <option value="">Todos</option>
                 {programs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
-            <div className="md:col-span-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase">Status</label>
-              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-full bg-[#1c2936] text-white text-xs h-9 rounded border border-surface-border">
-                <option value="">Todos os Status</option>
+            <div className="col-span-1">
+              <label className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-widest">Status</label>
+              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-full bg-[#0a0f14] text-white text-xs h-10 px-3 rounded-xl border border-surface-border focus:border-primary outline-none transition-all">
+                <option value="">Todos</option>
                 <option value="Em Andamento">Em Andamento</option>
                 <option value="Concluído">Concluído</option>
               </select>
             </div>
-            <div className="md:col-span-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase">Busca</label>
-              <input type="text" value={filterSearch} onChange={e => setFilterSearch(e.target.value)} className="w-full bg-[#1c2936] text-white text-xs h-9 rounded border border-surface-border" placeholder="Descrição..." />
+            <div className="col-span-2 lg:col-span-1">
+              <label className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-widest">Busca Rápida</label>
+              <input type="text" value={filterSearch} onChange={e => setFilterSearch(e.target.value)} className="w-full bg-[#0a0f14] text-white text-xs h-10 px-4 rounded-xl border border-surface-border focus:border-primary outline-none transition-all" placeholder="Filtrar por descrição..." />
             </div>
-            <div className="md:col-span-1">
+            <div className="col-span-2 lg:col-span-1">
               <button
                 onClick={() => { setFilterSchool(''); setFilterProgram(''); setFilterStatus(''); setFilterSearch(''); }}
-                className="w-full bg-surface-dark border border-surface-border text-white text-xs h-9 rounded font-bold hover:bg-slate-700 transition-colors"
+                className="w-full bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest h-10 rounded-xl hover:bg-slate-700 transition-all active:scale-95"
               >
                 Limpar Filtros
               </button>
@@ -681,24 +769,24 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
               const entry = (process as any).financial_entry || (process as any).financial_entries;
               const schoolName = entry?.schools?.name || 'Escola não informada';
               return (
-                <div key={process.id} className="bg-surface-dark border border-surface-border rounded-2xl p-6 hover:border-primary/40 transition-all flex justify-between items-center group">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${process.status === 'Concluído' ? 'bg-green-500/10 text-green-400' : 'bg-primary/10 text-primary'}`}>
+                <div key={process.id} className="bg-surface-dark border border-surface-border rounded-2xl p-4 md:p-6 hover:border-primary/40 transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4 group">
+                  <div className="flex items-center gap-4 w-full md:w-auto">
+                    <div className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center ${process.status === 'Concluído' ? 'bg-green-500/10 text-green-400' : 'bg-primary/10 text-primary'}`}>
                       <span className="material-symbols-outlined text-3xl font-light">
                         {process.status === 'Concluído' ? 'check_circle' : 'pending'}
                       </span>
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-white group-hover:text-primary transition-colors">{entry?.description}</h3>
-                        <span className="text-[9px] bg-white/5 text-slate-400 px-2 py-0.5 rounded border border-white/10 font-black uppercase">{entry?.nature}</span>
+                    <div className="flex flex-col gap-1 min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-bold text-white group-hover:text-primary transition-colors truncate">{entry?.description}</h3>
+                        <span className="text-[9px] bg-white/5 text-slate-400 px-2 py-0.5 rounded border border-white/10 font-black uppercase whitespace-nowrap">{entry?.nature}</span>
                       </div>
-                      <div className="flex flex-wrap gap-x-4 gap-y-1">
+                      <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-1">
                         <span className="text-[10px] uppercase font-black text-slate-300 flex items-center gap-1">
-                          <span className="material-symbols-outlined text-sm text-primary">school</span> {schoolName}
+                          <span className="material-symbols-outlined text-sm text-primary">school</span> <span className="max-w-[150px] truncate">{schoolName}</span>
                         </span>
                         <span className="text-[10px] uppercase font-black text-slate-500 flex items-center gap-1">
-                          <span className="material-symbols-outlined text-sm">person</span> {entry?.suppliers?.name || 'Sem Fornecedor'}
+                          <span className="material-symbols-outlined text-sm">person</span> <span className="max-w-[120px] truncate">{entry?.suppliers?.name || 'Sem Fornecedor'}</span>
                         </span>
                         <span className="text-[10px] uppercase font-black text-slate-500 flex items-center gap-1">
                           <span className="material-symbols-outlined text-sm">calendar_month</span> {entry?.date ? new Date(entry.date).toLocaleDateString('pt-BR') : '---'}
@@ -709,9 +797,9 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right hidden md:block">
-                      <p className="text-sm font-black text-white">{Number(entry?.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                  <div className="flex items-center justify-between md:justify-end gap-6 w-full md:w-auto pt-4 md:pt-0 border-t md:border-t-0 border-white/5">
+                    <div className="text-left md:text-right">
+                      <p className="text-base md:text-sm font-black text-white">{Number(entry?.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                       <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{process.status}</p>
                     </div>
                     <button
@@ -720,7 +808,7 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
                         setCurrentProcess({ ...process, quotes, financial_entry: entry });
                         setActiveTab('details');
                       }}
-                      className="p-3 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-colors"
+                      className="h-10 w-10 md:h-12 md:w-12 flex items-center justify-center bg-white/5 hover:bg-primary/20 hover:text-primary text-white rounded-xl transition-all"
                     >
                       <span className="material-symbols-outlined">chevron_right</span>
                     </button>
@@ -737,33 +825,33 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
           </button>
 
           <div className="bg-surface-dark border border-surface-border rounded-3xl overflow-hidden shadow-2xl">
-            <div className="p-8 bg-[#111a22] flex justify-between items-center border-b border-surface-border">
-              <div>
-                <h2 className="text-3xl font-black text-white">{currentProcess?.financial_entry?.description}</h2>
-                <p className="text-slate-400 font-medium">Processo de Prestação de Contas • {currentProcess?.financial_entry?.schools?.name}</p>
+            <div className="p-6 md:p-8 bg-[#111a22] flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-surface-border">
+              <div className="flex-1 w-full">
+                <h2 className="text-2xl md:text-3xl font-black text-white leading-tight break-words">{currentProcess?.financial_entry?.description}</h2>
+                <p className="text-slate-400 font-medium text-sm mt-1">Processo de Prestação de Contas • {currentProcess?.financial_entry?.schools?.name}</p>
               </div>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap md:flex-nowrap gap-2 w-full md:w-auto">
                 {(reportPerm.canEdit && user.role !== UserRole.DIRETOR) && (
                   <button
                     onClick={() => handleEdit(currentProcess)}
-                    className="h-12 px-6 bg-primary hover:bg-primary-hover text-white rounded-xl font-bold flex items-center gap-2 transition-all"
+                    className="flex-1 md:flex-none h-11 px-4 bg-primary hover:bg-primary-hover text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-xs"
                   >
-                    <span className="material-symbols-outlined">edit</span> Editar
+                    <span className="material-symbols-outlined text-[18px]">edit</span> Editar
                   </button>
                 )}
                 {reportPerm.canDelete && (
                   <button
                     onClick={() => currentProcess && handleDeleteProcess(currentProcess.id)}
-                    className="h-12 px-6 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 rounded-xl font-bold flex items-center gap-2 transition-all"
+                    className="flex-1 md:flex-none h-11 px-4 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-xs"
                   >
-                    <span className="material-symbols-outlined">delete_forever</span> Excluir
+                    <span className="material-symbols-outlined text-[18px]">delete_forever</span> Excluir
                   </button>
                 )}
                 <button
                   onClick={() => printDocument(generateConsolidacaoHTML(currentProcess))}
-                  className="h-12 px-6 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold flex items-center gap-2 transition-all"
+                  className="w-full md:w-auto h-11 px-5 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-xs border border-white/10"
                 >
-                  <span className="material-symbols-outlined">print</span> Imprimir Pack
+                  <span className="material-symbols-outlined text-[18px]">print</span> Imprimir Pack
                 </button>
               </div>
             </div>
@@ -963,77 +1051,132 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
         </div>
       )}
 
-      {/* New Process Modal */}
       {showNewProcessModal && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/99 backdrop-blur-xl">
-          <div className="bg-surface-dark border border-surface-border w-full max-w-7xl max-h-[95vh] overflow-y-auto rounded-3xl shadow-2xl flex flex-col">
-            <div className="px-8 py-6 border-b border-surface-border flex justify-between items-center sticky top-0 bg-surface-dark z-20">
-              <div>
-                <h2 className="text-2xl font-black text-white">{editingProcessId ? 'Editar Processo' : 'Novo Processo'}: Detalhamento Técnico</h2>
-                <p className="text-sm text-slate-400">{editingProcessId ? 'Atualize as informações do processo selecionado.' : 'Vincule o pagamento e detalhe os orçamentos concorrentes.'}</p>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/98 backdrop-blur-xl md:p-6 overflow-hidden">
+          <div className="bg-[#0a0f14] border-x border-white/5 w-full max-w-6xl h-screen md:h-auto md:max-h-[92vh] md:rounded-[40px] shadow-2xl flex flex-col relative overflow-hidden">
+            <div className="sticky top-0 z-30 p-6 md:p-8 border-b border-white/5 flex justify-between items-center bg-[#0a0f14]/80 backdrop-blur-md">
+              <div className="flex items-center gap-5">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+                  <span className="material-symbols-outlined text-[24px]">assignment</span>
+                </div>
+                <div className="flex flex-col">
+                  <h2 className="text-[12px] md:text-lg font-black text-white leading-tight tracking-[0.1em]">
+                    {editingProcessId ? 'EDITAR PRESTAÇÃO' : 'NOVA PRESTAÇÃO'}
+                  </h2>
+                  <p className="text-[9px] text-slate-500 uppercase font-bold tracking-[0.2em] mt-0.5">
+                    {editingProcessId ? 'Refinamento de dados' : 'Detalhamento técnico'}
+                  </p>
+                </div>
               </div>
-              <button onClick={() => setShowNewProcessModal(false)} className="text-slate-500 hover:text-white"><span className="material-symbols-outlined text-4xl">close</span></button>
+
+              <div className="flex items-center gap-2 md:gap-4">
+                <button
+                  onClick={() => setShowNewProcessModal(false)}
+                  className="h-10 px-4 bg-white/5 text-slate-400 font-bold text-[10px] uppercase tracking-widest rounded-xl hover:bg-white/10 hover:text-white transition-all border border-white/10 hidden md:block"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleCreateProcess}
+                  disabled={loading || !selectedEntry}
+                  className="h-10 px-6 bg-primary text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-xl shadow-lg shadow-primary/20 hover:bg-primary-hover transition-all disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {loading ? (
+                    <span className="material-symbols-outlined animate-spin text-[18px]">sync</span>
+                  ) : (
+                    <span className="material-symbols-outlined text-[18px]">verified</span>
+                  )}
+                  <span>{loading ? 'SALVANDO...' : 'FINALIZAR'}</span>
+                </button>
+                <div className="w-px h-8 bg-white/10 mx-1 md:mx-2"></div>
+                <button onClick={() => setShowNewProcessModal(false)} className="w-10 h-10 rounded-xl hover:bg-white/5 flex items-center justify-center text-slate-500 hover:text-white transition-all border border-transparent hover:border-white/10 group">
+                  <span className="material-symbols-outlined text-xl group-hover:rotate-90 transition-transform duration-500">close</span>
+                </button>
+              </div>
             </div>
 
-            <div className="p-8 space-y-8">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <section className="bg-white/5 p-6 rounded-2xl border border-white/5">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs font-black uppercase text-primary tracking-widest mb-3 block">1. Lançamento Base (Pagamento)</label>
+            <div className="flex-1 overflow-y-auto p-4 md:p-10 space-y-12 custom-scrollbar bg-[#0a0f14]">
+              {/* Dashboard de Valores (ValueCounter) */}
+              <div className="pb-6">
+                <ValueCounter />
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                <section className="bg-white/[0.02] p-8 rounded-[36px] border border-white/5 shadow-2xl flex flex-col gap-8 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-primary/5 blur-[80px] rounded-full -mr-20 -mt-20 group-hover:bg-primary/10 transition-all duration-1000"></div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="md:col-span-2">
+                      <label className="text-[10px] font-black uppercase text-primary tracking-[0.25em] mb-4 block opacity-60">1. Lançamento Base (Pagamento)</label>
                       <div
                         onClick={() => setShowEntryModal(true)}
-                        className="bg-[#111a22] border border-white/10 rounded-xl h-12 px-4 flex items-center justify-between cursor-pointer hover:border-primary transition-all"
+                        className="bg-black/40 border border-white/10 rounded-2xl h-14 px-5 flex items-center justify-between cursor-pointer hover:border-primary/40 hover:bg-black/60 transition-all group/btn"
                       >
-                        <span className={selectedEntry ? 'text-white font-bold' : 'text-slate-500 italic'}>
-                          {selectedEntry ? `${selectedEntry.description} - ${Number(selectedEntry.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : 'Clique para selecionar...'}
-                        </span>
-                        <span className="material-symbols-outlined text-primary">search</span>
+                        <div className="flex items-center gap-4 truncate">
+                          <span className="material-symbols-outlined text-primary/40 text-[22px] group-hover/btn:text-primary transition-colors">receipt</span>
+                          <span className={`text-[12px] truncate uppercase tracking-tight ${selectedEntry ? 'text-white font-black' : 'text-slate-600 italic font-bold'}`}>
+                            {selectedEntry ? `${selectedEntry.description}` : 'Selecionar Lançamento...'}
+                          </span>
+                        </div>
+                        <span className="material-symbols-outlined text-primary/30 group-hover/btn:text-primary text-[20px] group-hover/btn:translate-x-1 transition-all">arrow_forward_ios</span>
                       </div>
                     </div>
                     <div>
-                      <label className="text-xs font-black uppercase text-primary tracking-widest mb-3 block">Status do Processo</label>
-                      <select
-                        value={processStatus}
-                        onChange={(e) => setProcessStatus(e.target.value as any)}
-                        className="w-full bg-[#111a22] border border-white/10 rounded-xl h-12 px-4 text-white font-bold focus:border-primary outline-none transition-all"
-                      >
-                        <option value="Em Andamento">Em Andamento</option>
-                        <option value="Concluído">Concluído</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-xs font-black uppercase text-amber-500 tracking-widest mb-3 block">Desconto na Nota (R$)</label>
-                      <input
-                        type="number"
-                        step="any"
-                        value={discount}
-                        onChange={(e) => setDiscount(Number(e.target.value))}
-                        className="w-full bg-[#111a22] border border-amber-500/30 rounded-xl h-12 px-4 text-amber-500 font-bold focus:border-amber-500 outline-none transition-all placeholder:text-amber-500/30"
-                        placeholder="0,00"
-                      />
+                      <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.25em] mb-4 block opacity-60">Status</label>
+                      <div className="relative">
+                        <select
+                          value={processStatus}
+                          onChange={(e) => setProcessStatus(e.target.value as any)}
+                          className="w-full bg-black/40 bg-none border border-white/10 rounded-2xl h-14 px-5 text-white text-[11px] font-black focus:border-primary/50 outline-none transition-all cursor-pointer hover:bg-black/60 appearance-none"
+                          style={{ WebkitAppearance: 'none', MozAppearance: 'none', appearance: 'none' }}
+                        >
+                          <option value="Em Andamento">Em Andamento</option>
+                          <option value="Concluído">Concluído</option>
+                        </select>
+                        <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none text-[20px]">expand_more</span>
+                      </div>
                     </div>
                   </div>
-                  {selectedEntry && (
-                    <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white">
-                        <span className="material-symbols-outlined text-sm">emoji_events</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-black text-green-500 uppercase tracking-widest block leading-none">Fornecedor Ganhador</span>
-                        <span className="text-sm font-bold text-white uppercase">{selectedEntry.suppliers?.name || 'NÃO INFORMADO NO FINANCEIRO'}</span>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                    <div className="md:col-span-2">
+                      {selectedEntry && (
+                        <div className="h-14 px-5 bg-primary/5 border border-primary/10 rounded-2xl flex items-center gap-4 group/winner">
+                          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5 group-hover/winner:scale-110 transition-all duration-700">
+                            <span className="material-symbols-outlined text-[18px] font-black">verified</span>
+                          </div>
+                          <div className="truncate">
+                            <span className="text-[8px] font-black text-primary/60 uppercase tracking-[0.3em] block leading-none mb-1.5">Fornecedor Vencedor</span>
+                            <span className="text-[12px] font-black text-white uppercase tracking-tight truncate block">{selectedEntry.suppliers?.name || 'NÃO INFORMADO'}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-amber-500/70 tracking-[0.25em] mb-4 block whitespace-nowrap">Dsc. em Nota (R$)</label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-500/40 font-black text-[10px]">R$</span>
+                        <input
+                          type="number"
+                          step="any"
+                          value={discount}
+                          onChange={(e) => setDiscount(Number(e.target.value))}
+                          className="w-full bg-black/40 border border-amber-500/20 rounded-2xl h-14 pl-10 pr-5 text-amber-500 text-[13px] font-black focus:border-amber-500/60 focus:bg-amber-500/5 outline-none transition-all placeholder:text-amber-500/20"
+                          placeholder="0,00"
+                        />
                       </div>
                     </div>
-                  )}
+                  </div>
                 </section>
 
-                <section className="bg-white/5 p-6 rounded-2xl border border-white/5">
-                  <label className="text-xs font-black uppercase text-primary tracking-widest mb-4 block">3. Checklist de Conformidade</label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <section className="bg-white/[0.02] p-8 rounded-[36px] border border-white/5 shadow-2xl relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-green-500/5 blur-[80px] rounded-full -mr-20 -mt-20 opacity-0 group-hover:opacity-100 transition-all duration-1000"></div>
+                  <label className="text-[10px] font-black uppercase text-primary tracking-[0.25em] mb-6 block opacity-60">3. Checklist de Conformidade</label>
+                  <div className="grid grid-cols-1 gap-3">
                     {checklist.map((item, idx) => (
-                      <label key={item.id} className="flex items-center gap-3 p-3 bg-black/20 rounded-xl border border-white/5 cursor-pointer hover:bg-white/5 transition-all group">
-                        <div className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-all ${item.checked ? 'bg-primary border-primary text-white' : 'border-white/20 group-hover:border-primary/50'}`}>
-                          {item.checked && <span className="material-symbols-outlined text-[16px] font-black">check</span>}
+                      <label key={item.id} className="flex items-center gap-5 p-4.5 bg-black/30 rounded-[24px] border border-white/5 cursor-pointer hover:bg-white/[0.04] hover:border-white/10 transition-all group/check relative overflow-hidden">
+                        <div className={`w-7 h-7 rounded-xl flex items-center justify-center border-2 transition-all duration-500 ${item.checked ? 'bg-primary border-primary text-white shadow-xl shadow-primary/20 scale-110' : 'border-white/10 group-hover/check:border-primary/40'}`}>
+                          {item.checked && <span className="material-symbols-outlined text-[18px] font-black">check_circle</span>}
                           <input
                             type="checkbox"
                             className="hidden"
@@ -1045,41 +1188,181 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
                             }}
                           />
                         </div>
-                        <div className="flex-1">
-                          <span className={`text-[11px] font-bold uppercase transition-all ${item.checked ? 'text-white' : 'text-slate-500 group-hover:text-slate-300'}`}>{item.label}</span>
-                          {/* Dica visual se o documento existe nos anexos */}
-                          {((item.id === 'quotations' && [...processAttachments, ...(selectedEntry?.attachments || [])].some(a => a.category === 'Pesquisa de Preços' || a.category === 'Nota Fiscal')) ||
-                            (item.id === 'invoice' && [...processAttachments, ...(selectedEntry?.attachments || [])].some(a => a.category === 'Nota Fiscal')) ||
-                            (item.id === 'certificates' && [...processAttachments, ...(selectedEntry?.attachments || [])].some(a => a.category?.includes('Certidão'))) ||
-                            (item.id === 'minutes' && [...processAttachments, ...(selectedEntry?.attachments || [])].some(a => a.category === 'Ata de Assembleia'))) && (
-                              <span className="flex items-center gap-1 text-[8px] text-green-500 font-black mt-1 uppercase">
-                                <span className="material-symbols-outlined text-[10px]">cloud_done</span> Documento detectado no repositório
-                              </span>
-                            )}
+                        <div className="flex-1 flex justify-between items-center pr-2">
+                          <span className={`text-[11px] font-black uppercase tracking-widest transition-all duration-500 ${item.checked ? 'text-white' : 'text-slate-600 group-hover/check:text-slate-300'}`}>{item.label}</span>
+                          {(() => {
+                            const allAtts = [...processAttachments, ...(selectedEntry?.attachments || [])];
+                            const hasDoc = (cat: string) => allAtts.some(a => a.category?.toLowerCase().includes(cat.toLowerCase()));
+                            let detected = false;
+                            if (item.id === 'quotations' && (hasDoc('Pesquisa') || hasDoc('Orçamento'))) detected = true;
+                            if (item.id === 'invoice' && (hasDoc('Nota') || hasDoc('Fiscal'))) detected = true;
+                            if (item.id === 'certificates' && hasDoc('Certidão')) detected = true;
+                            if (item.id === 'minutes' && (hasDoc('Ata') || hasDoc('Assembleia'))) detected = true;
+                            if (detected) return (
+                              <div className="flex items-center h-7 px-4 rounded-full bg-green-500/10 border border-green-500/20 gap-2 shadow-inner">
+                                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]"></div>
+                                <span className="text-[8px] font-black text-green-500 uppercase tracking-[0.2em]">Verificado</span>
+                              </div>
+                            );
+                            return null;
+                          })()}
                         </div>
                       </label>
                     ))}
                   </div>
                 </section>
-
-                <ValueCounter />
               </div>
 
+
               {selectedEntry && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <section className="bg-white/5 p-6 rounded-2xl border border-white/5">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                      <h4 className="text-xs font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[18px]">attach_file</span>
-                        4. Documentação da Prestação (Anexos Técnicos)
-                      </h4>
-                      <div className="flex flex-wrap gap-1">
-                        {ACCOUNTABILITY_DOC_CATEGORIES.slice(0, 3).map(cat => (
-                          <label key={cat} className="flex items-center gap-2 bg-primary/10 text-primary px-3 py-1.5 rounded-xl text-[10px] font-bold border border-primary/20 cursor-pointer hover:bg-primary/20 transition-all">
-                            + {cat.split(' ')[0]}
+                <div className="space-y-16 pb-10">
+                  {/* 2. Itens e Comparativos */}
+                  <section className="space-y-10">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+                      <div className="flex items-center gap-5">
+                        <div className="w-14 h-14 rounded-[20px] bg-primary/10 flex items-center justify-center text-primary shadow-2xl shadow-primary/5">
+                          <span className="material-symbols-outlined text-[28px]">query_stats</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <h4 className="text-[14px] font-black uppercase text-white tracking-[0.2em]">2. Itens e Cotações Competidoras</h4>
+                          <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Gerencie os itens da nota e o quadro comparativo</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-4 w-full md:w-auto">
+                        <button onClick={() => setShowImportModal(true)} className="flex-1 md:flex-none bg-emerald-500/10 text-emerald-500 px-8 h-14 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-emerald-500/20 transition-all flex items-center justify-center gap-3 border border-emerald-500/20 group">
+                          <span className="material-symbols-outlined text-[20px] group-hover:rotate-12 transition-transform">database</span> Planilha (Excel)
+                        </button>
+                        <button onClick={handleAddItem} className="flex-1 md:flex-none bg-primary/10 text-primary px-8 h-14 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-primary/20 transition-all flex items-center justify-center gap-3 border border-primary/20 group">
+                          <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">add_circle</span> Adicionar Item
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-8">
+                      {items.map((item, idx) => (
+                        <div key={idx} className="bg-white/[0.01] border border-white/5 p-10 rounded-[44px] space-y-10 shadow-2xl relative group/item overflow-hidden">
+                          <div className="absolute top-0 left-0 w-1.5 h-full bg-primary/0 group-hover/item:bg-primary/30 transition-all duration-700"></div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-end relative z-10">
+                            <div className="md:col-span-5">
+                              <label className="text-[10px] font-black text-slate-500 uppercase mb-4 block tracking-widest opacity-60">Descrição Detalhada</label>
+                              <input value={item.description} onChange={(e) => {
+                                const it = [...items]; it[idx].description = e.target.value; setItems(it);
+                                const cq = [...competitorQuotes]; cq.forEach(q => q.items[idx].description = e.target.value); setCompetitorQuotes(cq);
+                              }} className="w-full bg-black/40 border border-white/10 rounded-2xl h-12 px-5 text-[12px] text-white focus:border-primary/50 transition-all" placeholder="Ex: Monitor 24 Polegadas" />
+                            </div>
+                            <div className="md:col-span-3 grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="text-[10px] font-black text-slate-500 uppercase mb-4 block tracking-widest opacity-60 text-center">Qtd</label>
+                                <input type="number" step="any" value={item.quantity} onChange={(e) => {
+                                  const it = [...items]; it[idx].quantity = Number(e.target.value); setItems(it);
+                                  const cq = [...competitorQuotes]; cq.forEach(q => q.items[idx].quantity = Number(e.target.value)); setCompetitorQuotes(cq);
+                                }} className="w-full bg-black/40 border border-white/10 rounded-2xl h-12 px-3 text-[12px] text-white text-center font-bold" />
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-black text-slate-500 uppercase mb-4 block tracking-widest opacity-60 text-center">Unid</label>
+                                <input
+                                  list="standard-units"
+                                  value={item.unit}
+                                  onChange={(e) => {
+                                    const it = [...items]; it[idx].unit = e.target.value; setItems(it);
+                                    const cq = [...competitorQuotes]; cq.forEach(q => q.items[idx].unit = e.target.value); setCompetitorQuotes(cq);
+                                  }}
+                                  className="w-full bg-black/40 border border-white/10 rounded-2xl h-12 px-3 text-[12px] text-white text-center focus:border-primary/50 outline-none transition-all uppercase font-bold"
+                                />
+                                <datalist id="standard-units">
+                                  {['Unid.', 'Cx.', 'Pac.', 'Kg', 'M', 'L', 'Pça', 'Serv.', 'Kit', 'Resma', 'Galão'].map(u => (
+                                    <option key={u} value={u} />
+                                  ))}
+                                </datalist>
+                              </div>
+                            </div>
+                            <div className="md:col-span-3">
+                              <label className="text-[10px] font-black text-primary uppercase mb-4 block tracking-[0.15em]">Preço Unit. Vencedor</label>
+                              <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-black text-[10px] opacity-40">R$</span>
+                                <input type="number" step="any" value={item.winner_unit_price} onChange={(e) => {
+                                  const it = [...items]; it[idx].winner_unit_price = Number(e.target.value); setItems(it);
+                                }} className="w-full bg-primary/10 border border-primary/20 rounded-2xl h-12 pl-10 pr-5 text-[14px] text-primary font-black focus:border-primary transition-all" />
+                              </div>
+                            </div>
+                            <div className="md:col-span-1 flex justify-end">
+                              <button
+                                onClick={() => handleRemoveItem(idx)}
+                                className={`w-12 h-12 flex items-center justify-center rounded-2xl bg-red-500/10 text-red-500 hover:bg-red-500 transition-all hover:text-white ${items.length === 1 ? 'opacity-20 cursor-not-allowed' : 'opacity-100'}`}
+                              >
+                                <span className="material-symbols-outlined text-[20px]">delete_sweep</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Quadro Comparativo Interno */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 pt-10 border-t border-white/5 relative z-10">
+                            {competitorQuotes.map((q, qIdx) => (
+                              <div key={qIdx} className="bg-black/30 p-8 rounded-[32px] border border-white/5 space-y-6 relative group/quote hover:border-amber-500/20 transition-all">
+                                <div className="absolute -top-4 left-8 px-4 py-1 bg-amber-500 text-amber-950 rounded-full shadow-lg shadow-amber-500/20">
+                                  <span className="text-[9px] font-black uppercase tracking-[0.1em]">Concorrente {qIdx + 1}</span>
+                                </div>
+                                <div className="flex justify-between items-center bg-black/40 p-5 rounded-2xl border border-white/5 min-h-[64px] cursor-pointer hover:border-amber-500/40 hover:bg-black/60 transition-all group/s" onClick={() => setShowSupplierModal({ open: true, quoteIdx: qIdx })}>
+                                  <div className="truncate flex-1 pr-6 flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 group-hover/s:bg-amber-500 group-hover/s:text-amber-950 transition-all">
+                                      <span className="material-symbols-outlined text-[20px]">storefront</span>
+                                    </div>
+                                    <div className="truncate">
+                                      <span className={`text-[12px] uppercase tracking-tight font-black block truncate ${q.supplier_name ? 'text-white' : 'text-slate-600 italic'}`}>
+                                        {q.supplier_name || 'Vincular Empresa...'}
+                                      </span>
+                                      {q.supplier_cnpj && <span className="text-[9px] text-slate-500 font-bold block mt-0.5 tracking-widest">{q.supplier_cnpj}</span>}
+                                    </div>
+                                  </div>
+                                  <span className="material-symbols-outlined text-amber-500 group-hover/s:translate-x-1 transition-transform">search</span>
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-black text-slate-600 uppercase mb-3 block tracking-widest opacity-60">Preço Unitário (R$)</label>
+                                  <div className="relative">
+                                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-amber-500/30 font-black text-[12px]">R$</span>
+                                    <input
+                                      type="number"
+                                      step="any"
+                                      className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 pl-12 pr-6 text-[16px] text-amber-500 font-black focus:border-amber-500/50 outline-none transition-all"
+                                      value={q.items[idx].unit_price}
+                                      onChange={(e) => {
+                                        const cq = [...competitorQuotes]; cq[qIdx].items[idx].unit_price = Number(e.target.value); setCompetitorQuotes(cq);
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  {/* 4. Documentação Técnica */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                    <section className="bg-white/[0.02] p-10 rounded-[44px] border border-white/5 shadow-2xl space-y-10 relative overflow-hidden group">
+                      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/0 via-primary/40 to-primary/0"></div>
+                      <div className="flex items-center gap-5">
+                        <div className="w-14 h-14 rounded-[20px] bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5">
+                          <span className="material-symbols-outlined text-[28px]">folder_zip</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <h4 className="text-[14px] font-black uppercase text-white tracking-[0.2em]">4. Anexos Técnicos</h4>
+                          <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Clique para subir novos arquivos</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {ACCOUNTABILITY_DOC_CATEGORIES.map(cat => (
+                          <label key={cat} className="flex flex-col items-center justify-center p-4 bg-black/40 border border-white/5 rounded-3xl text-[9px] font-black text-slate-500 uppercase tracking-tight text-center cursor-pointer hover:bg-primary hover:text-white transition-all gap-2 h-24 group/up shadow-lg hover:shadow-primary/20">
+                            <span className="material-symbols-outlined text-[22px] opacity-40 group-hover/up:opacity-100 group-hover/up:scale-125 transition-all duration-500">upload</span>
+                            {cat}
                             <input
                               type="file"
                               className="hidden"
+                              disabled={isUploadingDoc}
                               onChange={async (e) => {
                                 const file = e.target.files?.[0];
                                 if (!file) return;
@@ -1097,197 +1380,77 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
                           </label>
                         ))}
                       </div>
-                    </div>
-                    <div className="space-y-2">
-                      {processAttachments.map(att => (
-                        <div key={att.id} className="flex items-center justify-between p-3 bg-black/20 rounded-xl border border-white/5 group">
-                          <div className="flex items-center gap-3">
-                            <span className="material-symbols-outlined text-primary">description</span>
-                            <div>
-                              <span className="text-sm text-white font-medium block leading-tight">{att.name}</span>
-                              <span className="text-[9px] text-primary/60 font-black uppercase">{att.category}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                            <a href={att.url} target="_blank" className="p-2 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-all">
-                              <span className="material-symbols-outlined text-sm">visibility</span>
-                            </a>
-                            <button
-                              onClick={() => setProcessAttachments(processAttachments.filter(a => a.id !== att.id))}
-                              className="p-2 hover:bg-red-500/10 rounded-lg text-slate-400 hover:text-red-500 transition-all"
-                            >
-                              <span className="material-symbols-outlined text-sm">delete</span>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                      {processAttachments.length === 0 && (
-                        <div className="p-6 border-2 border-dashed border-white/5 rounded-2xl text-center text-slate-500">
-                          <p className="text-xs">Nenhum documento específico anexado a esta prestação.</p>
-                        </div>
-                      )}
-                    </div>
-                  </section>
 
-                  {/* Documentos herdados do Lançamento */}
-                  <section className="bg-white/5 p-6 rounded-2xl border border-white/5 border-dashed">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-6">
-                      <h4 className="text-xs font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[18px]">history_edu</span>
-                        Documentos Herdados do Lançamento
-                      </h4>
-                      <span className="text-[9px] bg-white/10 text-slate-400 px-2 py-1 rounded font-black uppercase">Somente Leitura</span>
-                    </div>
-                    <div className="space-y-2">
-                      {selectedEntry?.attachments && selectedEntry.attachments.length > 0 ? (
-                        selectedEntry.attachments.map(att => (
-                          <div key={att.id} className="flex items-center justify-between p-3 bg-black/40 rounded-xl border border-white/5">
-                            <div className="flex items-center gap-3">
-                              <span className="material-symbols-outlined text-slate-500">payments</span>
-                              <div>
-                                <span className="text-sm text-slate-300 font-medium block leading-tight">{att.name}</span>
-                                <span className="text-[10px] text-slate-600 font-black uppercase text-xs">{att.category || 'Lançamento'}</span>
+                      <div className="space-y-4 pt-4">
+                        {processAttachments.map(att => (
+                          <div key={att.id} className="flex items-center justify-between p-5 bg-primary/5 rounded-3xl border border-primary/10 group/itematt transition-all hover:bg-primary/10 hover:border-primary/30">
+                            <div className="flex items-center gap-5 truncate">
+                              <div className="w-12 h-12 rounded-[18px] bg-primary/10 flex items-center justify-center text-primary group-hover/itematt:scale-110 transition-transform">
+                                <span className="material-symbols-outlined text-[22px]">attachment</span>
+                              </div>
+                              <div className="truncate">
+                                <span className="text-[12px] text-white font-black block leading-tight truncate mb-1">{att.name}</span>
+                                <span className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-60">{att.category}</span>
                               </div>
                             </div>
-                            <a href={att.url} target="_blank" className="p-2 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-all">
-                              <span className="material-symbols-outlined text-sm">visibility</span>
-                            </a>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="p-6 text-center text-slate-600 italic">
-                          <p className="text-xs">Nenhum documento financeiro anexado ao lançamento original.</p>
-                        </div>
-                      )}
-                    </div>
-                  </section>
-                </div>
-              )}
-
-              {selectedEntry && (
-                <div className="space-y-10">
-                  <section>
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                      <h4 className="text-xs font-black uppercase text-primary tracking-widest flex items-center gap-2 mb-2 md:mb-0">
-                        <span className="material-symbols-outlined">analytics</span>
-                        2. Itens da Nota e Cotações Competidoras
-                      </h4>
-                      <div className="flex gap-2">
-                        <button onClick={() => setShowImportModal(true)} className="bg-green-600/10 text-green-500 px-5 py-2.5 rounded-xl font-bold text-xs hover:bg-green-600/20 transition-all flex items-center gap-2 border border-green-600/20">
-                          <span className="material-symbols-outlined text-sm">grid_on</span> IMPORTAR (EXCEL)
-                        </button>
-                        <button onClick={handleAddItem} className="bg-primary/10 text-primary px-5 py-2.5 rounded-xl font-black text-xs hover:bg-primary/20 transition-all flex items-center gap-2 border border-primary/20">
-                          <span className="material-symbols-outlined text-sm">add_box</span> ADICIONAR ITEM À NOTA
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-6">
-                      {items.map((item, idx) => (
-                        <div key={idx} className="bg-white/[0.02] border border-white/5 p-6 rounded-2xl space-y-6 shadow-sm group/item">
-                          {/* Main Item Row */}
-                          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end relative">
-                            <div className="md:col-span-5">
-                              <label className="text-[10px] font-black text-slate-500 uppercase mb-2 block tracking-tighter">Descrição do Item</label>
-                              <input value={item.description} onChange={(e) => {
-                                const it = [...items]; it[idx].description = e.target.value; setItems(it);
-                                const cq = [...competitorQuotes]; cq.forEach(q => q.items[idx].description = e.target.value); setCompetitorQuotes(cq);
-                              }} className="w-full bg-black/40 border-white/10 rounded-lg h-10 px-3 text-sm text-white focus:border-primary transition-all" placeholder="Ex: Monitor 24 Polegadas" />
-                            </div>
-                            <div className="md:col-span-2">
-                              <label className="text-[10px] font-black text-slate-500 uppercase mb-2 block">Qtd</label>
-                              <input type="number" step="any" value={item.quantity} onChange={(e) => {
-                                const it = [...items]; it[idx].quantity = Number(e.target.value); setItems(it);
-                                const cq = [...competitorQuotes]; cq.forEach(q => q.items[idx].quantity = Number(e.target.value)); setCompetitorQuotes(cq);
-                              }} className="w-full bg-black/40 border-white/10 rounded-lg h-10 px-3 text-sm text-white text-center" />
-                            </div>
-                            <div className="md:col-span-1">
-                              <label className="text-[10px] font-black text-slate-500 uppercase mb-2 block">Unid</label>
-                              <input
-                                list="standard-units"
-                                value={item.unit}
-                                onChange={(e) => {
-                                  const it = [...items]; it[idx].unit = e.target.value; setItems(it);
-                                  const cq = [...competitorQuotes]; cq.forEach(q => q.items[idx].unit = e.target.value); setCompetitorQuotes(cq);
-                                }}
-                                className="w-full bg-black/40 border-white/10 rounded-lg h-10 px-3 text-sm text-white text-center focus:border-primary outline-none transition-all"
-                              />
-                              <datalist id="standard-units">
-                                {['Unid.', 'Cx.', 'Pac.', 'Kg', 'M', 'L', 'Pça', 'Serv.', 'Kit', 'Resma', 'Galão'].map(u => (
-                                  <option key={u} value={u} />
-                                ))}
-                              </datalist>
-                            </div>
-                            <div className="md:col-span-3">
-                              <label className="text-[10px] font-black text-primary uppercase mb-2 block">Preço Unit. GANHADOR (R$)</label>
-                              <input type="number" step="any" value={item.winner_unit_price} onChange={(e) => {
-                                const it = [...items]; it[idx].winner_unit_price = Number(e.target.value); setItems(it);
-                              }} className="w-full bg-primary/10 border-primary/20 rounded-lg h-10 px-3 text-sm text-primary font-black" />
-                            </div>
-                            <div className="md:col-span-1 flex justify-end">
-                              <button
-                                onClick={() => handleRemoveItem(idx)}
-                                className={`w-full md:w-10 h-10 flex items-center justify-center rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 transition-all hover:text-white ${items.length === 1 ? 'opacity-20 cursor-not-allowed' : 'opacity-100 group-hover/item:opacity-100'}`}
-                                title="Remover este item"
-                              >
-                                <span className="material-symbols-outlined">delete</span>
+                            <div className="flex items-center gap-3">
+                              <a href={att.url} target="_blank" className="w-10 h-10 flex items-center justify-center bg-black/40 hover:bg-primary text-slate-500 hover:text-white rounded-xl transition-all shadow-xl">
+                                <span className="material-symbols-outlined text-[20px]">visibility</span>
+                              </a>
+                              <button onClick={() => setProcessAttachments(processAttachments.filter(a => a.id !== att.id))} className="w-10 h-10 flex items-center justify-center bg-black/40 hover:bg-red-500 text-slate-500 hover:text-white rounded-xl transition-all shadow-xl">
+                                <span className="material-symbols-outlined text-[20px]">delete</span>
                               </button>
                             </div>
                           </div>
+                        ))}
+                      </div>
+                    </section>
 
-                          {/* Quotes Side-by-Side */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-white/5">
-                            {competitorQuotes.map((q, qIdx) => (
-                              <div key={qIdx} className="bg-black/20 p-5 rounded-2xl border border-white/5 space-y-4">
-                                <div className="flex justify-between items-center">
-                                  <label className="text-[10px] font-black text-amber-500 uppercase tracking-widest">FORNECEDOR CONCORRENTE {qIdx + 1}</label>
-                                  <button
-                                    onClick={() => setShowSupplierModal({ open: true, quoteIdx: qIdx })}
-                                    className="text-[10px] bg-amber-500/10 text-amber-500 px-2 py-1 rounded hover:bg-amber-500/20 transition-all font-bold"
-                                  >
-                                    BUSCAR FORNECEDOR
-                                  </button>
-                                </div>
-                                <div className="flex flex-col gap-3">
-                                  <div className="flex flex-col gap-1">
-                                    <span className="text-[9px] text-slate-500 font-bold uppercase">Razão Social / CNPJ Selecionado</span>
-                                    <div className="h-10 px-3 bg-[#111a22] border border-white/5 rounded-lg flex items-center text-xs text-white font-bold italic">
-                                      {q.supplier_name ? `${q.supplier_name}${q.supplier_cnpj ? ` (${q.supplier_cnpj})` : ''}` : 'Nenhum selecionado...'}
-                                    </div>
-                                  </div>
-                                  <div className="flex flex-col gap-1">
-                                    <span className="text-[9px] text-slate-500 font-bold uppercase">Preço Unitário para este item (R$)</span>
-                                    <input
-                                      type="number"
-                                      step="any"
-                                      className="w-full bg-[#111a22] border-white/10 rounded-lg h-10 px-3 text-sm text-amber-500 font-black"
-                                      value={q.items[idx].unit_price}
-                                      onChange={(e) => {
-                                        const cq = [...competitorQuotes]; cq[qIdx].items[idx].unit_price = Number(e.target.value); setCompetitorQuotes(cq);
-                                      }}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
+                    {/* Documentos Financeiros */}
+                    <section className="bg-white/[0.02] p-10 rounded-[44px] border border-white/5 border-dashed shadow-2xl space-y-10 relative group">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-5">
+                          <div className="w-14 h-14 rounded-[20px] bg-slate-500/10 flex items-center justify-center text-slate-400">
+                            <span className="material-symbols-outlined text-[28px]">history_edu</span>
+                          </div>
+                          <div className="flex flex-col">
+                            <h4 className="text-[14px] font-black uppercase text-slate-400 tracking-[0.2em]">Anexos Financeiros</h4>
+                            <p className="text-[10px] text-slate-600 uppercase font-bold tracking-widest mt-1">Importados automaticamente</p>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </section>
+                        <span className="text-[8px] bg-white/5 text-slate-600 border border-white/10 px-4 py-2 rounded-full font-black uppercase tracking-[0.2em]">Read Only</span>
+                      </div>
+
+                      <div className="space-y-4">
+                        {selectedEntry?.attachments && selectedEntry.attachments.length > 0 ? (
+                          selectedEntry.attachments.map(att => (
+                            <div key={att.id} className="flex items-center justify-between p-5 bg-black/40 rounded-3xl border border-white/5 group/att relative overflow-hidden transition-all hover:border-white/10">
+                              <div className="absolute inset-y-0 left-0 w-1.5 bg-slate-500/20 group-hover/att:w-full transition-all duration-1000 -z-10 group-hover/att:bg-slate-300/[0.02]"></div>
+                              <div className="flex items-center gap-5">
+                                <div className="w-12 h-12 rounded-[18px] bg-white/5 flex items-center justify-center text-slate-600">
+                                  <span className="material-symbols-outlined text-[20px]">receipt_long</span>
+                                </div>
+                                <div>
+                                  <span className="text-[12px] text-white font-black block leading-tight mb-1">{att.name}</span>
+                                  <span className="text-[9px] text-slate-600 font-black uppercase tracking-[0.2em]">{att.category || 'FINANCEIRO'}</span>
+                                </div>
+                              </div>
+                              <a href={att.url} target="_blank" className="w-10 h-10 flex items-center justify-center bg-white/5 hover:bg-white/20 rounded-[18px] text-slate-500 hover:text-white transition-all">
+                                <span className="material-symbols-outlined text-[20px]">visibility</span>
+                              </a>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-20 border-2 border-dashed border-white/[0.02] rounded-[44px] text-center flex flex-col items-center gap-4 opacity-20">
+                            <span className="material-symbols-outlined text-[48px]">folder_off</span>
+                            <p className="text-[10px] text-slate-600 font-black uppercase tracking-[0.3em]">Sem anexos no lançamento</p>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+                  </div>
                 </div>
               )}
-            </div>
-
-            <div className="p-8 border-t border-surface-border bg-[#111a22] flex flex-col md:flex-row justify-end gap-4 sticky bottom-0 z-20">
-              <button onClick={() => setShowNewProcessModal(false)} className="px-8 h-12 bg-white/5 text-white font-bold rounded-xl hover:bg-white/10 transition-all w-full md:w-auto">Cancelar</button>
-              <button
-                onClick={handleCreateProcess}
-                disabled={loading || !selectedEntry}
-                className="px-12 h-12 bg-primary text-white font-bold rounded-xl shadow-2xl shadow-primary/30 hover:bg-primary-hover transition-all disabled:opacity-50 w-full md:w-auto"
-              >
-                {loading ? 'Processando Dados...' : 'Finalizar Lançamento Técnico'}
-              </button>
             </div>
           </div>
         </div>
@@ -1295,7 +1458,7 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
 
       {/* Entry Selection Modal */}
       {showEntryModal && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
           <div className="bg-[#0f172a] border border-white/10 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
             <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#111a22]">
               <div>
@@ -1342,7 +1505,7 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
 
       {/* Supplier Selection Modal */}
       {showSupplierModal.open && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
           <div className="bg-[#0f172a] border border-white/10 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[70vh]">
             <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#111a22]">
               <h3 className="text-lg font-bold text-white">Selecionar Fornecedor</h3>
@@ -1380,43 +1543,105 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
 
       {/* Import Modal */}
       {showImportModal && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/99 backdrop-blur-md">
-          <div className="bg-[#0f172a] border border-white/10 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#111a22]">
-              <div>
-                <h3 className="text-lg font-bold text-white">Importar Itens do Excel</h3>
-                <p className="text-xs text-slate-400">Copie as células do Excel e cole abaixo.</p>
+        <div className="fixed inset-0 z-[130] flex items-center justify-center p-2 md:p-4 bg-black/99 backdrop-blur-md overflow-y-auto">
+          <div className="bg-[#0a0f14] border border-white/10 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
+            <div className="p-5 md:p-6 border-b border-white/5 flex justify-between items-center bg-[#0a0f14]/80 backdrop-blur-md sticky top-0 z-10">
+              <div className="flex flex-col">
+                <h3 className="text-base md:text-xl font-black text-white leading-tight">Importação em Massa (Excel)</h3>
+                <p className="text-[10px] md:text-xs text-slate-400 mt-1 uppercase tracking-widest">Preenchimento rápido de itens e cotações</p>
               </div>
-              <button onClick={() => setShowImportModal(false)} className="text-slate-400 hover:text-white"><span className="material-symbols-outlined">close</span></button>
+              <button onClick={() => setShowImportModal(false)} className="w-10 h-10 rounded-full hover:bg-white/5 flex items-center justify-center text-slate-500 hover:text-white transition-all">
+                <span className="material-symbols-outlined text-2xl">close</span>
+              </button>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-xl">
-                <p className="text-xs text-yellow-500 font-bold uppercase mb-2">Formato Esperado (4 Colunas):</p>
-                <div className="flex gap-2 text-[10px] text-white font-mono bg-black/40 p-2 rounded">
-                  <span className="flex-1">DESCRIÇÃO</span>
-                  <span className="w-px bg-white/20"></span>
-                  <span className="w-20 text-center">QTD</span>
-                  <span className="w-px bg-white/20"></span>
-                  <span className="w-16 text-center">UNID</span>
-                  <span className="w-px bg-white/20"></span>
-                  <span className="w-24 text-right">VALOR UNIT.</span>
+            <div className="p-4 md:p-8 space-y-6 overflow-y-auto min-h-0">
+              <div className="flex flex-col md:flex-row justify-between items-stretch bg-primary/5 border border-primary/20 p-5 rounded-2xl gap-4">
+                <div className="flex-1">
+                  <p className="text-[10px] text-primary font-black uppercase mb-1 tracking-widest">Opção A: Arquivo CSV</p>
+                  <p className="text-[9px] text-slate-500 mb-3">Baixe o modelo ou envie seu arquivo.</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={downloadTemplate}
+                      className="h-9 px-4 rounded-lg bg-indigo-500/10 text-indigo-400 text-[10px] font-bold flex items-center gap-2 hover:bg-indigo-500 hover:text-white transition-all border border-indigo-500/20"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">download</span>
+                      Baixar Modelo
+                    </button>
+                    <label className="h-9 px-4 rounded-lg bg-emerald-500/10 text-emerald-400 text-[10px] font-bold flex items-center gap-2 hover:bg-emerald-500 hover:text-white transition-all border border-emerald-500/20 cursor-pointer">
+                      <span className="material-symbols-outlined text-[18px]">upload_file</span>
+                      Subir CSV
+                      <input type="file" accept=".csv" className="hidden" onChange={handleFileImport} />
+                    </label>
+                  </div>
+                </div>
+                <div className="w-px bg-white/10 hidden md:block"></div>
+                <div className="flex-1">
+                  <p className="text-[10px] text-primary font-black uppercase mb-3 tracking-widest">Estrutura das Colunas (Excel):</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { label: 'Descrição Detalhada', sub: 'Texto (ex: Arroz tipo 1)', color: 'slate' },
+                      { label: 'Quantidade', sub: 'Numérico (ex: 100)', color: 'slate' },
+                      { label: 'Unidade', sub: 'Texto (ex: KG, Unid)', color: 'slate' },
+                      { label: 'Preço Vencedor', sub: 'Valor Unitário (R$)', color: 'emerald' },
+                      { label: 'Concorrente 1', sub: 'Valor Unitário (R$)', color: 'amber' },
+                      { label: 'Concorrente 2', sub: 'Valor Unitário (R$)', color: 'amber' },
+                    ].map((col, idx) => (
+                      <div key={idx} className="bg-black/20 border border-white/5 p-2 rounded-xl flex items-center gap-2 group hover:border-white/10 transition-all shadow-lg shadow-black/20">
+                        <div className={`w-5 h-5 rounded-lg flex items-center justify-center text-[9px] font-black shadow-lg
+                          ${col.color === 'emerald' ? 'bg-emerald-500 text-emerald-950 shadow-emerald-500/20' :
+                            col.color === 'amber' ? 'bg-amber-500 text-amber-950 shadow-amber-500/20' :
+                              'bg-white/10 text-white shadow-black/40'}`}>
+                          {idx + 1}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className={`text-[8px] font-black uppercase tracking-wider ${col.color === 'emerald' ? 'text-emerald-400' : col.color === 'amber' ? 'text-amber-400' : 'text-slate-300'}`}>{col.label}</span>
+                          <span className="text-[7px] text-slate-500 font-bold uppercase tracking-tight">{col.sub}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[9px] text-slate-500 mt-2 italic">Dica: Selecione 6 colunas no Excel e cole aqui.</p>
                 </div>
               </div>
-              <textarea
-                value={importText}
-                onChange={(e) => setImportText(e.target.value)}
-                className="w-full h-64 bg-black/40 border border-white/10 rounded-xl p-4 text-xs font-mono text-white focus:border-primary outline-none resize-none"
-                placeholder={`Exemplo de conteúdo copiado:\n\nArroz Parboilizado Tipo 1\t50\tkg\t5,50\nFeijão Carioca\t30\tkg\t8,90\nÓleo de Soja\t20\tun\t6,75`}
-              />
-              <div className="flex justify-end gap-3">
-                <button onClick={() => setShowImportModal(false)} className="px-6 h-10 bg-white/5 text-white text-xs font-bold rounded-xl hover:bg-white/10">Cancelar</button>
-                <button onClick={processImport} className="px-8 h-10 bg-green-600 text-white text-xs font-bold rounded-xl shadow-lg hover:bg-green-500">Processar Importação</button>
+
+              <div className="relative">
+                <p className="text-[10px] text-slate-500 font-black uppercase mb-2 tracking-widest">Opção B: Copiar e Colar</p>
+                <textarea
+                  value={importText}
+                  onChange={(e) => setImportText(e.target.value)}
+                  className="w-full h-56 bg-black/40 border border-white/10 rounded-2xl p-5 text-xs font-mono text-white focus:border-primary outline-none resize-none transition-all placeholder:text-slate-700"
+                  placeholder={`Arroz Parboilizado\t50\tkg\t5,50\t5,90\t6,10\nFeijão Carioca\t30\tkg\t8,90\t9,20\t9,00`}
+                />
+                {!importText && (
+                  <div className="absolute inset-x-0 bottom-10 flex items-center justify-center pointer-events-none opacity-20 flex-col gap-2">
+                    <span className="material-symbols-outlined text-4xl">content_paste</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-center">Cole seus dados do Excel aqui</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-[#0a0f14] pt-4 border-t border-white/5 sticky bottom-0 z-10">
+                <button
+                  onClick={() => { setItems([{ description: '', quantity: 1, unit: 'Unid.', winner_unit_price: 0 }]); setCompetitorQuotes(competitorQuotes.map(q => ({ ...q, items: [{ description: '', quantity: 1, unit: 'Unid.', unit_price: 0 }] }))); alert('Itens limpos. Agora você pode importar do zero.'); }}
+                  className="w-full md:w-auto px-6 h-11 bg-red-500/10 text-red-500 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
+                >
+                  Limpar Itens Atuais
+                </button>
+                <div className="flex gap-2 w-full md:w-auto">
+                  <button onClick={() => setShowImportModal(false)} className="flex-1 md:flex-none px-6 h-11 bg-white/5 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all border border-white/5">Cancelar</button>
+                  <button
+                    onClick={() => processImport()}
+                    disabled={!importText.trim()}
+                    className="flex-2 md:flex-none px-10 h-11 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-2xl shadow-primary/30 hover:bg-primary-hover transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    Confirmar e Inserir
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 };

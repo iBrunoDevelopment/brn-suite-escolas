@@ -46,7 +46,9 @@ const Settings: React.FC<{ user: User }> = ({ user }) => {
     { id: 'periods', label: 'Períodos / Semestres', icon: 'calendar_month', roles: ['Administrador', 'Operador'] },
     { id: 'banks', label: 'Contas Bancárias', icon: 'account_balance', roles: ['Administrador', 'Operador'] },
     { id: 'suppliers', label: 'Fornecedores', icon: 'local_shipping', roles: ['Administrador', 'Operador'] },
-    { id: 'contacts', label: 'Contatos de Suporte', icon: 'contact_support', roles: ['Administrador'] }
+    { id: 'assets', label: 'Arquivos & Modelos', icon: 'folder_open', roles: ['Administrador', 'Operador'] },
+    { id: 'contacts', label: 'Contatos de Suporte', icon: 'contact_support', roles: ['Administrador'] },
+    { id: 'website', label: 'Web Site / Planos', icon: 'public', roles: ['Administrador'] }
   ].filter(tab => tab.roles.length === 0 || tab.roles.includes(user.role));
 
   // State for Cities
@@ -100,6 +102,16 @@ const Settings: React.FC<{ user: User }> = ({ user }) => {
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [savingContacts, setSavingContacts] = useState(false);
 
+  // Plans State
+  const [plans, setPlans] = useState<any[]>([]);
+  const [loadingPlans, setLoadingPlans] = useState(false);
+  const [savingPlans, setSavingPlans] = useState(false);
+
+  // System Assets State
+  const [templateUrl, setTemplateUrl] = useState('');
+  const [loadingAssets, setLoadingAssets] = useState(false);
+  const [isUploadingTemplate, setIsUploadingTemplate] = useState(false);
+
   useEffect(() => {
     if (activeTab === 'rubrics' || activeTab === 'banks') fetchAuxOptions();
     if (activeTab === 'rubrics') fetchRubricData();
@@ -108,7 +120,119 @@ const Settings: React.FC<{ user: User }> = ({ user }) => {
     if (activeTab === 'payment') fetchPaymentData();
     if (activeTab === 'periods') fetchPeriodData();
     if (activeTab === 'contacts') fetchSupportContacts();
+    if (activeTab === 'website') fetchPlans();
+    if (activeTab === 'assets') fetchAssets();
   }, [activeTab]);
+
+  const defaultPlans = [
+    {
+      id: "bbagil_gestao",
+      title: "BBÁgil & Gestão",
+      subtitle: "Ferramentas Digitais",
+      price_value: "R$ 300",
+      price_period: "/mês",
+      billing_info: "Valor mensal: R$ 300,00. Valor anual: R$ 3.600,00. O controle absoluto nas suas mãos.",
+      features: [
+        "BBÁgil Automático",
+        "Livro Caixa Digital",
+        "Livro Tombo Patrimonial",
+        "Atas de Assembleia",
+        "Planos de Ação"
+      ],
+      details: "O pacote completo de ferramentas digitais para facilitar a gestão do dia a dia. Inclui o BBÁgil para automação bancária, Livro Caixa, Livro Tombo e toda a parte de documentação de Atas e Planos de Ação. Uma solução robusta para a organização administrativa da sua escola.",
+      highlight: false,
+      highlight_text: "",
+      icon: "auto_awesome",
+      order: 1
+    },
+    {
+      id: "combo_full",
+      title: "BRN Suite FULL",
+      subtitle: "Assessoria + Tecnologia",
+      price_value: "R$ 750",
+      price_period: "/mês",
+      billing_info: "Economia de R$ 150/mês! Valor anual: R$ 9.000,00. A solução completa e definitiva.",
+      features: [
+        "Tudo do plano Prestação de Contas",
+        "Tudo do plano BBÁgil & Gestão",
+        "Suporte VIP prioritário",
+        "Economia real de R$ 1.800/ano"
+      ],
+      details: "A experiência máxima do BRN Suite. Este combo une nossa assessoria especializada e humana com toda a nossa tecnologia de ponta. Ao contratar o pacote FULL, você economiza R$ 150,00 mensais em relação à contratação individual dos serviços, garantindo gestão total e tecnologia por um preço muito mais competitivo.",
+      highlight: true,
+      highlight_text: "Melhor Custo-Benefício",
+      icon: "star",
+      order: 2
+    },
+    {
+      id: "prestacao_contas",
+      title: "Prestação de Contas",
+      subtitle: "Assessoria Especializada",
+      price_value: "R$ 600",
+      price_period: "/mês",
+      billing_info: "Valor mensal: R$ 600,00. Valor anual: R$ 7.200,00. Tranquilidade e conformidade total.",
+      features: [
+        "Confecção de Notas e Espelhos",
+        "Consolidação de Documentos",
+        "Ordens de Compra e Serviço",
+        "Atas de Compra e Certidões",
+        "Recibos e Autenticações"
+      ],
+      details: "Este é o plano de assessoria especializada. Nós cuidamos de toda a parte burocrática da sua prestação de contas, garantindo que tudo esteja em conformidade com as normas vigentes. Inclui acompanhamento mensal e conferência minuciosa de documentos fiscais.",
+      highlight: false,
+      highlight_text: "",
+      icon: "verified_user",
+      order: 3
+    }
+  ];
+
+  const fetchPlans = async () => {
+    setLoadingPlans(true);
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'landing_page_plans')
+        .maybeSingle();
+
+      if (data?.value) {
+        setPlans(data.value);
+      } else {
+        setPlans(defaultPlans);
+      }
+    } catch (error) {
+      console.error('Error fetching plans:', error);
+      setPlans(defaultPlans);
+    } finally {
+      setLoadingPlans(false);
+    }
+  };
+
+  const handleSavePlans = async () => {
+    setSavingPlans(true);
+    try {
+      const { error } = await supabase
+        .from('system_settings')
+        .upsert({
+          key: 'landing_page_plans',
+          value: plans,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+      alert('Planos atualizados com sucesso! A Landing Page foi atualizada.');
+    } catch (error: any) {
+      alert(`Erro ao salvar planos: ${error.message}`);
+    } finally {
+      setSavingPlans(false);
+    }
+  };
+
+  const updatePlanField = (index: number, field: string, value: any) => {
+    const newPlans = [...plans];
+    newPlans[index] = { ...newPlans[index], [field]: value };
+    setPlans(newPlans);
+  };
 
   const fetchSupportContacts = async () => {
     setLoadingContacts(true);
@@ -291,6 +415,57 @@ const Settings: React.FC<{ user: User }> = ({ user }) => {
       .slice(0, 16);
   };
 
+  const fetchAssets = async () => {
+    setLoadingAssets(true);
+    try {
+      const { data } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'import_template_url')
+        .maybeSingle();
+      if (data?.value) setTemplateUrl(data.value);
+    } catch (error) {
+      console.error('Error fetching assets:', error);
+    } finally {
+      setLoadingAssets(false);
+    }
+  };
+
+  const handleTemplateUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingTemplate(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `templates/import_model_${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('attachments')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('attachments')
+        .getPublicUrl(fileName);
+
+      // Save to system_settings
+      const { error: saveError } = await supabase
+        .from('system_settings')
+        .upsert({ key: 'import_template_url', value: publicUrl }, { onConflict: 'key' });
+
+      if (saveError) throw saveError;
+
+      setTemplateUrl(publicUrl);
+      alert('Modelo de importação atualizado com sucesso!');
+    } catch (error: any) {
+      alert(`Erro no upload: ${error.message}`);
+    } finally {
+      setIsUploadingTemplate(false);
+    }
+  };
+
   const formatCEP = (value: string) => {
     return value.replace(/\D/g, '')
       .replace(/(\d{5})(\d)/, '$1-$2')
@@ -304,7 +479,28 @@ const Settings: React.FC<{ user: User }> = ({ user }) => {
     setLoading(false);
   };
 
-  const handleSaveSupplier = async () => {
+  const handleAddFeature = (planIndex: number) => {
+    const updatedPlans = [...plans];
+    if (!updatedPlans[planIndex].features) {
+      updatedPlans[planIndex].features = [];
+    }
+    updatedPlans[planIndex].features.push(""); // Adiciona string vazia
+    setPlans(updatedPlans);
+  };
+
+  const handleRemoveFeature = (planIndex: number, featureIndex: number) => {
+    const updatedPlans = [...plans];
+    updatedPlans[planIndex].features = updatedPlans[planIndex].features.filter((_, i) => i !== featureIndex);
+    setPlans(updatedPlans);
+  };
+
+  const handleUpdateFeature = (planIndex: number, featureIndex: number, value: string) => {
+    const updatedPlans = [...plans];
+    updatedPlans[planIndex].features[featureIndex] = value;
+    setPlans(updatedPlans);
+  };
+
+  const handleCreateSupplier = async () => {
     if (!newSupplier.name) return alert('Nome é obrigatório');
 
     if (editingSupplierId) {
@@ -1064,7 +1260,7 @@ const Settings: React.FC<{ user: User }> = ({ user }) => {
                           Cancelar
                         </button>
                       )}
-                      <button onClick={handleSaveSupplier} className="bg-primary hover:bg-primary-hover text-white px-6 py-2 rounded font-bold text-sm shadow-lg transition-all">
+                      <button onClick={handleCreateSupplier} className="bg-primary hover:bg-primary-hover text-white px-6 py-2 rounded font-bold text-sm shadow-lg transition-all">
                         {editingSupplierId ? 'Salvar Alterações' : 'Adicionar Fornecedor'}
                       </button>
                     </div>
@@ -1435,13 +1631,234 @@ const Settings: React.FC<{ user: User }> = ({ user }) => {
             )}
           </div>
 
-          <div className="flex justify-end gap-3 mt-8 border-t border-surface-border pt-6">
-            <button className="h-10 px-6 rounded-lg text-white font-medium hover:bg-[#233648] transition-colors">Restaurar Padrão</button>
-            <button className="h-10 px-8 rounded-lg bg-primary hover:bg-primary-hover text-white font-bold shadow-lg shadow-primary/20 transition-all">Salvar Alterações</button>
-          </div>
+          {activeTab === 'assets' && (
+            <div className="flex flex-col gap-8 animate-in fade-in pb-10">
+              <div className="flex items-center gap-4 border-b border-surface-border pb-4">
+                <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 shrink-0">
+                  <span className="material-symbols-outlined text-3xl">folder_open</span>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white tracking-wider uppercase">Arquivos & Modelos do Sistema</h3>
+                  <p className="text-slate-400 text-sm italic">Configure os arquivos oficiais que ficarão disponíveis para download pelos usuários.</p>
+                </div>
+              </div>
+
+              <div className="bg-[#111a22] p-8 rounded-3xl border border-surface-border">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="flex-1">
+                    <h4 className="text-lg font-bold text-white mb-2">Modelo de Importação de Itens (Excel/CSV)</h4>
+                    <p className="text-slate-500 text-sm mb-4">Este arquivo será baixado pelos usuários na tela de Prestação de Contas para servir de base para importação em massa.</p>
+
+                    {templateUrl && (
+                      <div className="flex items-center gap-3 bg-emerald-500/5 border border-emerald-500/10 p-3 rounded-xl w-fit mb-4">
+                        <span className="material-symbols-outlined text-emerald-500">verified</span>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-emerald-500/60 font-black uppercase tracking-widest">Arquivo Atual:</span>
+                          <a href={templateUrl} target="_blank" rel="noreferrer" className="text-xs text-white font-mono hover:underline truncate max-w-[300px]">
+                            {templateUrl.split('/').pop()}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="shrink-0 flex flex-col items-center">
+                    <label className={`
+                      w-64 h-32 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-3 cursor-pointer
+                      ${isUploadingTemplate ? 'bg-indigo-500/5 border-indigo-500/20' : 'bg-surface-dark border-surface-border hover:border-indigo-500/50 hover:bg-indigo-500/5'}
+                    `}>
+                      {isUploadingTemplate ? (
+                        <>
+                          <span className="material-symbols-outlined animate-spin text-3xl text-indigo-500">sync</span>
+                          <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Enviando modelo...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined text-3xl text-slate-500">add_circle</span>
+                          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-center px-4">CLIQUE PARA SUBIR NOVO MODELO (XLSX/CSV)</span>
+                        </>
+                      )}
+                      <input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleTemplateUpload} disabled={isUploadingTemplate} />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-amber-500/5 border border-amber-500/10 p-5 rounded-2xl flex gap-4">
+                <span className="material-symbols-outlined text-amber-500 text-3xl">info</span>
+                <div>
+                  <p className="text-sm text-amber-200/80 font-bold mb-1">Informações Importantes:</p>
+                  <ul className="text-xs text-slate-500 space-y-1 list-disc ml-4">
+                    <li>O arquivo subido aqui substituirá o modelo padrão gerado pelo sistema.</li>
+                    <li>Certifique-se de que as colunas estejam na mesma ordem para garantir que a importação funcione.</li>
+                    <li>Recomendamos o uso de arquivos .csv ou .xlsx.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'website' && (
+            <div className="flex flex-col gap-8 animate-in fade-in pb-10">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-surface-border pb-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 shrink-0">
+                    <span className="material-symbols-outlined text-3xl">public</span>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white tracking-wider uppercase">Gerenciar Landing Page</h3>
+                    <p className="text-slate-400 text-sm italic">Edite os planos e preços exibidos na página inicial.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleSavePlans}
+                  disabled={savingPlans}
+                  className="btn-primary w-full md:w-auto flex justify-center items-center gap-2"
+                >
+                  {savingPlans ? (
+                    <>
+                      <span className="material-symbols-outlined animate-spin text-lg">sync</span>
+                      <span>Salvando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-lg">save</span>
+                      <span>Salvar Alterações</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="space-y-8">
+                {plans.map((plan, index) => (
+                  <div key={index} className="bg-[#111a22] p-6 rounded-2xl border border-surface-border">
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="material-symbols-outlined text-text-secondary">{plan.icon}</span>
+                      <h4 className="text-lg font-bold text-white">{plan.title}</h4>
+                      {plan.highlight && <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full uppercase font-bold">Destaque</span>}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs text-slate-400 font-bold uppercase">Título do Plano</label>
+                        <input
+                          type="text"
+                          value={plan.title}
+                          onChange={(e) => updatePlanField(index, 'title', e.target.value)}
+                          className="bg-surface-dark border border-surface-border rounded-lg px-3 py-2 text-white text-sm"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs text-slate-400 font-bold uppercase">Subtítulo</label>
+                        <input
+                          type="text"
+                          value={plan.subtitle}
+                          onChange={(e) => updatePlanField(index, 'subtitle', e.target.value)}
+                          className="bg-surface-dark border border-surface-border rounded-lg px-3 py-2 text-white text-sm"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs text-slate-400 font-bold uppercase">Valor (R$)</label>
+                        <input
+                          type="text"
+                          value={plan.price_value}
+                          onChange={(e) => updatePlanField(index, 'price_value', e.target.value)}
+                          className="bg-surface-dark border border-surface-border rounded-lg px-3 py-2 text-white text-sm font-bold text-emerald-400"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs text-slate-400 font-bold uppercase">Período (ex: /mês)</label>
+                        <input
+                          type="text"
+                          value={plan.price_period}
+                          onChange={(e) => updatePlanField(index, 'price_period', e.target.value)}
+                          className="bg-surface-dark border border-surface-border rounded-lg px-3 py-2 text-white text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1 mb-4">
+                      <label className="text-xs text-slate-400 font-bold uppercase">Informação de Cobrança / Pagamento</label>
+                      <input
+                        type="text"
+                        value={plan.billing_info}
+                        onChange={(e) => updatePlanField(index, 'billing_info', e.target.value)}
+                        className="bg-surface-dark border border-surface-border rounded-lg px-3 py-2 text-white text-sm w-full"
+                        placeholder="Ex: Faturado semestralmente..."
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1 mb-4">
+                      <label className="text-xs text-slate-400 font-bold uppercase">Detalhes Completos (para Modal)</label>
+                      <textarea
+                        rows={3}
+                        value={plan.details || ''}
+                        onChange={(e) => updatePlanField(index, 'details', e.target.value)}
+                        className="bg-surface-dark border border-surface-border rounded-lg px-3 py-2 text-white text-sm w-full resize-none"
+                        placeholder="Descreva detalhadamente o plano para aparecer no modal..."
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-2 mb-4">
+                      <label className="text-xs text-slate-400 font-bold uppercase">Itens Inclusos (Features)</label>
+                      <div className="space-y-2">
+                        {plan.features?.map((feature: any, fIndex: number) => (
+                          <div key={fIndex} className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-emerald-500 text-sm">check_circle</span>
+                            <input
+                              type="text"
+                              value={typeof feature === 'string' ? feature : feature.text} // Compatibilidade para string ou obj
+                              onChange={(e) => handleUpdateFeature(index, fIndex, e.target.value)}
+                              className="flex-1 bg-surface-dark border border-surface-border rounded-lg px-3 py-2 text-white text-sm"
+                              placeholder="Descrição do item..."
+                            />
+                            <button
+                              onClick={() => handleRemoveFeature(index, fIndex)}
+                              className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-colors"
+                              title="Remover item"
+                            >
+                              <span className="material-symbols-outlined text-lg">close</span>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => handleAddFeature(index)}
+                        className="mt-2 w-full py-2 border border-dashed border-slate-700 hover:border-primary text-slate-500 hover:text-primary rounded-lg text-xs font-bold uppercase transition-all flex items-center justify-center gap-2"
+                      >
+                        <span className="material-symbols-outlined text-base">add</span>
+                        Adicionar Item
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={plan.highlight}
+                          onChange={(e) => updatePlanField(index, 'highlight', e.target.checked)}
+                        />
+                        <span className="text-sm text-slate-300">Destacar este plano</span>
+                      </label>
+                      {plan.highlight && (
+                        <input
+                          type="text"
+                          value={plan.highlight_text}
+                          onChange={(e) => updatePlanField(index, 'highlight_text', e.target.value)}
+                          placeholder="Texto do destaque (ex: Mais Popular)"
+                          className="bg-surface-dark border border-surface-border rounded-lg px-3 py-1 text-white text-xs"
+                        />
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 

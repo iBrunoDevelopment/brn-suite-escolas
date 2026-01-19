@@ -5,9 +5,10 @@ import { UserRole, School } from '../types';
 
 interface LoginProps {
   onLogin: (user: any) => void;
+  onBack?: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin }) => {
+const Login: React.FC<LoginProps> = ({ onLogin, onBack }) => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -131,7 +132,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               profile = refreshed;
             } else {
               // 3. Se não vinculou, cria novo perfil (Self-Healing Básico)
-              // 3. Se não vinculou, cria novo perfil (Self-Healing Básico)
               const newProfile = {
                 id: authData.user.id,
                 email: authData.user.email!,
@@ -180,7 +180,18 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0f172a] p-4 font-display">
+    <div className="min-h-screen flex items-center justify-center bg-[#0f172a] p-4 font-display relative">
+      {/* Back Button */}
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="absolute top-4 left-4 md:top-8 md:left-8 text-slate-400 hover:text-white flex items-center gap-2 transition-colors group"
+        >
+          <span className="material-symbols-outlined group-hover:-translate-x-1 transition-transform">arrow_back</span>
+          <span className="text-sm font-medium">Voltar ao início</span>
+        </button>
+      )}
+
       <div className="w-full max-w-md bg-[#1e293b] border border-[#334155] rounded-2xl shadow-2xl p-8 animate-in fade-in zoom-in duration-300">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4 border border-primary/20">

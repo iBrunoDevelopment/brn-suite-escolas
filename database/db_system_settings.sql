@@ -26,6 +26,12 @@ USING (
   )
 );
 
+-- Política: Visitantes (anon) podem ler configurações públicas (Site e Contatos)
+CREATE POLICY "Leitura pública de configurações selecionadas"
+ON system_settings FOR SELECT
+TO anon
+USING (key IN ('landing_page_plans', 'support_contacts'));
+
 -- Inserir valores padrão para contatos de suporte se não existirem
 INSERT INTO system_settings (key, value)
 VALUES ('support_contacts', '{

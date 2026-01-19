@@ -357,8 +357,8 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
             {/* Checklist Modal */}
             {showChecklist && selectedDoc && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-                    <div className="w-full max-w-2xl bg-[#0f172a] border border-indigo-500/30 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95">
-                        <div className="p-6 border-b border-white/5 bg-indigo-500/5 flex justify-between items-center">
+                    <div className="w-full max-w-2xl bg-[#0f172a] border border-indigo-500/30 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[90vh]">
+                        <div className="p-6 border-b border-white/5 bg-indigo-500/5 flex justify-between items-center shrink-0">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
                                     <span className="material-symbols-outlined">fact_check</span>
@@ -371,18 +371,18 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                             <button onClick={() => setShowChecklist(false)} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5 text-slate-400 transition-colors"><span className="material-symbols-outlined">close</span></button>
                         </div>
 
-                        <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 overflow-y-auto">
                             {/* File Preview Card */}
-                            <div className="bg-white/[0.03] p-6 rounded-2xl border border-white/5 flex flex-col gap-4">
+                            <div className="bg-white/[0.03] p-6 rounded-2xl border border-white/5 flex flex-col gap-4 h-fit">
                                 <div className="text-center">
                                     <span className="material-symbols-outlined text-5xl text-indigo-400 opacity-50 mb-2">description</span>
                                     <h4 className="text-sm font-bold text-white line-clamp-2">{selectedDoc.name}</h4>
                                     <span className="text-[10px] text-slate-500 uppercase tracking-widest font-black">{selectedDoc.category}</span>
                                 </div>
                                 <div className="space-y-3 mt-4 pt-4 border-t border-white/5">
-                                    <div className="flex justify-between text-xs">
-                                        <span className="text-slate-500">Escola:</span>
-                                        <span className="text-white font-bold">{selectedDoc.school_name}</span>
+                                    <div className="flex justify-between text-xs gap-4">
+                                        <span className="text-slate-500 shrink-0">Escola:</span>
+                                        <span className="text-white font-bold text-right truncate">{selectedDoc.school_name}</span>
                                     </div>
                                     <div className="flex justify-between text-xs">
                                         <span className="text-slate-500">Data Lanç.:</span>
@@ -437,7 +437,7 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                                 <div className="flex flex-col gap-1 mt-2">
                                     <label className="text-[10px] font-black text-slate-500 uppercase">Observações Técnicas</label>
                                     <textarea
-                                        className="bg-surface-dark border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-indigo-500 h-20 resize-none"
+                                        className="bg-surface-dark border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-indigo-500 h-24 shrink-0 resize-none"
                                         placeholder="Ex: Nota fiscal com rasura no CNPJ..."
                                         value={selectedDoc.checklist?.notes || ''}
                                         onChange={(e) => setSelectedDoc({ ...selectedDoc, checklist: { ...(selectedDoc.checklist || {}), notes: e.target.value } as any })}
@@ -447,7 +447,7 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                                 <button
                                     onClick={() => handleSaveChecklist(selectedDoc, selectedDoc.checklist)}
                                     disabled={isSavingChecklist}
-                                    className="w-full h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-widest text-xs shadow-lg shadow-emerald-500/20 transition-all active:scale-95 disabled:opacity-50 mt-2"
+                                    className="w-full h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-widest text-xs shadow-lg shadow-emerald-500/20 transition-all active:scale-95 disabled:opacity-50 mt-4 shrink-0 mb-4"
                                 >
                                     {isSavingChecklist ? 'Sincronizando...' : 'Finalizar Conferência'}
                                 </button>

@@ -17,6 +17,7 @@ import DocumentSafe from './pages/DocumentSafe';
 import BankReconciliation from './pages/BankReconciliation';
 import WaitingPage from './pages/WaitingPage';
 import GEEPage from './pages/GEE';
+import LandingPage from './pages/LandingPage';
 
 const App: React.FC = () => {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -137,6 +138,9 @@ const App: React.FC = () => {
         setCurrentUser(null);
     };
 
+
+    const [showLogin, setShowLogin] = useState(false);
+
     if (loading) {
         return <div className="h-screen w-full flex items-center justify-center bg-[#0f172a] text-white">
             <div className="flex flex-col items-center gap-2">
@@ -147,7 +151,10 @@ const App: React.FC = () => {
     }
 
     if (!currentUser) {
-        return <Login onLogin={setCurrentUser} />;
+        if (showLogin) {
+            return <Login onLogin={setCurrentUser} onBack={() => setShowLogin(false)} />;
+        }
+        return <LandingPage onLoginClick={() => setShowLogin(true)} />;
     }
 
     const renderContent = () => {
