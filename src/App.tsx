@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { User, UserRole } from './types';
 import Sidebar from './components/Sidebar';
@@ -19,6 +18,7 @@ import WaitingPage from './pages/WaitingPage';
 import GEEPage from './pages/GEE';
 import ProgramsGuide from './pages/ProgramsGuide';
 import LandingPage from './pages/LandingPage';
+import Contract from './pages/Contract';
 
 const App: React.FC = () => {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -28,6 +28,7 @@ const App: React.FC = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [showLogin, setShowLogin] = useState(false);
     const [showGuide, setShowGuide] = useState(false);
+    const [needsSignature, setNeedsSignature] = useState(false);
 
     useEffect(() => {
         const initSession = async () => {
@@ -60,7 +61,7 @@ const App: React.FC = () => {
         const handlePageChangeEvent = (e: any) => {
             if (e.detail) {
                 setActivePage(e.detail);
-                setIsMobileMenuOpen(false); // Close mobile menu on navigation
+                setIsMobileMenuOpen(false);
             }
         };
         window.addEventListener('changePage', handlePageChangeEvent);
@@ -70,6 +71,23 @@ const App: React.FC = () => {
             window.removeEventListener('changePage', handlePageChangeEvent);
         };
     }, []);
+
+    const checkContractSignature = async (userId: string, role: UserRole) => {
+        // Only require signature for DIRECTORS
+        if (role !== UserRole.DIRETOR) {
+            setNeedsSignature(false);
+            return;
+        }
+
+        const { data } = await supabase
+            .from('contract_signatures')
+            .select('id')
+            .eq('user_id', userId)
+            .limit(1)
+            .maybeSingle();
+
+        setNeedsSignature(!data);
+    };
 
     const fetchProfile = async (userId: string, email: string) => {
         setLoading(true);
@@ -104,7 +122,7 @@ const App: React.FC = () => {
             }
 
             if (data) {
-                setCurrentUser({
+                const userObj = {
                     id: data.id,
                     name: data.name,
                     email: data.email,
@@ -114,7 +132,9 @@ const App: React.FC = () => {
                     active: data.active,
                     gee: data.gee,
                     avatar_url: data.avatar_url
-                });
+                };
+                setCurrentUser(userObj);
+                checkContractSignature(userObj.id, userObj.role);
             } else {
                 setCurrentUser(null);
             }
@@ -128,6 +148,7 @@ const App: React.FC = () => {
     const handleLogout = async () => {
         await supabase.auth.signOut();
         setCurrentUser(null);
+        setNeedsSignature(false);
     };
 
     if (loading) {
@@ -159,6 +180,10 @@ const App: React.FC = () => {
             return <WaitingPage user={currentUser} />;
         }
 
+        if (needsSignature) {
+            return <Contract user={currentUser} onSigned={() => setNeedsSignature(false)} />;
+        }
+
         switch (activePage) {
             case 'dashboard': return <Dashboard user={currentUser} />;
             case 'entries': return <FinancialEntries user={currentUser} />;
@@ -174,11 +199,6 @@ const App: React.FC = () => {
             default: return <Dashboard user={currentUser} />;
         }
     };
-
-    const isStaff = currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.OPERADOR;
-    const hasAssignedSchools = currentUser.assignedSchools && currentUser.assignedSchools.length > 0;
-    const isAuthorized = isStaff || currentUser.schoolId || hasAssignedSchools;
-    const isWaiting = currentUser.active === false || !isAuthorized;
 
     return (
         <div className="flex h-screen w-full overflow-hidden bg-background-light dark:bg-background-dark font-display relative">
@@ -207,7 +227,7 @@ const App: React.FC = () => {
             <div className={`flex flex-col flex-1 min-w-0 transition-all duration-500`}>
                 <Topbar
                     user={currentUser}
-                    activePageName={isWaiting ? 'waiting' : activePage}
+                    activePageName={needsSignature ? 'Contrato' : activePage}
                     onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
                 />
                 <main className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">

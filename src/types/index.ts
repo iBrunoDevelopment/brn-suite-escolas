@@ -242,3 +242,12 @@ export interface ReprogrammedBalance {
     period: string; // e.g. '2025'
     value: number;
 }
+
+export interface ContractSignature {
+    id: string;
+    user_id: string;
+    signed_at: string;
+    contract_version: string;
+    ip_address?: string;
+    status: string;
+}
