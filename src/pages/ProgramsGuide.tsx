@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { printDocument } from '../lib/printUtils';
+import { generateAtaHTML, generateOrdemHTML, generateConsolidacaoHTML } from '../lib/documentTemplates';
 
 interface ProgramsGuideProps {
     onBack: () => void;
@@ -6,6 +8,59 @@ interface ProgramsGuideProps {
 
 const ProgramsGuide: React.FC<ProgramsGuideProps> = ({ onBack }) => {
     const [activeTab, setActiveTab] = useState<'federal' | 'estadual' | 'execucao'>('federal');
+
+    const handleDownload = (type: 'ata' | 'ordem' | 'consolidacao') => {
+        const blankProcess = {
+            id: "MODELO",
+            financial_entries: {
+                description: "DESCRIÇÃO DO PRODUTO (PREENCHER)",
+                date: new Date().toISOString(),
+                schools: {
+                    name: "ESCOLA ESTADUAL (NOME DA ESCOLA)",
+                    city: "CIDADE/AL",
+                    director: "NOME DO PRESIDENTE",
+                    secretary: "NOME DO SECRETÁRIO",
+                    cnpj: "CNPJ DA ESCOLA",
+                    seec: "CÓDIGO SEEC"
+                },
+                programs: { name: "NOME DO PROGRAMA (PREENCHER)" },
+                suppliers: { cnpj: "CNPJ VENCEDOR" }
+            },
+            quotes: [
+                {
+                    supplier_name: "EMPRESA VENCEDORA (PREENCHER)",
+                    supplier_cnpj: "CNPJ: 00.000.000/0000-00",
+                    is_winner: true,
+                    total_value: 0,
+                    accountability_quote_items: []
+                },
+                {
+                    supplier_name: "EMPRESA PARTICIPANTE B (PREENCHER)",
+                    supplier_cnpj: "CNPJ: 00.000.000/0000-00",
+                    is_winner: false,
+                    total_value: 0,
+                    accountability_quote_items: []
+                },
+                {
+                    supplier_name: "EMPRESA PARTICIPANTE C (PREENCHER)",
+                    supplier_cnpj: "CNPJ: 00.000.000/0000-00",
+                    is_winner: false,
+                    total_value: 0,
+                    accountability_quote_items: []
+                }
+            ],
+            accountability_items: [
+                { description: "ITEM 1 (DESCREVER)", quantity: "___", unit: "UND", winner_unit_price: 0, unit_price: 0 },
+                { description: "ITEM 2 (DESCREVER)", quantity: "___", unit: "UND", winner_unit_price: 0, unit_price: 0 },
+                { description: "ITEM 3 (DESCREVER)", quantity: "___", unit: "UND", winner_unit_price: 0, unit_price: 0 }
+            ],
+            discount: 0
+        };
+
+        if (type === 'ata') printDocument(generateAtaHTML(blankProcess));
+        if (type === 'ordem') printDocument(generateOrdemHTML(blankProcess));
+        if (type === 'consolidacao') printDocument(generateConsolidacaoHTML(blankProcess));
+    };
 
     return (
         <div className="min-h-screen bg-[#111827] text-white font-sans selection:bg-primary/30">
@@ -258,19 +313,19 @@ const ProgramsGuide: React.FC<ProgramsGuideProps> = ({ onBack }) => {
                             <Step
                                 num="03"
                                 title="Aquisição e Pagamento"
-                                desc="Selecione o menor preço por item ou lote global. O pagamento deve ser feito via cheque nominativo, transferência ou cartão do programa."
+                                desc="Selecione o menor preço por item ou lote global. O pagamento deve ser feito via cheque nominativo, transferência, PIX ou cartão do programa."
                                 align="right"
                             />
                             <Step
                                 num="04"
                                 title="Documentação Fiscal"
-                                desc="Exija Nota Fiscal Eletrônica (NF-e). A nota DEVE conter no campo 'Informações Complementares' o nome do programa e o ID da escola."
+                                desc="Exija Nota Fiscal Eletrônica (NF-e). A nota DEVE conter no campo 'Informações Complementares' o nome do programa e o ID da escola. Exija também as certidões atualizadas e válidas"
                                 align="left"
                             />
                             <Step
                                 num="05"
                                 title="Prestação de Contas"
-                                desc="Organize o processo físico (capa, ofícios, cotações, notas, recibos, extratos, conciliação e parecer do conselho)."
+                                desc="Organize o processo físico (cotações, cartões CNPJ, ata, consolidação, ordem de compra, certidões, autenticações, nota, espelho, recibo e comprovante de pagamento), tudo assinado e carimbado."
                                 align="right"
                             />
                         </div>
@@ -279,14 +334,14 @@ const ProgramsGuide: React.FC<ProgramsGuideProps> = ({ onBack }) => {
                         <div className="bg-[#16202a] border border-white/5 rounded-[40px] p-10 mt-12">
                             <h3 className="text-2xl font-black text-white mb-8 text-center">Documentos e Modelos Úteis</h3>
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <DocButton icon="description" label="Modelo de Ata de Reunião" />
-                                <DocButton icon="request_quote" label="Planilha de Pesquisa de Preço" />
-                                <DocButton icon="gavel" label="Termo de Referência" />
-                                <DocButton icon="inventory" label="Termo de Doação (Capital)" />
-                                <DocButton icon="shopping_cart_checkout" label="Ordem de Compra/Serviço" />
-                                <DocButton icon="analytics" label="Consolidação de Preços" />
-                                <DocButton icon="check_circle" label="Atestado de Recebimento" />
-                                <DocButton icon="rule" label="Parecer do Conselho Fiscal" />
+                                <DocButton icon="group" label="Modelo de Ata de Reunião" onClick={() => handleDownload('ata')} />
+                                <DocButton icon="request_quote" label="Planilha de Pesquisa de Preço" onClick={() => alert('Modelo disponível no portal FNDE.')} />
+                                <DocButton icon="gavel" label="Termo de Referência" onClick={() => alert('Modelo disponível no portal FNDE.')} />
+                                <DocButton icon="inventory" label="Termo de Doação (Capital)" onClick={() => alert('Modelo em desenvolvimento.')} />
+                                <DocButton icon="shopping_cart_checkout" label="Ordem de Compra/Serviço" onClick={() => handleDownload('ordem')} />
+                                <DocButton icon="analytics" label="Consolidação de Preços" onClick={() => handleDownload('consolidacao')} />
+                                <DocButton icon="check_circle" label="Atestado de Recebimento" onClick={() => alert('Utilize o carimbo no verso da Nota Fiscal.')} />
+                                <DocButton icon="rule" label="Parecer do Conselho Fiscal" onClick={() => alert('Modelo em desenvolvimento.')} />
                             </div>
                         </div>
 
@@ -469,8 +524,8 @@ const Step = ({ num, title, desc, align }: any) => {
     );
 };
 
-const DocButton = ({ icon, label }: any) => (
-    <button className="flex flex-col items-center gap-4 p-6 bg-white/5 rounded-3xl hover:bg-white/10 transition-all border border-transparent hover:border-white/10 group">
+const DocButton = ({ icon, label, onClick }: any) => (
+    <button onClick={onClick} className="flex flex-col items-center gap-4 p-6 bg-white/5 rounded-3xl hover:bg-white/10 transition-all border border-transparent hover:border-white/10 group">
         <span className="material-symbols-outlined text-3xl text-slate-400 group-hover:text-primary transition-colors">{icon}</span>
         <span className="text-xs font-bold uppercase tracking-widest text-center">{label}</span>
     </button>
