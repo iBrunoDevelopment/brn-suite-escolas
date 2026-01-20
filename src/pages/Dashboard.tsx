@@ -10,6 +10,17 @@ import { usePermissions, useAccessibleSchools } from '../hooks/usePermissions';
 
 const COLORS = ['#137fec', '#0bda5b', '#fb923c', '#94a3b8'];
 
+const ChartEmptyState: React.FC<{ message: string, icon: string }> = ({ message, icon }) => (
+  <div className="flex flex-col items-center justify-center h-full w-full py-12 text-center animate-in fade-in zoom-in duration-700">
+    <div className="w-20 h-20 rounded-3xl bg-white/5 flex items-center justify-center mb-6 border border-white/10 shadow-2xl relative group">
+      <div className="absolute inset-0 bg-primary/10 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+      <span className="material-symbols-outlined text-5xl text-text-secondary opacity-40 relative z-10">{icon}</span>
+    </div>
+    <h4 className="text-white/80 font-bold text-sm mb-2">Sem dados no período</h4>
+    <p className="text-text-secondary text-xs max-w-[240px] leading-relaxed px-4">{message}</p>
+  </div>
+);
+
 const Dashboard: React.FC<{ user: User }> = ({ user }) => {
   const [stats, setStats] = useState({
     receita: 0,
@@ -23,6 +34,8 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
     tarifas: 0,
     impostosDevolucoes: 0
   });
+
+  const [loading, setLoading] = useState(true);
 
   const [flowData, setFlowData] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
@@ -107,93 +120,100 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
   useEffect(() => {
     processData();
     generateAlerts();
-  }, [filters, rawData, rawProcesses, pendingUsersCount]); // Re-process when filters or data change
+  }, [filters, rawData, rawProcesses, rawReprogrammed, pendingUsersCount]); // Re-process when filters or data change
 
   const fetchDashboardData = async () => {
-    // 1. Fetch Basic Data (Schools, Programs, Rubrics)
-    const [schoolsRes, programsRes, rubricsRes, suppliersRes] = await Promise.all([
-      supabase.from('schools').select('*'),
-      supabase.from('programs').select('*'),
-      supabase.from('rubrics').select('*'),
-      supabase.from('suppliers').select('*')
-    ]);
+    setLoading(true);
+    try {
+      // 1. Fetch Basic Data (Schools, Programs, Rubrics)
+      const [schoolsRes, programsRes, rubricsRes, suppliersRes] = await Promise.all([
+        supabase.from('schools').select('*'),
+        supabase.from('programs').select('*'),
+        supabase.from('rubrics').select('*'),
+        supabase.from('suppliers').select('*')
+      ]);
 
-    const schoolsData = schoolsRes.data || [];
-    const programsData = programsRes.data || [];
-    const rubricsData = rubricsRes.data || [];
-    const suppliersData = suppliersRes.data || [];
+      const schoolsData = schoolsRes.data || [];
+      const programsData = programsRes.data || [];
+      const rubricsData = rubricsRes.data || [];
+      const suppliersData = suppliersRes.data || [];
 
-    setAvailableOptions({
-      schools: schoolsData,
-      programs: programsData,
-      rubrics: rubricsData,
-      suppliers: suppliersData
-    });
+      setAvailableOptions({
+        schools: schoolsData,
+        programs: programsData,
+        rubrics: rubricsData,
+        suppliers: suppliersData
+      });
 
-    // Fetch Pending Users Count and Launch Reminders if Admin
-    if (user.role === UserRole.ADMIN) {
-      const { count } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .or('active.eq.false,and(role.eq.Cliente,school_id.is.null)');
-      setPendingUsersCount(count || 0);
+      // Fetch Pending Users Count and Launch Reminders if Admin
+      if (user.role === UserRole.ADMIN) {
+        const { count } = await supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true })
+          .or('active.eq.false,and(role.eq.Cliente,school_id.is.null)');
+        setPendingUsersCount(count || 0);
 
-      // Trigger automatic monthly reminders
-      await supabase.rpc('launch_monthly_reminders');
-    }
+        // Trigger automatic monthly reminders
+        await supabase.rpc('launch_monthly_reminders');
+      }
 
-    // 2. Fetch Entries with visibility restrictions
-    let entriesQuery = supabase.from('financial_entries').select('*');
-    if (user.role !== UserRole.ADMIN && user.role !== UserRole.OPERADOR) {
-      if (user.role === UserRole.DIRETOR || user.role === UserRole.CLIENTE) {
-        entriesQuery = entriesQuery.eq('school_id', user.schoolId);
-      } else if (user.role === UserRole.TECNICO_GEE) {
-        if (user.assignedSchools && user.assignedSchools.length > 0) {
-          entriesQuery = entriesQuery.in('school_id', user.assignedSchools);
-        } else {
-          setRawData([]);
-          setStats({ receita: 0, despesa: 0, saldo: 0, pendencias: 0 });
-          return;
+      // 2. Fetch Entries with visibility restrictions
+      let entriesQuery = supabase.from('financial_entries').select('*');
+      if (user.role !== UserRole.ADMIN && user.role !== UserRole.OPERADOR) {
+        if (user.role === UserRole.DIRETOR || user.role === UserRole.CLIENTE) {
+          entriesQuery = entriesQuery.eq('school_id', user.schoolId);
+        } else if (user.role === UserRole.TECNICO_GEE) {
+          if (user.assignedSchools && user.assignedSchools.length > 0) {
+            entriesQuery = entriesQuery.in('school_id', user.assignedSchools);
+          } else {
+            setRawData([]);
+            setStats({ receita: 0, despesa: 0, saldo: 0, pendencias: 0 });
+            return;
+          }
         }
       }
-    }
-    const { data: entries } = await entriesQuery;
+      const { data: entries } = await entriesQuery;
 
-    // 3. Fetch Processes with restrictions
-    let procQuery = supabase.from('accountability_processes').select('financial_entry_id');
-    if (user.role !== UserRole.ADMIN && user.role !== UserRole.OPERADOR) {
-      if (user.role === UserRole.DIRETOR || user.role === UserRole.CLIENTE) {
-        procQuery = procQuery.eq('school_id', user.schoolId);
-      } else if (user.role === UserRole.TECNICO_GEE) {
-        if (user.assignedSchools && user.assignedSchools.length > 0) {
-          procQuery = procQuery.in('school_id', user.assignedSchools);
-        } else {
-          setRawProcesses([]);
-          return;
+      // 3. Fetch Processes with restrictions
+      let procQuery = supabase.from('accountability_processes').select('financial_entry_id');
+      if (user.role !== UserRole.ADMIN && user.role !== UserRole.OPERADOR) {
+        if (user.role === UserRole.DIRETOR || user.role === UserRole.CLIENTE) {
+          procQuery = procQuery.eq('school_id', user.schoolId);
+        } else if (user.role === UserRole.TECNICO_GEE) {
+          if (user.assignedSchools && user.assignedSchools.length > 0) {
+            procQuery = procQuery.in('school_id', user.assignedSchools);
+          } else {
+            setRawProcesses([]);
+            return;
+          }
         }
       }
-    }
-    const { data: processes } = await procQuery;
+      const { data: processes } = await procQuery;
 
-    if (processes) setRawProcesses(processes);
+      if (processes) setRawProcesses(processes);
 
-    if (entries) {
-      setRawData(entries);
-    }
+      if (entries) {
+        setRawData(entries);
+      }
 
-    // 4. Fetch Reprogrammed Balances
-    let reprogQuery = supabase.from('reprogrammed_balances').select('*');
-    if (user.role !== UserRole.ADMIN && user.role !== UserRole.OPERADOR) {
-      if (user.role === UserRole.DIRETOR || user.role === UserRole.CLIENTE) {
-        reprogQuery = reprogQuery.eq('school_id', user.schoolId);
-      } else if (user.role === UserRole.TECNICO_GEE) {
-        if (user.assignedSchools && user.assignedSchools.length > 0) {
-          reprogQuery = reprogQuery.in('school_id', user.assignedSchools);
+      // 4. Fetch Reprogrammed Balances
+      let reprogQuery = supabase.from('reprogrammed_balances').select('*');
+      if (user.role !== UserRole.ADMIN && user.role !== UserRole.OPERADOR) {
+        if (user.role === UserRole.DIRETOR || user.role === UserRole.CLIENTE) {
+          reprogQuery = reprogQuery.eq('school_id', user.schoolId);
+        } else if (user.role === UserRole.TECNICO_GEE) {
+          if (user.assignedSchools && user.assignedSchools.length > 0) {
+            reprogQuery = reprogQuery.in('school_id', user.assignedSchools);
+          }
         }
       }
+      const { data: reprog } = await reprogQuery;
+      if (reprog) setRawReprogrammed(reprog);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
     }
-    const { data: reprog } = await reprogQuery;
-    if (reprog) setRawReprogrammed(reprog);
   };
 
   const processData = () => {
@@ -424,7 +444,7 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
   };
 
   const formatCurrency = (val: number) => {
-    return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact' });
+    return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
   return (
@@ -587,59 +607,70 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[
-          {
-            label: 'Saldo Total Disponível',
-            value: formatCurrency(stats.totalDisponivel),
-            subtitle: `Sendo ${formatCurrency(stats.reprogramado)} reprogramado`,
-            icon: 'account_balance',
-            color: 'text-blue-400',
-            bg: 'bg-blue-500/5',
-            border: 'border-blue-500/20'
-          },
-          {
-            label: 'Novos Repasses',
-            value: formatCurrency(stats.repasses),
-            subtitle: 'Recebimentos no período',
-            icon: 'trending_up',
-            color: 'text-emerald-400',
-            bg: 'bg-emerald-500/5',
-            border: 'border-emerald-500/20'
-          },
-          {
-            label: 'Reserva & Rendimentos',
-            value: formatCurrency(stats.reprogramado + stats.rendimentos),
-            subtitle: 'Saldo anterior + Juros',
-            icon: 'savings',
-            color: 'text-orange-400',
-            bg: 'bg-orange-500/5',
-            border: 'border-orange-500/20'
-          },
-          {
-            label: 'Execução (Saídas)',
-            value: formatCurrency(stats.despesa),
-            subtitle: `Tarifas: ${formatCurrency(stats.tarifas)}${stats.impostosDevolucoes > 0 ? ` + Imp/Dev: ${formatCurrency(stats.impostosDevolucoes)}` : ''}`,
-            icon: 'trending_down',
-            color: 'text-red-400',
-            bg: 'bg-red-500/5',
-            border: 'border-red-500/20'
-          }
-        ].map((stat, i) => (
-          <div key={i} className={`bg-card-dark border ${stat.border} ${stat.bg} rounded-3xl p-6 flex flex-col gap-1 relative overflow-hidden group transition-all hover:scale-[1.02] shadow-xl`}>
-            <div className={`absolute -right-2 -bottom-2 opacity-10 group-hover:opacity-20 transition-opacity`}>
-              <span className={`material-symbols-outlined text-8xl ${stat.color}`}>{stat.icon}</span>
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="bg-card-dark border border-white/5 rounded-3xl p-6 h-32 animate-pulse flex flex-col gap-4">
+              <div className="h-2 w-24 bg-white/5 rounded"></div>
+              <div className="h-6 w-32 bg-white/5 rounded"></div>
             </div>
-            <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">{stat.label}</p>
-            <div className="flex flex-col mt-1">
-              <h3 className="text-white text-3xl font-black tracking-tight">{stat.value}</h3>
-              <span className="text-[10px] text-slate-400 font-bold mt-1 uppercase">
-                {stat.subtitle}
-              </span>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            {
+              label: 'Saldo Total Disponível',
+              value: formatCurrency(stats.totalDisponivel),
+              subtitle: `Sendo ${formatCurrency(stats.reprogramado)} reprogramado`,
+              icon: 'account_balance',
+              color: 'text-blue-400',
+              bg: 'bg-blue-500/5',
+              border: 'border-blue-500/20'
+            },
+            {
+              label: 'Novos Repasses',
+              value: formatCurrency(stats.repasses),
+              subtitle: 'Recebimentos no período',
+              icon: 'trending_up',
+              color: 'text-emerald-400',
+              bg: 'bg-emerald-500/5',
+              border: 'border-emerald-500/20'
+            },
+            {
+              label: 'Reserva & Rendimentos',
+              value: formatCurrency(stats.reprogramado + stats.rendimentos),
+              subtitle: 'Saldo anterior + Juros',
+              icon: 'savings',
+              color: 'text-orange-400',
+              bg: 'bg-orange-500/5',
+              border: 'border-orange-500/20'
+            },
+            {
+              label: 'Execução (Saídas)',
+              value: formatCurrency(stats.despesa),
+              subtitle: `Tarifas: ${formatCurrency(stats.tarifas)}${stats.impostosDevolucoes > 0 ? ` + Imp/Dev: ${formatCurrency(stats.impostosDevolucoes)}` : ''}`,
+              icon: 'trending_down',
+              color: 'text-red-400',
+              bg: 'bg-red-500/5',
+              border: 'border-red-500/20'
+            }
+          ].map((stat, i) => (
+            <div key={i} className={`bg-card-dark border ${stat.border} ${stat.bg} rounded-3xl p-6 flex flex-col gap-1 relative overflow-hidden group transition-all hover:scale-[1.02] shadow-xl`}>
+              <div className={`absolute -right-2 -bottom-2 opacity-10 group-hover:opacity-20 transition-opacity`}>
+                <span className={`material-symbols-outlined text-8xl ${stat.color}`}>{stat.icon}</span>
+              </div>
+              <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">{stat.label}</p>
+              <div className="flex flex-col mt-1">
+                <h3 className="text-white text-3xl font-black tracking-tight">{stat.value}</h3>
+                <span className="text-[10px] text-slate-400 font-bold mt-1 uppercase">
+                  {stat.subtitle}
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -648,9 +679,9 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
             <h3 className="text-white font-bold text-lg">Fluxo de Caixa</h3>
             <p className="text-text-secondary text-sm">Comparativo Receita vs Despesa (Mensal)</p>
           </div>
-          <div className="flex-1 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              {flowData.length > 0 ? (
+          <div className="flex-1 w-full min-h-[300px]">
+            {flowData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={flowData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#2d3f52" vertical={false} />
                   <XAxis dataKey="name" stroke="#92adc9" fontSize={12} tickLine={false} axisLine={false} />
@@ -664,10 +695,13 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
                   <Bar dataKey="despesa" fill="#ef4444" radius={[4, 4, 0, 0]} name="Despesa" />
                   <Line type="monotone" dataKey="saldoAcumulado" stroke="#3b82f6" strokeWidth={3} name="Saldo em Conta" dot={{ r: 4 }} />
                 </ComposedChart>
-              ) : (
-                <div className="flex items-center justify-center h-full text-text-secondary">Sem dados para exibir</div>
-              )}
-            </ResponsiveContainer>
+              </ResponsiveContainer>
+            ) : (
+              <ChartEmptyState
+                message="Não encontramos lançamentos financeiros com os filtros aplicados para gerar o comparativo mensal."
+                icon="bar_chart_4_bars"
+              />
+            )}
           </div>
         </div>
 
@@ -676,7 +710,7 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
             <h3 className="text-white font-bold text-lg">Resumo</h3>
             <p className="text-text-secondary text-sm">Distribuição Estimada</p>
           </div>
-          <div className="flex-1 w-full flex items-center justify-center">
+          <div className="flex-1 w-full flex items-center justify-center min-h-[300px]">
             {pieData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -701,10 +735,10 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="text-center text-text-secondary flex flex-col items-center">
-                <span className="material-symbols-outlined text-4xl mb-2 opacity-50">donut_small</span>
-                <p>Nenhum dado por natureza.</p>
-              </div>
+              <ChartEmptyState
+                message="A distribuição por natureza de despesa será exibida assim que houverem pagamentos registrados."
+                icon="pie_chart"
+              />
             )}
           </div>
         </div>
