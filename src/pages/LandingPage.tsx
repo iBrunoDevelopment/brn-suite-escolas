@@ -114,22 +114,24 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onGuideClick })
                         <div className="flex items-center gap-3">
                             <img src="/assets/logo/logo-horizontal.png" alt="BRN GROUP" className="h-10 w-auto" />
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 sm:gap-4">
                             {onGuideClick && (
                                 <button
                                     onClick={onGuideClick}
-                                    className="hidden md:flex items-center gap-2 px-4 py-2 text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition-colors"
+                                    className="flex items-center gap-1.5 px-2 sm:px-4 py-2 text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition-colors shrink-0"
                                 >
-                                    <span className="material-symbols-outlined text-lg">menu_book</span>
-                                    Manual do Gestor
+                                    <span className="material-symbols-outlined text-lg sm:text-xl">menu_book</span>
+                                    <span className="hidden sm:inline">Manual do Gestor</span>
+                                    <span className="sm:hidden">Manual</span>
                                 </button>
                             )}
                             <button
                                 onClick={onLoginClick}
-                                className="btn-primary flex items-center gap-2 group"
+                                className="btn-primary flex items-center gap-2 group !px-3 sm:!px-6 !py-2 sm:!py-2.5 !text-xs sm:!text-sm shrink-0"
                             >
-                                <span>Acessar Sistema</span>
-                                <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">login</span>
+                                <span className="hidden xs:inline sm:inline">Acessar Sistema</span>
+                                <span className="xs:hidden sm:hidden">Entrar</span>
+                                <span className="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform">login</span>
                             </button>
                         </div>
                     </div>

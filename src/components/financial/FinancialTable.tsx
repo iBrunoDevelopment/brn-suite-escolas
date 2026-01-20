@@ -62,7 +62,84 @@ const FinancialTable: React.FC<FinancialTableProps> = ({
 
     return (
         <div className="bg-surface-dark border border-surface-border rounded-2xl overflow-hidden shadow-2xl min-h-[400px]">
-            <div className="overflow-x-auto">
+            {/* Mobile View: Cards */}
+            <div className="md:hidden flex flex-col divide-y divide-surface-border/30">
+                {entries.length === 0 ? (
+                    <div className="p-20 text-center text-slate-500 italic">
+                        Nenhum lançamento encontrado para os filtros selecionados.
+                    </div>
+                ) : (
+                    entries.map((entry) => (
+                        <div key={entry.id} className="p-4 flex flex-col gap-4 hover:bg-white/[0.02] transition-colors relative overflow-hidden group">
+                            {/* Subtle background glow for entry type */}
+                            <div className={`absolute -right-4 -top-4 w-16 h-16 rounded-full blur-2xl opacity-10 transition-opacity ${entry.type === 'Entrada' ? 'bg-green-500' : 'bg-red-500'}`} />
+
+                            <div className="flex justify-between items-start relative z-10">
+                                <div className="flex flex-col gap-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className={`text-[9px] font-black uppercase tracking-[0.1em] px-2 py-0.5 rounded-md border ${entry.type === 'Entrada' ? 'text-green-400 bg-green-500/10 border-green-500/20' : 'text-orange-400 bg-orange-500/10 border-orange-500/20'}`}>
+                                            {entry.type}
+                                        </span>
+                                        <span className="text-[10px] text-slate-400 font-bold bg-white/5 px-2 py-0.5 rounded-md">
+                                            {new Date(entry.date).toLocaleDateString('pt-BR')}
+                                        </span>
+                                    </div>
+                                    <h4 className="text-sm text-white font-bold leading-tight mt-1 line-clamp-2">{entry.description}</h4>
+                                </div>
+                                <div className="flex flex-col items-end gap-1.5 shrink-0">
+                                    <div className={`text-base font-black tracking-tight ${entry.type === 'Entrada' ? 'text-green-400' : 'text-red-400'}`}>
+                                        {entry.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                    </div>
+                                    <StatusBadge s={entry.status} />
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-2 bg-black/20 p-3 rounded-xl border border-white/[0.03]">
+                                <div className="flex items-center gap-4 text-[10px]">
+                                    <div className="flex items-center gap-1.5 text-slate-400 font-medium truncate">
+                                        <span className="material-symbols-outlined text-[14px] text-primary">store</span>
+                                        {entry.supplier || 'Sem Fornecedor'}
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-slate-400 font-medium truncate">
+                                        <span className="material-symbols-outlined text-[14px] text-primary">school</span>
+                                        {entry.school.substring(0, 15)}...
+                                    </div>
+                                </div>
+                                <div className="h-px bg-white/[0.05] w-full" />
+                                <div className="flex items-center justify-between">
+                                    <div className="flex flex-col gap-0.5">
+                                        <span className="text-[10px] text-blue-400 font-black uppercase tracking-wider">{entry.program}</span>
+                                        <span className="text-[10px] text-slate-500 font-medium line-clamp-1">{entry.rubric}</span>
+                                    </div>
+                                    <div className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${entry.nature === 'Custeio' ? 'text-purple-400 bg-purple-500/10' : 'text-amber-400 bg-amber-500/10'}`}>
+                                        {entry.nature}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-between items-center bg-white/[0.02] -mx-4 -mb-4 px-4 py-3 border-t border-white/5">
+                                <div className="text-[10px] text-slate-500 font-bold flex items-center gap-1.5">
+                                    <span className="material-symbols-outlined text-sm">payments</span>
+                                    {entry.payment_method}
+                                </div>
+                                {canEdit && (
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={() => onEdit(entry)} className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center transition-all active:scale-95 shadow-sm border border-primary/20">
+                                            <span className="material-symbols-outlined text-[18px]">edit</span>
+                                        </button>
+                                        <button onClick={() => onDelete(entry)} className="w-9 h-9 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center transition-all active:scale-95 shadow-sm border border-red-500/20">
+                                            <span className="material-symbols-outlined text-[18px]">{isAdmin ? 'delete' : (entry.status === TransactionStatus.ESTORNADO ? 'restore_from_trash' : 'block')}</span>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Desktop View: Table */}
+            <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-[1000px]">
                     <thead className="bg-[#111a22]/80 backdrop-blur-md sticky top-0 z-10">
                         <tr className="border-b border-surface-border">
@@ -85,7 +162,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({
                     <tbody>
                         {entries.length === 0 ? (
                             <tr>
-                                <td colSpan={7} className="p-20 text-center text-slate-500 italic">
+                                <td colSpan={canEdit ? 7 : 6} className="p-20 text-center text-slate-500 italic">
                                     Nenhum lançamento encontrado para os filtros selecionados.
                                 </td>
                             </tr>
@@ -100,6 +177,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({
                                             className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-primary"
                                         />
                                     </td>
+                                    {/* ... rest of the table cells remain exactly as they were ... */}
                                     <td className="p-5">
                                         <div className="flex flex-col">
                                             <span className={`text-[10px] font-black uppercase tracking-tighter ${entry.type === 'Entrada' ? 'text-green-500' : 'text-orange-500'}`}>

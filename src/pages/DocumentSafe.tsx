@@ -208,7 +208,7 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
             </div>
 
             {/* Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 bg-card-dark/50 p-4 rounded-2xl border border-surface-border">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 bg-card-dark/50 p-4 rounded-2xl border border-surface-border">
                 <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Buscar Termo</label>
                     <input
@@ -259,7 +259,7 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                         })}
                     </select>
                 </div>
-                <div className="flex items-end">
+                <div className="flex items-end sm:col-span-2 lg:col-span-1">
                     <button
                         onClick={() => { setFilterSearch(''); setFilterCategory(''); setFilterSchool(''); setFilterProcess(''); }}
                         className="w-full h-10 rounded-xl bg-white/5 border border-white/10 text-slate-400 text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
@@ -270,8 +270,9 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
             </div>
 
             {/* Documents Grid/Table */}
-            <div className="bg-card-dark rounded-3xl border border-surface-border overflow-hidden shadow-2xl">
-                <div className="overflow-x-auto">
+            <div className="bg-card-dark rounded-3xl border border-surface-border overflow-hidden shadow-2xl pb-20 md:pb-0">
+                {/* Desktop View */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
                             <tr className="bg-surface-dark/50 border-b border-surface-border">
@@ -286,12 +287,12 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                             {loading ? (
                                 [1, 2, 3].map(i => (
                                     <tr key={i} className="animate-pulse">
-                                        <td colSpan={4} className="px-6 py-8"><div className="h-4 bg-surface-dark rounded w-full"></div></td>
+                                        <td colSpan={5} className="px-6 py-8"><div className="h-4 bg-surface-dark rounded w-full"></div></td>
                                     </tr>
                                 ))
                             ) : filteredDocs.length === 0 ? (
                                 <tr>
-                                    <td colSpan={4} className="px-6 py-12 text-center text-slate-500 italic">Nenhum documento encontrado com os filtros aplicados.</td>
+                                    <td colSpan={5} className="px-6 py-12 text-center text-slate-500 italic">Nenhum documento encontrado com os filtros aplicados.</td>
                                 </tr>
                             ) : filteredDocs.map(doc => (
                                 <tr key={doc.id} className="group hover:bg-white/[0.02] transition-all">
@@ -328,38 +329,7 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        {doc.checklist ? (() => {
-                                            const checks = [
-                                                doc.checklist.has_signature,
-                                                doc.checklist.has_stamp,
-                                                doc.checklist.is_legible,
-                                                doc.checklist.is_correct_value,
-                                                doc.checklist.is_correct_date
-                                            ];
-                                            const allPassed = checks.every(Boolean);
-                                            const passedCount = checks.filter(Boolean).length;
-
-                                            if (allPassed) {
-                                                return (
-                                                    <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 px-3 py-1 rounded-full w-fit mx-auto">
-                                                        <span className="material-symbols-outlined text-[16px]">verified</span>
-                                                        <span className="text-[10px] font-black uppercase tracking-widest">Validado</span>
-                                                    </div>
-                                                );
-                                            } else {
-                                                return (
-                                                    <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 text-amber-500 px-3 py-1 rounded-full w-fit mx-auto" title={`${passedCount}/5 critérios atendidos`}>
-                                                        <span className="material-symbols-outlined text-[16px]">gpp_maybe</span>
-                                                        <span className="text-[10px] font-black uppercase tracking-widest">Ressalvas ({passedCount}/5)</span>
-                                                    </div>
-                                                );
-                                            }
-                                        })() : (
-                                            <div className="flex items-center gap-2 bg-slate-500/10 border border-slate-500/20 text-slate-500 px-3 py-1 rounded-full w-fit mx-auto">
-                                                <span className="material-symbols-outlined text-[16px]">pending</span>
-                                                <span className="text-[10px] font-black uppercase tracking-widest">Pendente</span>
-                                            </div>
-                                        )}
+                                        <ChecklistBadge doc={doc} />
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex items-center justify-end gap-2">
@@ -385,6 +355,65 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                             ))}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Mobile View */}
+                <div className="md:hidden p-4 space-y-4">
+                    {loading ? (
+                        [1, 2, 3].map(i => <div key={i} className="h-40 bg-white/5 rounded-2xl animate-pulse" />)
+                    ) : filteredDocs.length === 0 ? (
+                        <div className="py-12 text-center text-slate-500 italic">Nenhum documento encontrado.</div>
+                    ) : filteredDocs.map(doc => (
+                        <div key={doc.id} className="bg-white/5 border border-white/5 rounded-2xl p-5 space-y-4">
+                            <div className="flex justify-between items-start">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 shrink-0">
+                                        <span className="material-symbols-outlined">description</span>
+                                    </div>
+                                    <div className="min-w-0">
+                                        <span className="text-sm font-bold text-white block truncate">{doc.name}</span>
+                                        <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{doc.category}</span>
+                                    </div>
+                                </div>
+                                <ChecklistBadge doc={doc} />
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-3 pt-2 border-t border-white/5">
+                                <div className="flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-sm text-slate-500">school</span>
+                                    <span className="text-xs text-white font-medium">{doc.school_name}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-sm text-slate-500">calendar_today</span>
+                                        <span className="text-xs text-slate-400">{new Date(doc.entry_date).toLocaleDateString('pt-BR')}</span>
+                                    </div>
+                                    <span className="text-xs text-emerald-400 font-black">{doc.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                                </div>
+                                <div className="p-3 bg-black/40 rounded-xl border border-white/5 text-[10px] text-slate-400 italic">
+                                    {doc.process_info || doc.entry_description}
+                                </div>
+                            </div>
+
+                            <div className="flex gap-2 pt-2">
+                                <button
+                                    onClick={() => { setSelectedDoc(doc); setShowChecklist(true); }}
+                                    className="flex-1 h-11 bg-white/5 border border-white/10 rounded-xl text-indigo-400 font-bold text-xs flex items-center justify-center gap-2"
+                                >
+                                    <span className="material-symbols-outlined text-lg">fact_check</span>
+                                    Checklist
+                                </button>
+                                <a
+                                    href={doc.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="w-12 h-11 bg-slate-800 rounded-xl flex items-center justify-center text-white border border-white/5"
+                                >
+                                    <span className="material-symbols-outlined">visibility</span>
+                                </a>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
 
@@ -494,16 +523,54 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
     );
 };
 
+const ChecklistBadge: React.FC<{ doc: DocumentFile }> = ({ doc }) => {
+    if (!doc.checklist) {
+        return (
+            <div className="flex items-center gap-2 bg-slate-500/10 border border-slate-500/20 text-slate-500 px-3 py-1 rounded-full w-fit mx-auto">
+                <span className="material-symbols-outlined text-[16px]">pending</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">Pendente</span>
+            </div>
+        );
+    }
+    const checks = [
+        doc.checklist.has_signature,
+        doc.checklist.has_stamp,
+        doc.checklist.is_legible,
+        doc.checklist.is_correct_value,
+        doc.checklist.is_correct_date
+    ];
+    const allPassed = checks.every(Boolean);
+    const passedCount = checks.filter(Boolean).length;
+
+    if (allPassed) {
+        return (
+            <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 px-3 py-1 rounded-full w-fit mx-auto">
+                <span className="material-symbols-outlined text-[16px]">verified</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">Validado</span>
+            </div>
+        );
+    } else {
+        return (
+            <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 text-amber-500 px-3 py-1 rounded-full w-fit mx-auto" title={`${passedCount}/5 critérios atendidos`}>
+                <span className="material-symbols-outlined text-[16px]">gpp_maybe</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">Ressalvas ({passedCount}/5)</span>
+            </div>
+        );
+    }
+};
+
 // Helper Sub-component for Checklist Items
 const CheckItem: React.FC<{ label: string, checked: boolean, onChange: (v: boolean) => void }> = ({ label, checked, onChange }) => (
-    <div className="flex items-center justify-between p-2 hover:bg-white/[0.02] rounded-lg group transition-all">
-        <span className="text-xs text-slate-300 font-medium">{label}</span>
-        <button
-            onClick={() => onChange(!checked)}
-            className={`w-10 h-6 rounded-full relative transition-all duration-300 ${checked ? 'bg-emerald-500/80 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-slate-700'}`}
+    <div
+        onClick={() => onChange(!checked)}
+        className="flex items-center justify-between p-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 rounded-2xl cursor-pointer transition-all active:scale-[0.98]"
+    >
+        <span className="text-xs md:text-sm text-slate-200 font-medium pr-4">{label}</span>
+        <div
+            className={`w-12 h-7 rounded-full relative transition-all duration-300 shrink-0 ${checked ? 'bg-emerald-500/80 shadow-[0_0_12px_rgba(16,185,129,0.3)]' : 'bg-slate-700'}`}
         >
-            <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform duration-300 ${checked ? 'translate-x-4' : ''}`}></div>
-        </button>
+            <div className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-lg transition-transform duration-300 ${checked ? 'translate-x-5' : ''}`}></div>
+        </div>
     </div>
 );
 

@@ -464,7 +464,7 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
 
             {/* Show active filter badges if collapsed */}
             {!showFilters && (
-              <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+              <div className="hidden sm:flex items-center gap-2 overflow-x-auto scrollbar-hide">
                 {filters.schoolId && filters.schoolId !== (user.schoolId || '') && (
                   <span className="px-2 py-1 rounded-lg bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 text-[10px] font-bold whitespace-nowrap">
                     {availableOptions.schools.find(s => s.id === filters.schoolId)?.name?.substring(0, 15)}...
@@ -496,9 +496,9 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
               </button>
             )}
             {stats.pendencias > 0 && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/10 border border-orange-500/20 rounded-lg animate-pulse">
+              <div className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 bg-orange-500/10 border border-orange-500/20 rounded-lg animate-pulse shrink-0">
                 <span className="material-symbols-outlined text-orange-500 text-sm">priority_high</span>
-                <span className="text-[10px] font-black text-orange-500 uppercase">{stats.pendencias} Pendentes</span>
+                <span className="text-[10px] font-black text-orange-500 uppercase">{stats.pendencias} <span className="hidden sm:inline">Pendentes</span></span>
               </div>
             )}
             <button onClick={fetchDashboardData} className="flex items-center justify-center gap-2 bg-primary hover:bg-blue-600 text-white w-10 h-10 md:w-auto md:h-auto md:px-5 md:py-2.5 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-blue-500/20 active:scale-95">
@@ -608,19 +608,19 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
 
       {/* Stats Cards */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-card-dark border border-white/5 rounded-3xl p-6 h-32 animate-pulse flex flex-col gap-4">
+            <div key={i} className="bg-card-dark border border-white/5 rounded-2xl md:rounded-3xl p-4 md:p-6 h-28 md:h-32 animate-pulse flex flex-col gap-4">
               <div className="h-2 w-24 bg-white/5 rounded"></div>
               <div className="h-6 w-32 bg-white/5 rounded"></div>
             </div>
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
           {[
             {
-              label: 'Saldo Total Disponível',
+              label: 'Saldo Total',
               value: formatCurrency(stats.totalDisponivel),
               subtitle: `Sendo ${formatCurrency(stats.reprogramado)} reprogramado`,
               icon: 'account_balance',
@@ -638,7 +638,7 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
               border: 'border-emerald-500/20'
             },
             {
-              label: 'Reserva & Rendimentos',
+              label: 'Reserva & Rend.',
               value: formatCurrency(stats.reprogramado + stats.rendimentos),
               subtitle: 'Saldo anterior + Juros',
               icon: 'savings',
@@ -656,14 +656,14 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
               border: 'border-red-500/20'
             }
           ].map((stat, i) => (
-            <div key={i} className={`bg-card-dark border ${stat.border} ${stat.bg} rounded-3xl p-6 flex flex-col gap-1 relative overflow-hidden group transition-all hover:scale-[1.02] shadow-xl`}>
+            <div key={i} className={`bg-card-dark border ${stat.border} ${stat.bg} rounded-2xl md:rounded-3xl p-4 md:p-6 flex flex-col gap-1 relative overflow-hidden group transition-all hover:scale-[1.02] shadow-xl`}>
               <div className={`absolute -right-2 -bottom-2 opacity-10 group-hover:opacity-20 transition-opacity`}>
-                <span className={`material-symbols-outlined text-8xl ${stat.color}`}>{stat.icon}</span>
+                <span className={`material-symbols-outlined text-6xl md:text-8xl ${stat.color}`}>{stat.icon}</span>
               </div>
-              <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">{stat.label}</p>
+              <p className="text-slate-500 text-[8px] md:text-[10px] font-black uppercase tracking-widest truncate">{stat.label}</p>
               <div className="flex flex-col mt-1">
-                <h3 className="text-white text-3xl font-black tracking-tight">{stat.value}</h3>
-                <span className="text-[10px] text-slate-400 font-bold mt-1 uppercase">
+                <h3 className="text-white text-base sm:text-lg md:text-3xl font-black tracking-tight">{stat.value}</h3>
+                <span className="text-[8px] md:text-[10px] text-slate-400 font-bold mt-1 uppercase line-clamp-1">
                   {stat.subtitle}
                 </span>
               </div>

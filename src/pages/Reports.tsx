@@ -1054,32 +1054,32 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
       {showNewProcessModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/98 backdrop-blur-xl md:p-6 overflow-hidden">
           <div className="bg-[#0a0f14] border-x border-white/5 w-full max-w-6xl h-screen md:h-auto md:max-h-[92vh] md:rounded-[40px] shadow-2xl flex flex-col relative overflow-hidden">
-            <div className="sticky top-0 z-30 p-6 md:p-8 border-b border-white/5 flex justify-between items-center bg-[#0a0f14]/80 backdrop-blur-md">
-              <div className="flex items-center gap-5">
-                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-                  <span className="material-symbols-outlined text-[24px]">assignment</span>
+            <div className="sticky top-0 z-30 p-4 md:p-8 border-b border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[#0a0f14]/80 backdrop-blur-md">
+              <div className="flex items-center gap-3 md:gap-5">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+                  <span className="material-symbols-outlined text-[20px] md:text-[24px]">assignment</span>
                 </div>
                 <div className="flex flex-col">
-                  <h2 className="text-[12px] md:text-lg font-black text-white leading-tight tracking-[0.1em]">
+                  <h2 className="text-[14px] md:text-lg font-black text-white leading-tight tracking-[0.1em]">
                     {editingProcessId ? 'EDITAR PRESTAÇÃO' : 'NOVA PRESTAÇÃO'}
                   </h2>
-                  <p className="text-[9px] text-slate-500 uppercase font-bold tracking-[0.2em] mt-0.5">
+                  <p className="text-[8px] md:text-[9px] text-slate-500 uppercase font-bold tracking-[0.2em] mt-0.5">
                     {editingProcessId ? 'Refinamento de dados' : 'Detalhamento técnico'}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 md:gap-4">
+              <div className="flex items-center self-end md:self-auto gap-2 md:gap-4 w-full md:w-auto">
                 <button
                   onClick={() => setShowNewProcessModal(false)}
-                  className="h-10 px-4 bg-white/5 text-slate-400 font-bold text-[10px] uppercase tracking-widest rounded-xl hover:bg-white/10 hover:text-white transition-all border border-white/10 hidden md:block"
+                  className="flex-1 md:flex-none h-10 px-4 bg-white/5 text-slate-400 font-bold text-[10px] uppercase tracking-widest rounded-xl hover:bg-white/10 hover:text-white transition-all border border-white/10 md:block"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleCreateProcess}
                   disabled={loading || !selectedEntry}
-                  className="h-10 px-6 bg-primary text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-xl shadow-lg shadow-primary/20 hover:bg-primary-hover transition-all disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed flex items-center gap-2"
+                  className="flex-[1.5] md:flex-none h-10 px-6 bg-primary text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-xl shadow-lg shadow-primary/20 hover:bg-primary-hover transition-all disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <span className="material-symbols-outlined animate-spin text-[18px]">sync</span>
@@ -1088,21 +1088,21 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
                   )}
                   <span>{loading ? 'SALVANDO...' : 'FINALIZAR'}</span>
                 </button>
-                <div className="w-px h-8 bg-white/10 mx-1 md:mx-2"></div>
-                <button onClick={() => setShowNewProcessModal(false)} className="w-10 h-10 rounded-xl hover:bg-white/5 flex items-center justify-center text-slate-500 hover:text-white transition-all border border-transparent hover:border-white/10 group">
+                <div className="w-px h-8 bg-white/10 mx-1 md:mx-2 hidden md:block"></div>
+                <button onClick={() => setShowNewProcessModal(false)} className="w-10 h-10 rounded-xl hover:bg-white/5 flex items-center justify-center text-slate-500 hover:text-white transition-all border border-transparent hover:border-white/10 group order-first md:order-last">
                   <span className="material-symbols-outlined text-xl group-hover:rotate-90 transition-transform duration-500">close</span>
                 </button>
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 md:p-10 space-y-12 custom-scrollbar bg-[#0a0f14]">
+            <div className="flex-1 overflow-y-auto p-4 md:p-10 space-y-8 md:space-y-12 custom-scrollbar bg-[#0a0f14]">
               {/* Dashboard de Valores (ValueCounter) */}
-              <div className="pb-6">
+              <div className="pb-4 md:pb-6">
                 <ValueCounter />
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                <section className="bg-white/[0.02] p-8 rounded-[36px] border border-white/5 shadow-2xl flex flex-col gap-8 relative overflow-hidden group">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10">
+                <section className="bg-white/[0.02] p-6 md:p-8 rounded-[24px] md:rounded-[36px] border border-white/5 shadow-2xl flex flex-col gap-6 md:gap-8 relative overflow-hidden group">
                   <div className="absolute top-0 right-0 w-40 h-40 bg-primary/5 blur-[80px] rounded-full -mr-20 -mt-20 group-hover:bg-primary/10 transition-all duration-1000"></div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1110,15 +1110,15 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
                       <label className="text-[10px] font-black uppercase text-primary tracking-[0.25em] mb-4 block opacity-60">1. Lançamento Base (Pagamento)</label>
                       <div
                         onClick={() => setShowEntryModal(true)}
-                        className="bg-black/40 border border-white/10 rounded-2xl h-14 px-5 flex items-center justify-between cursor-pointer hover:border-primary/40 hover:bg-black/60 transition-all group/btn"
+                        className="bg-black/40 border border-white/10 rounded-2xl h-auto min-h-[56px] py-3 px-5 flex items-center justify-between cursor-pointer hover:border-primary/40 hover:bg-black/60 transition-all group/btn"
                       >
                         <div className="flex items-center gap-4 truncate">
-                          <span className="material-symbols-outlined text-primary/40 text-[22px] group-hover/btn:text-primary transition-colors">receipt</span>
-                          <span className={`text-[12px] truncate uppercase tracking-tight ${selectedEntry ? 'text-white font-black' : 'text-slate-600 italic font-bold'}`}>
+                          <span className="material-symbols-outlined text-primary/40 text-[22px] group-hover/btn:text-primary transition-colors shrink-0">receipt</span>
+                          <span className={`text-[12px] truncate uppercase tracking-tight break-all ${selectedEntry ? 'text-white font-black' : 'text-slate-600 italic font-bold'}`}>
                             {selectedEntry ? `${selectedEntry.description}` : 'Selecionar Lançamento...'}
                           </span>
                         </div>
-                        <span className="material-symbols-outlined text-primary/30 group-hover/btn:text-primary text-[20px] group-hover/btn:translate-x-1 transition-all">arrow_forward_ios</span>
+                        <span className="material-symbols-outlined text-primary/30 group-hover/btn:text-primary text-[20px] group-hover/btn:translate-x-1 transition-all shrink-0">arrow_forward_ios</span>
                       </div>
                     </div>
                     <div>
@@ -1169,9 +1169,9 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
                   </div>
                 </section>
 
-                <section className="bg-white/[0.02] p-8 rounded-[36px] border border-white/5 shadow-2xl relative overflow-hidden group">
+                <section className="bg-white/[0.02] p-6 md:p-8 rounded-[24px] md:rounded-[36px] border border-white/5 shadow-2xl relative overflow-hidden group">
                   <div className="absolute top-0 right-0 w-40 h-40 bg-green-500/5 blur-[80px] rounded-full -mr-20 -mt-20 opacity-0 group-hover:opacity-100 transition-all duration-1000"></div>
-                  <label className="text-[10px] font-black uppercase text-primary tracking-[0.25em] mb-6 block opacity-60">3. Checklist de Conformidade</label>
+                  <label className="text-[10px] font-black uppercase text-primary tracking-[0.25em] mb-4 md:mb-6 block opacity-60">3. Checklist de Conformidade</label>
                   <div className="grid grid-cols-1 gap-3">
                     {checklist.map((item, idx) => (
                       <label key={item.id} className="flex items-center gap-5 p-4.5 bg-black/30 rounded-[24px] border border-white/5 cursor-pointer hover:bg-white/[0.04] hover:border-white/10 transition-all group/check relative overflow-hidden">
@@ -1218,38 +1218,38 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
                 <div className="space-y-16 pb-10">
                   {/* 2. Itens e Comparativos */}
                   <section className="space-y-10">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-                      <div className="flex items-center gap-5">
-                        <div className="w-14 h-14 rounded-[20px] bg-primary/10 flex items-center justify-center text-primary shadow-2xl shadow-primary/5">
-                          <span className="material-symbols-outlined text-[28px]">query_stats</span>
+                    <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 md:gap-8">
+                      <div className="flex items-center gap-4 md:gap-5">
+                        <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-[20px] bg-primary/10 flex items-center justify-center text-primary shadow-2xl shadow-primary/5">
+                          <span className="material-symbols-outlined text-[24px] md:text-[28px]">query_stats</span>
                         </div>
                         <div className="flex flex-col">
-                          <h4 className="text-[14px] font-black uppercase text-white tracking-[0.2em]">2. Itens e Cotações Competidoras</h4>
-                          <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Gerencie os itens da nota e o quadro comparativo</p>
+                          <h4 className="text-[12px] md:text-[14px] font-black uppercase text-white tracking-[0.2em]">2. Itens e Cotações Competidoras</h4>
+                          <p className="text-[8px] md:text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Gerencie os itens da nota e o quadro comparativo</p>
                         </div>
                       </div>
-                      <div className="flex gap-4 w-full md:w-auto">
-                        <button onClick={() => setShowImportModal(true)} className="flex-1 md:flex-none bg-emerald-500/10 text-emerald-500 px-8 h-14 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-emerald-500/20 transition-all flex items-center justify-center gap-3 border border-emerald-500/20 group">
-                          <span className="material-symbols-outlined text-[20px] group-hover:rotate-12 transition-transform">database</span> Planilha (Excel)
+                      <div className="flex flex-wrap gap-3 w-full xl:w-auto">
+                        <button onClick={() => setShowImportModal(true)} className="flex-1 md:flex-none bg-emerald-500/10 text-emerald-500 px-4 md:px-8 h-12 md:h-14 rounded-xl md:rounded-2xl font-black text-[10px] md:text-[11px] uppercase tracking-[0.2em] hover:bg-emerald-500/20 transition-all flex items-center justify-center gap-2 md:gap-3 border border-emerald-500/20 group">
+                          <span className="material-symbols-outlined text-[18px] md:text-[20px] group-hover:rotate-12 transition-transform">database</span> Planilha <span className="hidden sm:inline">(Excel)</span>
                         </button>
-                        <button onClick={handleAddItem} className="flex-1 md:flex-none bg-primary/10 text-primary px-8 h-14 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-primary/20 transition-all flex items-center justify-center gap-3 border border-primary/20 group">
-                          <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">add_circle</span> Adicionar Item
+                        <button onClick={handleAddItem} className="flex-1 md:flex-none bg-primary/10 text-primary px-4 md:px-8 h-12 md:h-14 rounded-xl md:rounded-2xl font-black text-[10px] md:text-[11px] uppercase tracking-[0.2em] hover:bg-primary/20 transition-all flex items-center justify-center gap-2 md:gap-3 border border-primary/20 group">
+                          <span className="material-symbols-outlined text-[18px] md:text-[20px] group-hover:scale-110 transition-transform">add_circle</span> Item
                         </button>
                       </div>
                     </div>
 
                     <div className="space-y-8">
                       {items.map((item, idx) => (
-                        <div key={idx} className="bg-white/[0.01] border border-white/5 p-10 rounded-[44px] space-y-10 shadow-2xl relative group/item overflow-hidden">
-                          <div className="absolute top-0 left-0 w-1.5 h-full bg-primary/0 group-hover/item:bg-primary/30 transition-all duration-700"></div>
+                        <div key={idx} className="bg-white/[0.01] border border-white/5 p-4 md:p-10 rounded-[24px] md:rounded-[44px] space-y-6 md:space-y-10 shadow-2xl relative group/item overflow-hidden">
+                          <div className="absolute top-0 left-0 w-1 md:w-1.5 h-full bg-primary/0 group-hover/item:bg-primary/30 transition-all duration-700"></div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-end relative z-10">
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-8 items-end relative z-10">
                             <div className="md:col-span-5">
-                              <label className="text-[10px] font-black text-slate-500 uppercase mb-4 block tracking-widest opacity-60">Descrição Detalhada</label>
+                              <label className="text-[9px] md:text-[10px] font-black text-slate-500 uppercase mb-2 md:mb-4 block tracking-widest opacity-60">Descrição Detalhada</label>
                               <input value={item.description} onChange={(e) => {
                                 const it = [...items]; it[idx].description = e.target.value; setItems(it);
                                 const cq = [...competitorQuotes]; cq.forEach(q => q.items[idx].description = e.target.value); setCompetitorQuotes(cq);
-                              }} className="w-full bg-black/40 border border-white/10 rounded-2xl h-12 px-5 text-[12px] text-white focus:border-primary/50 transition-all" placeholder="Ex: Monitor 24 Polegadas" />
+                              }} className="w-full bg-black/40 border border-white/10 rounded-xl md:rounded-2xl h-10 md:h-12 px-4 md:px-5 text-[11px] md:text-[12px] text-white focus:border-primary/50 transition-all" placeholder="Ex: Monitor 24 Polegadas" />
                             </div>
                             <div className="md:col-span-3 grid grid-cols-2 gap-4">
                               <div>
@@ -1297,34 +1297,34 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
                           </div>
 
                           {/* Quadro Comparativo Interno */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 pt-10 border-t border-white/5 relative z-10">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 pt-6 md:pt-10 border-t border-white/5 relative z-10">
                             {competitorQuotes.map((q, qIdx) => (
-                              <div key={qIdx} className="bg-black/30 p-8 rounded-[32px] border border-white/5 space-y-6 relative group/quote hover:border-amber-500/20 transition-all">
-                                <div className="absolute -top-4 left-8 px-4 py-1 bg-amber-500 text-amber-950 rounded-full shadow-lg shadow-amber-500/20">
-                                  <span className="text-[9px] font-black uppercase tracking-[0.1em]">Concorrente {qIdx + 1}</span>
+                              <div key={qIdx} className="bg-black/30 p-5 md:p-8 rounded-[24px] md:rounded-[32px] border border-white/5 space-y-5 md:space-y-6 relative group/quote hover:border-amber-500/20 transition-all">
+                                <div className="absolute -top-3 md:-top-4 left-6 md:left-8 px-3 md:px-4 py-1 bg-amber-500 text-amber-950 rounded-full shadow-lg shadow-amber-500/20">
+                                  <span className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.1em]">Concorrente {qIdx + 1}</span>
                                 </div>
-                                <div className="flex justify-between items-center bg-black/40 p-5 rounded-2xl border border-white/5 min-h-[64px] cursor-pointer hover:border-amber-500/40 hover:bg-black/60 transition-all group/s" onClick={() => setShowSupplierModal({ open: true, quoteIdx: qIdx })}>
-                                  <div className="truncate flex-1 pr-6 flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 group-hover/s:bg-amber-500 group-hover/s:text-amber-950 transition-all">
-                                      <span className="material-symbols-outlined text-[20px]">storefront</span>
+                                <div className="flex justify-between items-center bg-black/40 p-3 md:p-5 rounded-xl md:rounded-2xl border border-white/5 min-h-[56px] md:min-h-[64px] cursor-pointer hover:border-amber-500/40 hover:bg-black/60 transition-all group/s" onClick={() => setShowSupplierModal({ open: true, quoteIdx: qIdx })}>
+                                  <div className="truncate flex-1 pr-4 md:pr-6 flex items-center gap-3 md:gap-4">
+                                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 group-hover/s:bg-amber-500 group-hover/s:text-amber-950 transition-all shrink-0">
+                                      <span className="material-symbols-outlined text-[18px] md:text-[20px]">storefront</span>
                                     </div>
-                                    <div className="truncate">
-                                      <span className={`text-[12px] uppercase tracking-tight font-black block truncate ${q.supplier_name ? 'text-white' : 'text-slate-600 italic'}`}>
+                                    <div className="truncate text-left">
+                                      <span className={`text-[10px] md:text-[12px] uppercase tracking-tight font-black block truncate ${q.supplier_name ? 'text-white' : 'text-slate-600 italic'}`}>
                                         {q.supplier_name || 'Vincular Empresa...'}
                                       </span>
-                                      {q.supplier_cnpj && <span className="text-[9px] text-slate-500 font-bold block mt-0.5 tracking-widest">{q.supplier_cnpj}</span>}
+                                      {q.supplier_cnpj && <span className="text-[8px] md:text-[9px] text-slate-500 font-bold block mt-0.5 tracking-widest">{q.supplier_cnpj}</span>}
                                     </div>
                                   </div>
-                                  <span className="material-symbols-outlined text-amber-500 group-hover/s:translate-x-1 transition-transform">search</span>
+                                  <span className="material-symbols-outlined text-amber-500 group-hover/s:translate-x-1 transition-transform shrink-0 text-sm md:text-base">search</span>
                                 </div>
                                 <div>
-                                  <label className="text-[9px] font-black text-slate-600 uppercase mb-3 block tracking-widest opacity-60">Preço Unitário (R$)</label>
+                                  <label className="text-[8px] md:text-[9px] font-black text-slate-600 uppercase mb-2 md:mb-3 block tracking-widest opacity-60">Preço Unitário (R$)</label>
                                   <div className="relative">
-                                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-amber-500/30 font-black text-[12px]">R$</span>
+                                    <span className="absolute left-4 md:left-5 top-1/2 -translate-y-1/2 text-amber-500/30 font-black text-[10px] md:text-[12px]">R$</span>
                                     <input
                                       type="number"
                                       step="any"
-                                      className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 pl-12 pr-6 text-[16px] text-amber-500 font-black focus:border-amber-500/50 outline-none transition-all"
+                                      className="w-full bg-black/40 border border-white/10 rounded-xl md:rounded-2xl h-11 md:h-14 pl-10 md:pl-12 pr-4 md:pr-6 text-[14px] md:text-[16px] text-amber-500 font-black focus:border-amber-500/50 outline-none transition-all"
                                       value={q.items[idx].unit_price}
                                       onChange={(e) => {
                                         const cq = [...competitorQuotes]; cq[qIdx].items[idx].unit_price = Number(e.target.value); setCompetitorQuotes(cq);
@@ -1341,24 +1341,24 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
                   </section>
 
                   {/* 4. Documentação Técnica */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                    <section className="bg-white/[0.02] p-10 rounded-[44px] border border-white/5 shadow-2xl space-y-10 relative overflow-hidden group">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10 pb-20">
+                    <section className="bg-white/[0.02] p-6 md:p-10 rounded-[32px] md:rounded-[44px] border border-white/5 shadow-2xl space-y-6 md:space-y-10 relative overflow-hidden group">
                       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/0 via-primary/40 to-primary/0"></div>
-                      <div className="flex items-center gap-5">
-                        <div className="w-14 h-14 rounded-[20px] bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5">
-                          <span className="material-symbols-outlined text-[28px]">folder_zip</span>
+                      <div className="flex items-center gap-4 md:gap-5">
+                        <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-[20px] bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5">
+                          <span className="material-symbols-outlined text-[24px] md:text-[28px]">folder_zip</span>
                         </div>
                         <div className="flex flex-col">
-                          <h4 className="text-[14px] font-black uppercase text-white tracking-[0.2em]">4. Anexos Técnicos</h4>
-                          <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Clique para subir novos arquivos</p>
+                          <h4 className="text-[12px] md:text-[14px] font-black uppercase text-white tracking-[0.2em]">4. Anexos Técnicos</h4>
+                          <p className="text-[9px] md:text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Clique para subir arquivos</p>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4">
                         {ACCOUNTABILITY_DOC_CATEGORIES.map(cat => (
-                          <label key={cat} className="flex flex-col items-center justify-center p-4 bg-black/40 border border-white/5 rounded-3xl text-[9px] font-black text-slate-500 uppercase tracking-tight text-center cursor-pointer hover:bg-primary hover:text-white transition-all gap-2 h-24 group/up shadow-lg hover:shadow-primary/20">
-                            <span className="material-symbols-outlined text-[22px] opacity-40 group-hover/up:opacity-100 group-hover/up:scale-125 transition-all duration-500">upload</span>
-                            {cat}
+                          <label key={cat} className="flex flex-col items-center justify-center p-3 md:p-4 bg-black/40 border border-white/5 rounded-2xl md:rounded-3xl text-[8px] md:text-[9px] font-black text-slate-500 uppercase tracking-tight text-center cursor-pointer hover:bg-primary hover:text-white transition-all gap-2 h-20 md:h-24 group/up shadow-lg hover:shadow-primary/20">
+                            <span className="material-symbols-outlined text-[18px] md:text-[22px] opacity-40 group-hover/up:opacity-100 group-hover/up:scale-125 transition-all duration-500">upload</span>
+                            <span className="line-clamp-2 leading-tight">{cat}</span>
                             <input
                               type="file"
                               className="hidden"
@@ -1372,7 +1372,8 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
                                   const path = `accountability/${Date.now()}_${sanitizedName}`;
                                   const { error: uploadError } = await supabase.storage.from('documents').upload(path, file);
                                   if (uploadError) throw uploadError;
-                                  const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(path);
+                                  const { data: publicUrlData } = supabase.storage.from('documents').getPublicUrl(path);
+                                  const publicUrl = publicUrlData.publicUrl;
                                   setProcessAttachments([...processAttachments, { id: Math.random().toString(), name: file.name, url: publicUrl, category: cat }]);
                                 } catch (err: any) { alert(err.message); } finally { setIsUploadingDoc(false); }
                               }}
@@ -1381,24 +1382,24 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
                         ))}
                       </div>
 
-                      <div className="space-y-4 pt-4">
+                      <div className="space-y-3 md:space-y-4 pt-2 md:pt-4">
                         {processAttachments.map(att => (
-                          <div key={att.id} className="flex items-center justify-between p-5 bg-primary/5 rounded-3xl border border-primary/10 group/itematt transition-all hover:bg-primary/10 hover:border-primary/30">
-                            <div className="flex items-center gap-5 truncate">
-                              <div className="w-12 h-12 rounded-[18px] bg-primary/10 flex items-center justify-center text-primary group-hover/itematt:scale-110 transition-transform">
-                                <span className="material-symbols-outlined text-[22px]">attachment</span>
+                          <div key={att.id} className="flex items-center justify-between p-4 md:p-5 bg-primary/5 rounded-2xl md:rounded-3xl border border-primary/10 group/itematt transition-all hover:bg-primary/10 hover:border-primary/30">
+                            <div className="flex items-center gap-4 md:gap-5 truncate">
+                              <div className="w-10 h-10 md:w-12 md:h-12 rounded-[14px] md:rounded-[18px] bg-primary/10 flex items-center justify-center text-primary group-hover/itematt:scale-110 transition-transform shrink-0">
+                                <span className="material-symbols-outlined text-[18px] md:text-[22px]">attachment</span>
                               </div>
                               <div className="truncate">
-                                <span className="text-[12px] text-white font-black block leading-tight truncate mb-1">{att.name}</span>
-                                <span className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-60">{att.category}</span>
+                                <span className="text-[11px] md:text-[12px] text-white font-black block leading-tight truncate mb-1">{att.name}</span>
+                                <span className="text-[8px] md:text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-60">{att.category}</span>
                               </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <a href={att.url} target="_blank" className="w-10 h-10 flex items-center justify-center bg-black/40 hover:bg-primary text-slate-500 hover:text-white rounded-xl transition-all shadow-xl">
-                                <span className="material-symbols-outlined text-[20px]">visibility</span>
+                            <div className="flex items-center gap-2 md:gap-3 shrink-0 ml-4">
+                              <a href={att.url} target="_blank" className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center bg-black/40 hover:bg-primary text-slate-500 hover:text-white rounded-xl transition-all shadow-xl">
+                                <span className="material-symbols-outlined text-[18px] md:text-[20px]">visibility</span>
                               </a>
-                              <button onClick={() => setProcessAttachments(processAttachments.filter(a => a.id !== att.id))} className="w-10 h-10 flex items-center justify-center bg-black/40 hover:bg-red-500 text-slate-500 hover:text-white rounded-xl transition-all shadow-xl">
-                                <span className="material-symbols-outlined text-[20px]">delete</span>
+                              <button onClick={() => setProcessAttachments(processAttachments.filter(a => a.id !== att.id))} className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center bg-black/40 hover:bg-red-500 text-slate-500 hover:text-white rounded-xl transition-all shadow-xl">
+                                <span className="material-symbols-outlined text-[18px] md:text-[20px]">delete</span>
                               </button>
                             </div>
                           </div>
@@ -1407,43 +1408,43 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
                     </section>
 
                     {/* Documentos Financeiros */}
-                    <section className="bg-white/[0.02] p-10 rounded-[44px] border border-white/5 border-dashed shadow-2xl space-y-10 relative group">
+                    <section className="bg-white/[0.02] p-6 md:p-10 rounded-[32px] md:rounded-[44px] border border-white/5 border-dashed shadow-2xl space-y-6 md:space-y-10 relative group">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-5">
-                          <div className="w-14 h-14 rounded-[20px] bg-slate-500/10 flex items-center justify-center text-slate-400">
-                            <span className="material-symbols-outlined text-[28px]">history_edu</span>
+                        <div className="flex items-center gap-4 md:gap-5">
+                          <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-[20px] bg-slate-500/10 flex items-center justify-center text-slate-400">
+                            <span className="material-symbols-outlined text-[24px] md:text-[28px]">history_edu</span>
                           </div>
                           <div className="flex flex-col">
-                            <h4 className="text-[14px] font-black uppercase text-slate-400 tracking-[0.2em]">Anexos Financeiros</h4>
-                            <p className="text-[10px] text-slate-600 uppercase font-bold tracking-widest mt-1">Importados automaticamente</p>
+                            <h4 className="text-[12px] md:text-[14px] font-black uppercase text-slate-400 tracking-[0.2em]">Anexos Financeiros</h4>
+                            <p className="text-[9px] md:text-[10px] text-slate-600 uppercase font-bold tracking-widest mt-1">Importados automaticamente</p>
                           </div>
                         </div>
-                        <span className="text-[8px] bg-white/5 text-slate-600 border border-white/10 px-4 py-2 rounded-full font-black uppercase tracking-[0.2em]">Read Only</span>
+                        <span className="text-[8px] bg-white/5 text-slate-600 border border-white/10 px-3 md:px-4 py-1.5 md:py-2 rounded-full font-black uppercase tracking-[0.2em] shrink-0">Read Only</span>
                       </div>
 
-                      <div className="space-y-4">
+                      <div className="space-y-3 md:space-y-4">
                         {selectedEntry?.attachments && selectedEntry.attachments.length > 0 ? (
                           selectedEntry.attachments.map(att => (
-                            <div key={att.id} className="flex items-center justify-between p-5 bg-black/40 rounded-3xl border border-white/5 group/att relative overflow-hidden transition-all hover:border-white/10">
+                            <div key={att.id} className="flex items-center justify-between p-4 md:p-5 bg-black/40 rounded-2xl md:rounded-3xl border border-white/5 group/att relative overflow-hidden transition-all hover:border-white/10">
                               <div className="absolute inset-y-0 left-0 w-1.5 bg-slate-500/20 group-hover/att:w-full transition-all duration-1000 -z-10 group-hover/att:bg-slate-300/[0.02]"></div>
-                              <div className="flex items-center gap-5">
-                                <div className="w-12 h-12 rounded-[18px] bg-white/5 flex items-center justify-center text-slate-600">
-                                  <span className="material-symbols-outlined text-[20px]">receipt_long</span>
+                              <div className="flex items-center gap-4 md:gap-5 truncate">
+                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-[14px] md:rounded-[18px] bg-white/5 flex items-center justify-center text-slate-600 shrink-0">
+                                  <span className="material-symbols-outlined text-[18px] md:text-[20px]">receipt_long</span>
                                 </div>
-                                <div>
-                                  <span className="text-[12px] text-white font-black block leading-tight mb-1">{att.name}</span>
-                                  <span className="text-[9px] text-slate-600 font-black uppercase tracking-[0.2em]">{att.category || 'FINANCEIRO'}</span>
+                                <div className="truncate">
+                                  <span className="text-[11px] md:text-[12px] text-white font-black block leading-tight mb-1 truncate">{att.name}</span>
+                                  <span className="text-[8px] md:text-[9px] text-slate-600 font-black uppercase tracking-[0.2em]">{att.category || 'FINANCEIRO'}</span>
                                 </div>
                               </div>
-                              <a href={att.url} target="_blank" className="w-10 h-10 flex items-center justify-center bg-white/5 hover:bg-white/20 rounded-[18px] text-slate-500 hover:text-white transition-all">
-                                <span className="material-symbols-outlined text-[20px]">visibility</span>
+                              <a href={att.url} target="_blank" className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center bg-white/5 hover:bg-white/20 rounded-xl md:rounded-[18px] text-slate-500 hover:text-white transition-all shrink-0 ml-4">
+                                <span className="material-symbols-outlined text-[18px] md:text-[20px]">visibility</span>
                               </a>
                             </div>
                           ))
                         ) : (
-                          <div className="p-20 border-2 border-dashed border-white/[0.02] rounded-[44px] text-center flex flex-col items-center gap-4 opacity-20">
-                            <span className="material-symbols-outlined text-[48px]">folder_off</span>
-                            <p className="text-[10px] text-slate-600 font-black uppercase tracking-[0.3em]">Sem anexos no lançamento</p>
+                          <div className="py-12 md:py-20 border-2 border-dashed border-white/[0.02] rounded-[32px] md:rounded-[44px] text-center flex flex-col items-center gap-4 opacity-20">
+                            <span className="material-symbols-outlined text-[36px] md:text-[48px]">folder_off</span>
+                            <p className="text-[9px] md:text-[10px] text-slate-600 font-black uppercase tracking-[0.3em]">Sem anexos</p>
                           </div>
                         )}
                       </div>
@@ -1458,40 +1459,40 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
 
       {/* Entry Selection Modal */}
       {showEntryModal && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="bg-[#0f172a] border border-white/10 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
-            <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#111a22]">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-2 md:p-4 bg-black/98 backdrop-blur-md">
+          <div className="bg-[#0f172a] border border-white/10 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh] md:max-h-[80vh]">
+            <div className="p-4 md:p-6 border-b border-white/5 flex justify-between items-center bg-[#111a22]">
               <div>
-                <h3 className="text-lg font-bold text-white">Selecionar Lançamento Base</h3>
-                <p className="text-xs text-slate-500">Mostrando apenas saídas que aguardam prestação.</p>
+                <h3 className="text-base md:text-lg font-bold text-white leading-tight">Selecionar Lançamento Base</h3>
+                <p className="text-[10px] md:text-xs text-slate-500 mt-0.5">Mostrando apenas saídas que aguardam prestação.</p>
               </div>
-              <button onClick={() => setShowEntryModal(false)} className="text-slate-400 hover:text-white"><span className="material-symbols-outlined">close</span></button>
+              <button onClick={() => setShowEntryModal(false)} className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white"><span className="material-symbols-outlined text-2xl">close</span></button>
             </div>
-            <div className="p-6 flex flex-col gap-4 overflow-hidden">
+            <div className="p-4 md:p-6 flex flex-col gap-4 overflow-hidden">
               <div className="relative">
-                <span className="material-symbols-outlined absolute left-3 top-2.5 text-slate-500">search</span>
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xl">search</span>
                 <input
-                  placeholder="Buscar por descrição, fornecedor ou valor..."
-                  className="w-full bg-black/40 border-white/10 rounded-xl h-12 pl-10 pr-4 text-white text-sm"
+                  placeholder="Buscar lançamento..."
+                  className="w-full bg-black/40 border border-white/10 rounded-xl h-11 md:h-12 pl-11 pr-4 text-white text-sm outline-none focus:border-primary transition-all"
                   value={entrySearch}
                   onChange={(e) => setEntrySearch(e.target.value)}
                   autoFocus
                 />
               </div>
-              <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+              <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
                 {filteredEntries.length > 0 ? filteredEntries.map(e => (
                   <button
                     key={e.id}
                     onClick={() => handleSelectEntry(e)}
-                    className="w-full p-4 bg-white/5 border border-white/5 rounded-2xl flex justify-between items-center hover:bg-primary/10 hover:border-primary/30 transition-all group"
+                    className="w-full p-4 bg-white/5 border border-white/5 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3 hover:bg-primary/10 hover:border-primary/30 transition-all group"
                   >
-                    <div className="text-left">
-                      <span className="font-bold text-white group-hover:text-primary transition-all block">{e.description}</span>
-                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">{e.suppliers?.name || 'Sem Fornecedor'} • {e.schools?.name}</span>
+                    <div className="text-left min-w-0 flex-1">
+                      <span className="text-sm font-bold text-white group-hover:text-primary transition-all block truncate leading-snug">{e.description}</span>
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mt-1 truncate">{e.suppliers?.name || 'Sem Fornecedor'} • {e.schools?.name}</span>
                     </div>
-                    <div className="text-right">
+                    <div className="text-left md:text-right shrink-0 w-full md:w-auto flex md:flex-col justify-between items-center md:items-end border-t md:border-t-0 border-white/5 pt-2 md:pt-0">
                       <span className="text-sm font-black text-white">{Number(e.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-                      <span className="text-[10px] text-slate-500 block uppercase font-bold">{new Date(e.date).toLocaleDateString('pt-BR')}</span>
+                      <span className="text-[10px] text-slate-500 uppercase font-bold">{new Date(e.date).toLocaleDateString('pt-BR')}</span>
                     </div>
                   </button>
                 )) : (
@@ -1505,32 +1506,32 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
 
       {/* Supplier Selection Modal */}
       {showSupplierModal.open && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="bg-[#0f172a] border border-white/10 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[70vh]">
-            <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#111a22]">
-              <h3 className="text-lg font-bold text-white">Selecionar Fornecedor</h3>
-              <button onClick={() => setShowSupplierModal({ open: false, quoteIdx: -1 })} className="text-slate-400 hover:text-white"><span className="material-symbols-outlined">close</span></button>
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-2 md:p-4 bg-black/98 backdrop-blur-md">
+          <div className="bg-[#0f172a] border border-white/10 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh] md:max-h-[70vh]">
+            <div className="p-4 md:p-6 border-b border-white/5 flex justify-between items-center bg-[#111a22]">
+              <h3 className="text-base md:text-lg font-bold text-white">Selecionar Fornecedor</h3>
+              <button onClick={() => setShowSupplierModal({ open: false, quoteIdx: -1 })} className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white transition-colors"><span className="material-symbols-outlined text-2xl">close</span></button>
             </div>
-            <div className="p-6 flex flex-col gap-4 overflow-hidden">
+            <div className="p-4 md:p-6 flex flex-col gap-4 overflow-hidden">
               <div className="relative">
-                <span className="material-symbols-outlined absolute left-3 top-2.5 text-slate-500">search</span>
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xl">search</span>
                 <input
                   placeholder="Buscar por nome ou CNPJ..."
-                  className="w-full bg-black/40 border-white/10 rounded-xl h-12 pl-10 pr-4 text-white text-sm"
+                  className="w-full bg-black/40 border-white/10 rounded-xl h-11 md:h-12 pl-11 pr-4 text-white text-sm outline-none focus:border-primary transition-all"
                   value={supplierSearch}
                   onChange={(e) => setSupplierSearch(e.target.value)}
                   autoFocus
                 />
               </div>
-              <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+              <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
                 {filteredSuppliers.length > 0 ? filteredSuppliers.map(s => (
                   <button
                     key={s.id}
                     onClick={() => handleSelectSupplier(s)}
                     className="w-full p-4 bg-white/5 border border-white/5 rounded-2xl flex flex-col items-start hover:bg-primary/10 hover:border-primary/30 transition-all group"
                   >
-                    <span className="font-bold text-white group-hover:text-primary transition-all">{s.name}</span>
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">{s.cnpj || 'SEM CNPJ'}</span>
+                    <span className="text-sm font-bold text-white group-hover:text-primary transition-all leading-tight text-left">{s.name}</span>
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1.5">{s.cnpj || 'SEM CNPJ'}</span>
                   </button>
                 )) : (
                   <div className="text-center py-10 text-slate-500 text-sm italic">Nenhum fornecedor encontrado.</div>

@@ -376,27 +376,27 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
                 <p className="text-slate-400 text-sm mt-1 italic">Compare seu extrato bancário com os lançamentos do sistema.</p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3 md:gap-4 bg-card-dark/30 p-4 md:p-6 rounded-3xl border border-white/5 shadow-xl">
                 <button
                     onClick={() => setShowHelp(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all w-full md:w-auto justify-center"
                 >
                     <span className="material-symbols-outlined text-sm">help</span>
                     Como pedir os arquivos?
                 </button>
 
                 {/* School Filter */}
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Escola</label>
                     {user.schoolId ? (
-                        <div className="bg-card-dark border border-white/5 rounded-xl px-4 py-2 text-xs text-white font-bold w-48 truncate">
+                        <div className="bg-card-dark border border-white/5 rounded-xl px-4 py-2 text-xs text-white font-bold truncate">
                             {schools.find(s => s.id === user.schoolId)?.name || 'Minha Escola'}
                         </div>
                     ) : (
                         <select
                             value={selectedSchoolId}
                             onChange={e => { setSelectedSchoolId(e.target.value); setSelectedBankAccountId(''); }}
-                            className="bg-card-dark border border-white/10 rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-emerald-500 w-48"
+                            className="bg-card-dark border border-white/10 rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-emerald-500 w-full"
                         >
                             <option value="">Selecione a Escola</option>
                             {accessibleSchools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -405,13 +405,13 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
                 </div>
 
                 {/* Bank Account Filter */}
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Conta Bancária</label>
                     <select
                         value={selectedBankAccountId}
                         disabled={!selectedSchoolId}
                         onChange={e => setSelectedBankAccountId(e.target.value)}
-                        className="bg-card-dark border border-white/10 rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-emerald-500 w-56 disabled:opacity-50"
+                        className="bg-card-dark border border-white/10 rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-emerald-500 w-full disabled:opacity-50"
                     >
                         <option value="">Selecione a Conta</option>
                         {bankAccounts
@@ -422,13 +422,13 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
                 </div>
 
                 {/* Period Hint */}
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1 w-full md:w-auto">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Mês de Referência</label>
                     <input
                         type="month"
                         value={filterMonth}
                         onChange={e => setFilterMonth(e.target.value)}
-                        className="bg-card-dark border border-white/10 rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-emerald-500"
+                        className="bg-card-dark border border-white/10 rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-emerald-500 w-full"
                     />
                 </div>
             </div>
@@ -470,39 +470,44 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
                     <p className="text-[10px] text-slate-600 font-bold uppercase tracking-tighter">Arquivos .OFX ou .CSV são suportados</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 pb-20">
                     {/* Bank Transactions List */}
                     <div className="xl:col-span-12">
                         <div className="bg-card-dark rounded-3xl border border-white/5 overflow-hidden shadow-2xl">
-                            <div className="p-4 bg-white/5 border-b border-white/5 flex justify-between items-center">
-                                <div className="flex items-center gap-4">
+                            <div className="p-4 md:p-6 bg-white/5 border-b border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full md:w-auto">
                                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Movimentações do Extrato</span>
-                                    <label className="text-[10px] bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full font-black uppercase tracking-widest cursor-pointer hover:bg-emerald-500/20 transition-all">
-                                        + Adicionar Outro Extrato (Investimento/CC)
-                                        <input type="file" className="hidden" accept=".ofx,.csv" onChange={handleFileUpload} />
-                                    </label>
-                                    {transactions.some(t => t.status === 'matched') && !isMatching && (
-                                        <button
-                                            onClick={handleBulkReconcile}
-                                            className="text-[10px] bg-primary/10 text-primary px-3 py-1 rounded-full font-black uppercase tracking-widest hover:bg-primary/20 transition-all flex items-center gap-1"
-                                        >
-                                            <span className="material-symbols-outlined text-[10px]">done_all</span>
-                                            Conciliar {transactions.filter(t => t.status === 'matched').length} Identificados
-                                        </button>
-                                    )}
+                                    <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                                        <label className="text-[9px] md:text-[10px] bg-emerald-500/10 text-emerald-400 px-3 py-1.5 rounded-full font-black uppercase tracking-widest cursor-pointer hover:bg-emerald-500/20 transition-all flex items-center gap-1.5 flex-1 md:flex-none justify-center">
+                                            <span className="material-symbols-outlined text-sm">add</span>
+                                            Extrato
+                                            <input type="file" className="hidden" accept=".ofx,.csv" onChange={handleFileUpload} />
+                                        </label>
+                                        {transactions.some(t => t.status === 'matched') && !isMatching && (
+                                            <button
+                                                onClick={handleBulkReconcile}
+                                                className="text-[9px] md:text-[10px] bg-primary/10 text-primary px-4 py-1.5 rounded-full font-black uppercase tracking-widest hover:bg-primary/20 transition-all flex items-center gap-1.5 flex-1 md:flex-none justify-center"
+                                            >
+                                                <span className="material-symbols-outlined text-[14px]">done_all</span>
+                                                Conciliar {transactions.filter(t => t.status === 'matched').length}
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-center justify-between w-full md:w-auto gap-4 md:gap-6 border-t md:border-t-0 border-white/5 pt-3 md:pt-0">
                                     <button
                                         onClick={() => setShowReport(true)}
                                         disabled={transactions.length === 0}
                                         className="text-[10px] text-emerald-400 font-bold uppercase hover:underline disabled:opacity-50"
                                     >
-                                        Gerar Termo de Conciliação
+                                        Gerar Termo
                                     </button>
                                     <button onClick={() => setTransactions([])} className="text-[10px] text-red-400 font-bold uppercase hover:underline">Limpar Tudo</button>
                                 </div>
                             </div>
-                            <div className="overflow-x-auto">
+
+                            {/* Desktop Table View */}
+                            <div className="hidden md:block overflow-x-auto">
                                 <table className="w-full text-left">
                                     <thead>
                                         <tr className="border-b border-white/5 bg-black/20">
@@ -592,6 +597,83 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
                                         })}
                                     </tbody>
                                 </table>
+                            </div>
+
+                            {/* Mobile Card View */}
+                            <div className="md:hidden divide-y divide-white/5 p-4 space-y-4">
+                                {transactions.map(bt => {
+                                    const matchedEntry = systemEntries.find(e => e.id === bt.matched_entry_id);
+                                    return (
+                                        <div key={bt.id} className="bg-white/5 rounded-2xl p-5 space-y-4 border border-white/5">
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs text-white font-mono">{new Date(bt.date).toLocaleDateString('pt-BR')}</span>
+                                                    <span className={`text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md w-fit mt-1 ${bt.extract_type === 'corrente' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'}`}>
+                                                        {bt.extract_type === 'corrente' ? 'C. Corrente' : 'Investimento'}
+                                                    </span>
+                                                </div>
+                                                <span className={`text-sm font-black p-2 rounded-xl bg-black/40 ${bt.type === 'C' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                    {bt.type === 'C' ? '+' : '-'} {bt.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                </span>
+                                            </div>
+
+                                            <div className="flex flex-col gap-0.5">
+                                                <span className="text-xs text-white font-bold leading-tight">{bt.description}</span>
+                                                <span className="text-[9px] text-slate-600 font-mono break-all">{bt.fitid}</span>
+                                            </div>
+
+                                            {/* Matching Section */}
+                                            <div className="pt-2">
+                                                {bt.status === 'matched' && matchedEntry ? (
+                                                    <div className="bg-emerald-500/5 border border-emerald-500/20 p-3 rounded-xl relative overflow-hidden">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                                                                <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span>
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <span className="text-[10px] text-emerald-400 font-bold uppercase truncate block">{matchedEntry.description}</span>
+                                                                <div className="flex justify-between items-center text-[9px] mt-1">
+                                                                    <span className="text-slate-500">{new Date(matchedEntry.date).toLocaleDateString('pt-BR')}</span>
+                                                                    <span className="text-emerald-500 font-black">{Number(matchedEntry.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-2 text-amber-500/50 italic p-3 border border-dashed border-amber-500/20 rounded-xl bg-black/20">
+                                                        <span className="material-symbols-outlined text-sm">search</span>
+                                                        <span className="text-[9px] font-medium uppercase tracking-tighter">Nenhuma correspondência exata</span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Actions */}
+                                            <div className="flex flex-col gap-2 pt-2 border-t border-white/5">
+                                                {bt.status === 'matched' ? (
+                                                    <button
+                                                        onClick={() => handleConfirmMatch(bt)}
+                                                        className="w-full h-11 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                                                    >
+                                                        Confirmar Lançamento
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleQuickCreateStart(bt)}
+                                                        className="w-full h-11 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                                                    >
+                                                        Criar Novo Lançamento
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => { setManualMatchBT(bt); setShowManualMatch(true); }}
+                                                    className="w-full py-2 text-slate-500 text-[9px] font-black uppercase tracking-widest"
+                                                >
+                                                    Vincular Manualmente
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>

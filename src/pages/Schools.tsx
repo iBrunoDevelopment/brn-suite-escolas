@@ -311,7 +311,7 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
 
             {showForm && (
                 <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/60 backdrop-blur-sm">
-                    <div className="w-full max-w-2xl h-full bg-[#0f172a] border-l border-surface-border flex flex-col shadow-2xl animate-in slide-in-from-right">
+                    <div className="w-full md:max-w-2xl h-full bg-[#0f172a] border-l border-surface-border flex flex-col shadow-2xl animate-in slide-in-from-right">
                         <div className="p-6 border-b border-surface-border flex justify-between items-center bg-[#1e293b]">
                             <h3 className="text-xl font-bold text-white">{editingId ? 'Editar Escola' : 'Nova Escola'}</h3>
                             <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-white">
@@ -406,7 +406,7 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                             </div>
                         </div>
 
-                        <div className="p-8 border-t border-surface-border flex gap-4 bg-[#1e293b]/50">
+                        <div className="p-6 md:p-8 border-t border-surface-border flex gap-4 bg-[#1e293b]/50">
                             <button onClick={() => setShowForm(false)} className="flex-1 py-3 text-slate-400 font-bold hover:text-white transition-colors">Cancelar</button>
                             <button onClick={handleSave} disabled={loading} className="flex-[2] bg-primary hover:bg-primary-hover text-white py-3 rounded-xl font-bold shadow-lg shadow-primary/20 disabled:opacity-50 transition-all active:scale-95">{loading ? 'Salvando...' : 'Salvar Instituição'}</button>
                         </div>
