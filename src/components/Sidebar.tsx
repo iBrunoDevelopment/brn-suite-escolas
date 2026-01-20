@@ -70,7 +70,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     { id: 'dashboard', label: 'Visão Geral', icon: 'dashboard', roles: [] },
                     { id: 'entries', label: 'Lançamentos', icon: 'receipt_long', roles: [] },
                     { id: 'reports', label: 'Prestação de Contas', icon: 'description', roles: [] },
-                    { id: 'reconciliation', label: 'Conciliação Bancária', icon: 'account_balance', roles: [UserRole.ADMIN, UserRole.OPERADOR] },
+                    { id: 'reconciliation', label: 'Conciliação Bancária', icon: 'account_balance', roles: [UserRole.ADMIN, UserRole.OPERADOR, UserRole.TECNICO_GEE] },
                     { id: 'vault', label: 'Cofre Docs', icon: 'folder_managed', roles: [UserRole.ADMIN, UserRole.OPERADOR, UserRole.TECNICO_GEE] },
                 ]
             },

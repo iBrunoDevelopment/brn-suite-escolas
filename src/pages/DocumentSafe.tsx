@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { User, UserRole, TransactionNature } from '../types';
+import { usePermissions, useAccessibleSchools } from '../hooks/usePermissions';
 
 interface DocumentFile {
     id: string;
@@ -12,6 +13,7 @@ interface DocumentFile {
     entry_id: string;
     entry_description: string;
     entry_date: string;
+    school_id: string; // Added ID for better filtering
     school_name: string;
     program_name: string;
     value: number;
@@ -40,19 +42,17 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
     const [showChecklist, setShowChecklist] = useState(false);
     const [isSavingChecklist, setIsSavingChecklist] = useState(false);
 
+    const accessibleSchools = useAccessibleSchools(user, schools);
+
     // Initial load
     useEffect(() => {
         fetchInitialData();
         fetchDocuments();
-    }, []);
+    }, [user]); // Re-fetch when user changes to ensure fresh data/permissions
 
     const fetchInitialData = async () => {
-        const [schoolsRes, procsRes] = await Promise.all([
-            supabase.from('schools').select('id, name'),
-            supabase.from('accountability_processes').select('id, description, financial_entry_id')
-        ]);
-        if (schoolsRes.data) setSchools(schoolsRes.data);
-        if (procsRes.data) setProcesses(procsRes.data);
+        const { data } = await supabase.from('schools').select('id, name').order('name');
+        if (data) setSchools(data);
     };
 
     const fetchDocuments = async () => {
@@ -60,7 +60,7 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
         try {
             // Fetch entries with attachments
             let query = supabase.from('financial_entries').select(`
-                id, date, description, value, attachments, 
+                id, date, description, value, attachments, school_id,
                 schools(name), programs(name)
             `).not('attachments', 'is', null);
 
@@ -71,9 +71,9 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
 
             const { data: entries } = await query;
 
-            // Fetch all checklists for these entries
+            // Fetch checklists and processes
             const { data: checklists } = await supabase.from('document_checklists').select('*');
-            const { data: procs } = await supabase.from('accountability_processes').select('id, description, financial_entry_id');
+            const { data: procs } = await supabase.from('accountability_processes').select('id, financial_entry_id, school_id');
 
             const allDocs: DocumentFile[] = [];
             (entries as any[])?.forEach(entry => {
@@ -91,11 +91,12 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                         entry_id: entry.id,
                         entry_description: entry.description,
                         entry_date: entry.date,
+                        school_id: entry.school_id,
                         school_name: entry.schools?.name || 'Escola não vinculada',
                         program_name: entry.programs?.name || 'Geral',
                         value: entry.value,
-                        process_id: process?.id,
-                        process_info: process?.description,
+                        process_id: process?.id || entry.id, // Se não for processo, usa o ID do lançamento
+                        process_info: process?.id ? entry.description : `[Lançamento] ${entry.description}`,
                         checklist: checklist ? {
                             has_signature: checklist.has_signature,
                             has_stamp: checklist.has_stamp,
@@ -142,8 +143,13 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
             doc.name.toLowerCase().includes(filterSearch.toLowerCase()) ||
             doc.entry_description.toLowerCase().includes(filterSearch.toLowerCase());
         const matchesCategory = !filterCategory || doc.category === filterCategory;
-        const matchesSchool = !filterSchool || doc.school_name === filterSchool;
+        const matchesSchool = !filterSchool || doc.school_id === filterSchool;
+
+        // Process Filter Logic:
+        // If a process is selected, only show docs from that process.
+        // The process filter dropdown itself is already filtered by the selected school.
         const matchesProcess = !filterProcess || doc.process_id === filterProcess;
+
         return matchesSearch && matchesCategory && matchesSchool && matchesProcess;
     });
 
@@ -228,11 +234,11 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Escola</label>
                     <select
                         value={filterSchool}
-                        onChange={e => setFilterSchool(e.target.value)}
+                        onChange={e => { setFilterSchool(e.target.value); setFilterProcess(''); }}
                         className="bg-surface-dark border border-surface-border rounded-xl px-4 py-2 text-xs text-white outline-none"
                     >
-                        <option value="">Todas as Escolas</option>
-                        {schools.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+                        <option value="">{user.role === UserRole.ADMIN || user.role === UserRole.OPERADOR ? 'Todas as Escolas' : 'Minhas Escolas'}</option>
+                        {accessibleSchools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                 </div>
                 <div className="flex flex-col gap-1">
@@ -243,7 +249,14 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                         className="bg-surface-dark border border-surface-border rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-indigo-500"
                     >
                         <option value="">Todas as Prestações</option>
-                        {processes.map(p => <option key={p.id} value={p.id}>{p.description || 'Sem descrição'}</option>)}
+                        {Array.from(new Set(documents
+                            .filter(d => !filterSchool || d.school_id === filterSchool)
+                            .map(d => JSON.stringify({ id: d.process_id, info: d.process_info }))
+                        )).map((procStr: string) => {
+                            const proc = JSON.parse(procStr);
+                            if (!proc.id) return null;
+                            return <option key={proc.id} value={proc.id}>{proc.info}</option>
+                        })}
                     </select>
                 </div>
                 <div className="flex items-end">
@@ -315,17 +328,38 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <div className="flex justify-center flex-wrap gap-1 max-w-[120px] mx-auto">
-                                            {doc.checklist ? (
-                                                <>
-                                                    <span title="Assinatura" className={`w-6 h-6 rounded flex items-center justify-center text-[14px] material-symbols-outlined ${doc.checklist.has_signature ? 'bg-emerald-500/20 text-emerald-500' : 'bg-red-500/10 text-slate-600'}`}>{doc.checklist.has_signature ? 'fountain_pen' : 'fountain_pen'}</span>
-                                                    <span title="Carimbo" className={`w-6 h-6 rounded flex items-center justify-center text-[14px] material-symbols-outlined ${doc.checklist.has_stamp ? 'bg-emerald-500/20 text-emerald-500' : 'bg-red-500/10 text-slate-600'}`}>approval</span>
-                                                    <span title="Legível" className={`w-6 h-6 rounded flex items-center justify-center text-[14px] material-symbols-outlined ${doc.checklist.is_legible ? 'bg-emerald-500/20 text-emerald-500' : 'bg-red-500/10 text-slate-600'}`}>visibility</span>
-                                                </>
-                                            ) : (
-                                                <span className="text-[10px] font-black text-amber-500 border border-amber-500/20 px-2 py-0.5 rounded uppercase">Não Conferido</span>
-                                            )}
-                                        </div>
+                                        {doc.checklist ? (() => {
+                                            const checks = [
+                                                doc.checklist.has_signature,
+                                                doc.checklist.has_stamp,
+                                                doc.checklist.is_legible,
+                                                doc.checklist.is_correct_value,
+                                                doc.checklist.is_correct_date
+                                            ];
+                                            const allPassed = checks.every(Boolean);
+                                            const passedCount = checks.filter(Boolean).length;
+
+                                            if (allPassed) {
+                                                return (
+                                                    <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 px-3 py-1 rounded-full w-fit mx-auto">
+                                                        <span className="material-symbols-outlined text-[16px]">verified</span>
+                                                        <span className="text-[10px] font-black uppercase tracking-widest">Validado</span>
+                                                    </div>
+                                                );
+                                            } else {
+                                                return (
+                                                    <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 text-amber-500 px-3 py-1 rounded-full w-fit mx-auto" title={`${passedCount}/5 critérios atendidos`}>
+                                                        <span className="material-symbols-outlined text-[16px]">gpp_maybe</span>
+                                                        <span className="text-[10px] font-black uppercase tracking-widest">Ressalvas ({passedCount}/5)</span>
+                                                    </div>
+                                                );
+                                            }
+                                        })() : (
+                                            <div className="flex items-center gap-2 bg-slate-500/10 border border-slate-500/20 text-slate-500 px-3 py-1 rounded-full w-fit mx-auto">
+                                                <span className="material-symbols-outlined text-[16px]">pending</span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest">Pendente</span>
+                                            </div>
+                                        )}
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex items-center justify-end gap-2">

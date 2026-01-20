@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { User, UserRole, TransactionNature } from '../types';
+import { usePermissions, useAccessibleSchools } from '../hooks/usePermissions';
 
 interface BankTransaction {
     id: string;
@@ -38,6 +39,8 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
     const [manualSearch, setManualSearch] = useState('');
     const [suppliers, setSuppliers] = useState<any[]>([]);
     const [quickForm, setQuickForm] = useState({ program_id: '', rubric_id: '', supplier_id: '', description: '', nature: 'Custeio' });
+
+    const accessibleSchools = useAccessibleSchools(user, schools);
 
     useEffect(() => {
         fetchInitialData();
@@ -396,7 +399,7 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
                             className="bg-card-dark border border-white/10 rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-emerald-500 w-48"
                         >
                             <option value="">Selecione a Escola</option>
-                            {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            {accessibleSchools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                     )}
                 </div>
