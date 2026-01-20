@@ -273,6 +273,22 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
 
     const removeAttachment = (id: string) => setAttachments(attachments.filter(a => a.id !== id));
 
+    const isBankOp = (type === 'Saída' && category === 'Tarifa Bancária') || (type === 'Entrada' && category === 'Rendimento de Aplicação');
+    const isRepasse = type === 'Entrada' && category === 'Repasse / Crédito';
+    const isTaxOrReturn = category === 'Impostos / Tributos' || category === 'Devolução de Recurso (FNDE/Estado)';
+    const isMisc = category === 'Reembolso / Estorno' || category === 'Doação';
+
+    // No supplier or invoice data needed for these specific types
+    const isSimplified = isBankOp || isRepasse || isTaxOrReturn || isMisc;
+
+    // Dynamic Attachment Labeling
+    let attachLabel = 'Documentos e Comprovantes (Nota Fiscal, etc)';
+    if (isBankOp || isRepasse) {
+        attachLabel = 'Anexar Extrato Bancário';
+    } else if (isTaxOrReturn || isMisc || category === 'Outros') {
+        attachLabel = 'Anexar Extrato e Comprovante de Transação';
+    }
+
     const handleSave = async () => {
         if (!selectedSchoolId || !date || !selectedProgramId || !totalValue || !mainDescription) {
             return alert('Preencha os campos obrigatórios: Escola, Data, Programa, Valor e Descritivo.');
@@ -433,7 +449,12 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                 </div>
             </div>
 
-            <StatsCards stats={stats} />
+            <StatsCards stats={{
+                ...stats,
+                reprogrammed: reprogrammedBalances
+                    .filter(rb => (!filters.school || rb.school_id === filters.school) && (!filters.program || rb.program_id === filters.program))
+                    .reduce((acc, curr) => acc + (Number(curr.value) || 0), 0)
+            }} />
 
             <FilterBar filters={filters} setFilters={setFilters} showFilters={showFilters} setShowFilters={setShowFilters} quickFilter={quickFilter} setQuickFilter={setQuickFilter} auxData={auxData} onPrintReport={handlePrintReport} onExportCSV={exportToCSV} />
 
@@ -599,31 +620,24 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                                     <button onClick={() => setType('Saída')} className={`flex-1 py-3 font-bold rounded-xl transition-all ${type === 'Saída' ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20' : 'bg-surface-dark text-slate-400'}`}>Saída</button>
                                     <button onClick={() => setType('Entrada')} className={`flex-1 py-3 font-bold rounded-xl transition-all ${type === 'Entrada' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20' : 'bg-surface-dark text-slate-400'}`}>Entrada</button>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="flex flex-col gap-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Valor R$</label><input type="number" value={totalValue} onChange={e => setTotalValue(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white text-lg font-mono outline-none border border-white/5 focus:border-primary" /></div>
-                                    <div className="flex flex-col gap-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Data</label><input type="date" value={date} onChange={e => setDate(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" /></div>
-                                </div>
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Escola</label>
-                                    <select value={selectedSchoolId} onChange={e => setSelectedSchoolId(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" disabled={user.role === UserRole.DIRETOR}>
-                                        <option value="">Selecione...</option>
-                                        {accessibleSchools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                    </select>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="flex flex-col gap-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Programa</label><select value={selectedProgramId} onChange={e => setSelectedProgramId(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary"><option value="">Selecione...</option>{programs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
-                                    <div className="flex flex-col gap-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Fornecedor</label><select value={selectedSupplierId} onChange={e => setSelectedSupplierId(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary"><option value="">Selecione...</option>{suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
-                                </div>
-                                <div className="flex flex-col gap-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Descrição do Lançamento</label><input type="text" value={mainDescription} onChange={e => setMainDescription(e.target.value.toUpperCase())} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" placeholder="EX: COMPRA DE MATERIAIS DE LIMPEZA" /></div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="flex flex-col gap-2">
-                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Status</label>
-                                        <select value={status} onChange={e => setStatus(e.target.value as TransactionStatus)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary">
-                                            <option value={TransactionStatus.PENDENTE}>Pendente</option>
-                                            <option value={TransactionStatus.PAGO}>Pago / Recebido</option>
-                                            <option value={TransactionStatus.CONCILIADO}>Conciliado</option>
-                                            <option value={TransactionStatus.ESTORNADO}>Estornado / Cancelado</option>
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Valor R$</label>
+                                        <input type="number" value={totalValue} onChange={e => setTotalValue(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white text-lg font-mono outline-none border border-white/5 focus:border-primary" />
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Data</label>
+                                        <input type="date" value={date} onChange={e => setDate(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Escola</label>
+                                        <select value={selectedSchoolId} onChange={e => setSelectedSchoolId(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" disabled={user.role === UserRole.DIRETOR}>
+                                            <option value="">Selecione...</option>
+                                            {accessibleSchools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                         </select>
                                     </div>
                                     <div className="flex flex-col gap-2">
@@ -634,6 +648,30 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                                             ))}
                                         </select>
                                     </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Programa</label>
+                                        <select value={selectedProgramId} onChange={e => setSelectedProgramId(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary">
+                                            <option value="">Selecione...</option>
+                                            {programs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                        </select>
+                                    </div>
+                                    {!isSimplified && (
+                                        <div className="flex flex-col gap-2">
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Fornecedor</label>
+                                            <select value={selectedSupplierId} onChange={e => setSelectedSupplierId(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary">
+                                                <option value="">Selecione...</option>
+                                                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                            </select>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Descrição do Lançamento</label>
+                                    <input type="text" value={mainDescription} onChange={e => setMainDescription(e.target.value.toUpperCase())} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" placeholder={isBankOp ? "EX: TARIFA BANCÁRIA MENSAL" : "EX: COMPRA DE MATERIAIS"} />
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -655,11 +693,24 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="flex flex-col gap-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Nº Documento</label><input type="text" value={documentNumber} onChange={e => setDocumentNumber(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" /></div>
-                                    <div className="flex flex-col gap-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Nº Autenticação</label><input type="text" value={authNumber} onChange={e => setAuthNumber(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" /></div>
-                                    <div className="flex flex-col gap-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Data da Nota</label><input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" /></div>
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Status</label>
+                                    <select value={status} onChange={e => setStatus(e.target.value as TransactionStatus)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary">
+                                        <option value={TransactionStatus.PENDENTE}>Pendente</option>
+                                        <option value={TransactionStatus.PAGO}>Pago / Recebido</option>
+                                        <option value={TransactionStatus.CONCILIADO}>Conciliado</option>
+                                        <option value={TransactionStatus.ESTORNADO}>Estornado / Cancelado</option>
+                                    </select>
                                 </div>
+
+                                {!isSimplified && (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="flex flex-col gap-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Nº Documento</label><input type="text" value={documentNumber} onChange={e => setDocumentNumber(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" /></div>
+                                        <div className="flex flex-col gap-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Nº Autenticação</label><input type="text" value={authNumber} onChange={e => setAuthNumber(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" /></div>
+                                        <div className="flex flex-col gap-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Data da Nota</label><input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" /></div>
+                                    </div>
+                                )}
+
 
                                 {/* Rubric Section */}
                                 <div className="flex flex-col gap-4 border-t border-white/5 pt-6">
@@ -719,91 +770,19 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                                     )}
                                 </div>
 
-                                {/* Section: Attachments */}
-                                <div className="flex flex-col gap-4 border-t border-white/5 pt-6 pb-4">
-                                    <div className="flex justify-between items-center">
-                                        <h4 className="text-white font-bold flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-primary">attach_file</span>
-                                            Documentos e Comprovantes
-                                        </h4>
-                                        <span className="text-[10px] text-slate-500 font-bold uppercase">{attachments.length} arquivo(s)</span>
-                                    </div>
 
-                                    {/* Upload Area */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        <div className="flex flex-col gap-2">
-                                            <label className="text-[9px] text-slate-500 font-bold uppercase pl-1">Tipo de Documento</label>
-                                            <select id="attachment-category" className="bg-[#1e293b] rounded-xl h-10 px-3 text-white text-xs border border-white/5 outline-none focus:border-primary">
-                                                {ATTACHMENT_CATEGORIES.map(cat => (
-                                                    <option key={cat} value={cat}>{cat}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div className="flex flex-col gap-2 justify-end">
-                                            <label className="relative flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-dashed border-white/20 rounded-xl h-10 cursor-pointer transition-all group overflow-hidden">
-                                                {isUploading ? (
-                                                    <div className="flex items-center gap-2 text-primary font-bold text-xs animate-pulse">
-                                                        <span className="material-symbols-outlined animate-spin text-[18px]">sync</span> Subindo...
-                                                    </div>
-                                                ) : (
-                                                    <>
-                                                        <span className="material-symbols-outlined text-[18px] text-slate-400 group-hover:text-primary transition-colors">cloud_upload</span>
-                                                        <span className="text-xs font-bold text-slate-300 group-hover:text-white transition-colors">Selecionar Arquivo</span>
-                                                        <input
-                                                            type="file"
-                                                            className="hidden"
-                                                            onChange={(e) => {
-                                                                const cat = (document.getElementById('attachment-category') as HTMLSelectElement).value;
-                                                                handleFileUpload(e, cat);
-                                                                e.target.value = ''; // Reset for same file re-upload
-                                                            }}
-                                                        />
-                                                    </>
-                                                )}
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    {/* Attachments List */}
-                                    <div className="flex flex-col gap-2 mt-2">
-                                        {attachments.length === 0 ? (
-                                            <div className="text-center py-6 bg-white/[0.01] rounded-2xl border border-white/[0.03]">
-                                                <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest leading-relaxed">Nenhum documento anexado ainda.<br />Selecione uma categoria e o arquivo acima.</p>
-                                            </div>
-                                        ) : (
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                {attachments.map((file) => (
-                                                    <div key={file.id} className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5 group hover:border-primary/30 transition-all">
-                                                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                                                            <span className="material-symbols-outlined text-[18px]">
-                                                                {file.name.match(/\.(pdf)$/i) ? 'picture_as_pdf' :
-                                                                    file.name.match(/\.(jpg|jpeg|png)$/i) ? 'image' : 'description'}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="text-[9px] font-black text-primary uppercase truncate mb-0.5">{file.category}</p>
-                                                            <p className="text-[10px] text-white font-medium truncate opacity-80">{file.name}</p>
-                                                        </div>
-                                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <a href={file.url} target="_blank" rel="noreferrer" className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 text-slate-400 hover:text-white hover:bg-white/10">
-                                                                <span className="material-symbols-outlined text-[16px]">visibility</span>
-                                                            </a>
-                                                            <button onClick={() => removeAttachment(file.id)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 text-red-500/60 hover:text-red-500 hover:bg-red-500/10">
-                                                                <span className="material-symbols-outlined text-[16px]">delete</span>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
 
                                 {/* Seção Unificada de Anexos */}
                                 <div className="border-t border-white/5 pt-8 mt-4">
-                                    <div className="flex items-center gap-2 mb-6">
-                                        <span className="material-symbols-outlined text-primary">folder_open</span>
-                                        <h4 className="text-white font-bold">Repositório de Documentos</h4>
+                                    <div className="flex items-center justify-between mb-6">
+                                        <div className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-primary">folder_open</span>
+                                            <h4 className="text-white font-bold">Repositório de Documentos</h4>
+                                        </div>
+                                        <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
+                                            <span className="material-symbols-outlined text-[14px] text-primary">info</span>
+                                            <span className="text-[9px] font-black text-primary uppercase tracking-wider">{attachLabel}</span>
+                                        </div>
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -943,9 +922,10 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                         </div>
                     </div>
                 </div>
-            )}
+            )
+            }
 
-        </div>
+        </div >
     );
 };
 

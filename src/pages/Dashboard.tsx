@@ -17,7 +17,11 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
     saldo: 0,
     pendencias: 0,
     reprogramado: 0,
-    totalDisponivel: 0
+    totalDisponivel: 0,
+    repasses: 0,
+    rendimentos: 0,
+    tarifas: 0,
+    impostosDevolucoes: 0
   });
 
   const [flowData, setFlowData] = useState<any[]>([]);
@@ -226,6 +230,10 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
     let receita = 0;
     let despesa = 0;
     let pendencias = 0;
+    let repasses = 0;
+    let rendimentos = 0;
+    let tarifas = 0;
+    let impDev = 0;
 
     // Group for charts
     const monthsMap: Record<string, { name: string, receita: number, despesa: number }> = {};
@@ -234,8 +242,15 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
       const val = Number(e.value);
       if (e.status === 'Pendente') pendencias++;
 
-      if (e.type === 'Entrada') receita += val;
-      else despesa += Math.abs(val);
+      if (e.type === 'Entrada') {
+        receita += val;
+        if (e.category === 'Repasse / Crédito') repasses += val;
+        if (e.category === 'Rendimento de Aplicação') rendimentos += val;
+      } else {
+        despesa += Math.abs(val);
+        if (e.category === 'Tarifa Bancária') tarifas += Math.abs(val);
+        if (e.category === 'Impostos / Tributos' || e.category === 'Devolução de Recurso (FNDE/Estado)') impDev += Math.abs(val);
+      }
 
       // Chart Data Builder
       const dateObj = new Date(e.date);
@@ -256,7 +271,11 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
       saldo: receita - despesa,
       pendencias,
       reprogramado,
-      totalDisponivel: (receita - despesa) + reprogramado
+      totalDisponivel: (receita - despesa) + reprogramado,
+      repasses,
+      rendimentos,
+      tarifas,
+      impostosDevolucoes: impDev
     });
 
     const sortedMonths = Object.keys(monthsMap)
@@ -456,6 +475,12 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
                 <span className="hidden md:inline">Comunicado</span>
               </button>
             )}
+            {stats.pendencias > 0 && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/10 border border-orange-500/20 rounded-lg animate-pulse">
+                <span className="material-symbols-outlined text-orange-500 text-sm">priority_high</span>
+                <span className="text-[10px] font-black text-orange-500 uppercase">{stats.pendencias} Pendentes</span>
+              </div>
+            )}
             <button onClick={fetchDashboardData} className="flex items-center justify-center gap-2 bg-primary hover:bg-blue-600 text-white w-10 h-10 md:w-auto md:h-auto md:px-5 md:py-2.5 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-blue-500/20 active:scale-95">
               <span className="material-symbols-outlined text-[18px]">refresh</span>
               <span className="hidden md:inline">Atualizar</span>
@@ -565,7 +590,7 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
           {
-            label: 'Saldo Total em Conta',
+            label: 'Saldo Total Disponível',
             value: formatCurrency(stats.totalDisponivel),
             subtitle: `Sendo ${formatCurrency(stats.reprogramado)} reprogramado`,
             icon: 'account_balance',
@@ -574,8 +599,8 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
             border: 'border-blue-500/20'
           },
           {
-            label: 'Receitas (Repasses)',
-            value: formatCurrency(stats.receita),
+            label: 'Novos Repasses',
+            value: formatCurrency(stats.repasses),
             subtitle: 'Recebimentos no período',
             icon: 'trending_up',
             color: 'text-emerald-400',
@@ -583,22 +608,22 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
             border: 'border-emerald-500/20'
           },
           {
-            label: 'Despesas Executadas',
+            label: 'Reserva & Rendimentos',
+            value: formatCurrency(stats.reprogramado + stats.rendimentos),
+            subtitle: 'Saldo anterior + Juros',
+            icon: 'savings',
+            color: 'text-orange-400',
+            bg: 'bg-orange-500/5',
+            border: 'border-orange-500/20'
+          },
+          {
+            label: 'Execução (Saídas)',
             value: formatCurrency(stats.despesa),
-            subtitle: 'Pagamentos realizados',
+            subtitle: `Tarifas: ${formatCurrency(stats.tarifas)}${stats.impostosDevolucoes > 0 ? ` + Imp/Dev: ${formatCurrency(stats.impostosDevolucoes)}` : ''}`,
             icon: 'trending_down',
             color: 'text-red-400',
             bg: 'bg-red-500/5',
             border: 'border-red-500/20'
-          },
-          {
-            label: 'Itens Pendentes',
-            value: `${stats.pendencias}`,
-            subtitle: 'Ações requeridas',
-            icon: 'pending_actions',
-            color: 'text-blue-300',
-            bg: 'bg-slate-500/5',
-            border: 'border-slate-500/20'
           }
         ].map((stat, i) => (
           <div key={i} className={`bg-card-dark border ${stat.border} ${stat.bg} rounded-3xl p-6 flex flex-col gap-1 relative overflow-hidden group transition-all hover:scale-[1.02] shadow-xl`}>

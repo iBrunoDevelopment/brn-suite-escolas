@@ -8,57 +8,77 @@ interface StatsCardsProps {
         expense: number;
         balance: number;
         pending: number;
+        repasses: number;
+        rendimentos: number;
+        tarifas: number;
+        reprogrammed: number;
+        impostosDevolucoes?: number;
     };
 }
 
 const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
+    const totalAccountBalance = stats.balance + (stats.reprogrammed || 0);
+    const reservesAndEarnings = (stats.reprogrammed || 0) + stats.rendimentos;
+
     return (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="group bg-surface-dark border border-surface-border p-6 rounded-2xl shadow-xl transition-all hover:border-green-500/30 hover:bg-green-500/5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* CARD 1: SALDO TOTAL */}
+            <div className="group bg-surface-dark border border-blue-500/20 p-6 rounded-2xl shadow-xl transition-all hover:border-blue-500/40 hover:bg-blue-500/5">
                 <div className="flex justify-between items-start mb-2">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Entradas do Período</span>
-                    <span className="material-symbols-outlined text-green-500 text-[20px] opacity-50 group-hover:opacity-100">trending_up</span>
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Saldo Total Disponível</span>
+                    <span className="material-symbols-outlined text-blue-500 text-[20px] opacity-50 group-hover:opacity-100">account_balance_wallet</span>
                 </div>
-                <div className="text-2xl font-black text-green-400">{stats.income.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                <div className="text-2xl font-black text-white">{totalAccountBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
                 <div className="mt-2 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase">Confirmado em Conta</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase">Sendo {stats.reprogrammed.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} Reprogramado</span>
                 </div>
             </div>
 
-            <div className="group bg-surface-dark border border-surface-border p-6 rounded-2xl shadow-xl transition-all hover:border-red-500/30 hover:bg-red-500/5">
+            {/* CARD 2: REPASSES */}
+            <div className="group bg-surface-dark border border-green-500/20 p-6 rounded-2xl shadow-xl transition-all hover:border-green-500/40 hover:bg-green-500/5">
                 <div className="flex justify-between items-start mb-2">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Saídas do Período</span>
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Novos Repasses</span>
+                    <span className="material-symbols-outlined text-green-500 text-[20px] opacity-50 group-hover:opacity-100">trending_up</span>
+                </div>
+                <div className="text-2xl font-black text-green-400">{stats.repasses.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                <div className="mt-2 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase">Recebimentos no Período</span>
+                </div>
+            </div>
+
+            {/* CARD 3: RESERVAS & RENDIMENTOS */}
+            <div className="group bg-surface-dark border border-orange-500/20 p-6 rounded-2xl shadow-xl transition-all hover:border-orange-500/40 hover:bg-orange-500/5">
+                <div className="flex justify-between items-start mb-2">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Reserva & Rendimentos</span>
+                    <span className="material-symbols-outlined text-orange-500 text-[20px] opacity-50 group-hover:opacity-100">savings</span>
+                </div>
+                <div className="text-2xl font-black text-orange-400">{reservesAndEarnings.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                <div className="mt-2 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase">Saldo Anterior + Juros</span>
+                </div>
+            </div>
+
+            {/* CARD 4: DESPESAS */}
+            <div className="group bg-surface-dark border border-red-500/20 p-6 rounded-2xl shadow-xl transition-all hover:border-red-500/40 hover:bg-red-500/5">
+                <div className="flex justify-between items-start mb-2">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Execução (Saídas)</span>
                     <span className="material-symbols-outlined text-red-500 text-[20px] opacity-50 group-hover:opacity-100">trending_down</span>
                 </div>
                 <div className="text-2xl font-black text-red-400">{stats.expense.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-                <div className="mt-2 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase">Pagamentos Efetuados</span>
-                </div>
-            </div>
-
-            <div className={`group border p-6 rounded-2xl shadow-xl transition-all ${stats.balance >= 0 ? 'bg-blue-500/5 border-blue-500/20 hover:border-blue-500/40' : 'bg-red-500/5 border-red-500/20 hover:border-red-500/40'}`}>
-                <div className="flex justify-between items-start mb-2">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Saldo Atual Disponível</span>
-                    <span className={`material-symbols-outlined text-[20px] opacity-50 group-hover:opacity-100 ${stats.balance >= 0 ? 'text-blue-500' : 'text-red-500'}`}>{stats.balance >= 0 ? 'account_balance_wallet' : 'error_outline'}</span>
-                </div>
-                <div className={`text-2xl font-black ${stats.balance >= 0 ? 'text-white' : 'text-red-400'}`}>{stats.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-                <div className="mt-2 flex items-center gap-1.5">
-                    <span className={`w-1.5 h-1.5 rounded-full ${stats.balance >= 0 ? 'bg-blue-500' : 'bg-red-500'}`}></span>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase">Total Líquido em Caixa</span>
-                </div>
-            </div>
-
-            <div className="group bg-surface-dark border border-surface-border p-6 rounded-2xl shadow-xl transition-all hover:border-yellow-500/30 hover:bg-yellow-500/5">
-                <div className="flex justify-between items-start mb-2">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Aguardando Aprovação</span>
-                    <span className="material-symbols-outlined text-yellow-500 text-[20px] opacity-50 group-hover:opacity-100">hourglass_empty</span>
-                </div>
-                <div className="text-2xl font-black text-white">{stats.pending} <span className="text-xs font-normal text-slate-500">itens</span></div>
-                <div className="mt-2 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase">Status Pendente</span>
+                <div className="mt-2 flex flex-col gap-1">
+                    <div className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase">Tarifas: {stats.tarifas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                    </div>
+                    {(stats.impostosDevolucoes || 0) > 0 && (
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-orange-400"></span>
+                            <span className="text-[10px] text-slate-400 font-bold uppercase">Impostos/Dev: {stats.impostosDevolucoes?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
