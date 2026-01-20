@@ -193,12 +193,17 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack }) => {
       )}
 
       <div className="w-full max-w-md bg-[#1e293b] border border-[#334155] rounded-2xl shadow-2xl p-8 animate-in fade-in zoom-in duration-300">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4 border border-primary/20">
-            <span className="material-symbols-outlined text-3xl">account_balance</span>
+        <div className="text-center mb-10 group">
+          <div className="inline-flex items-center justify-center mb-6 relative">
+            <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
+            <img
+              src="/assets/logo/logo-circle.png"
+              alt="BRN GROUP"
+              className="w-24 h-24 rounded-full border-2 border-white/10 shadow-2xl relative z-10 animate-in zoom-in duration-700"
+            />
           </div>
-          <h1 className="text-2xl font-black text-white tracking-tight">BRN Suite Escolas</h1>
-          <p className="text-slate-400 text-sm mt-1">Gestão financeira profissional para educação.</p>
+          <h1 className="text-3xl font-black text-white tracking-tight uppercase">BRN Suite Escolas</h1>
+          <p className="text-slate-400 text-sm mt-2 font-medium">Gestão financeira profissional para educação.</p>
         </div>
 
         {errorMsg && (

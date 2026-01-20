@@ -112,12 +112,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onGuideClick })
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-20">
                         <div className="flex items-center gap-3">
-                            <div className="bg-primary p-2 rounded-xl shadow-lg shadow-primary/20">
-                                <span className="material-symbols-outlined text-white text-2xl">school</span>
-                            </div>
-                            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600 dark:from-sky-400 dark:to-blue-500">
-                                BRN Suite Escolas
-                            </span>
+                            <img src="/assets/logo/logo-horizontal.png" alt="BRN GROUP" className="h-10 w-auto" />
                         </div>
                         <div className="flex items-center gap-4">
                             {onGuideClick && (
@@ -334,8 +329,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onGuideClick })
             <footer className="bg-white dark:bg-surface-dark border-t border-slate-200 dark:border-surface-border py-12">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
                     <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-primary">school</span>
-                        <span className="text-xl font-bold text-slate-800 dark:text-white">BRN Suite Escolas</span>
+                        <img src="/assets/logo/logo-horizontal.png" alt="BRN GROUP" className="h-10 w-auto" />
                     </div>
 
                     <div className="text-slate-500 dark:text-slate-400 text-sm text-center md:text-right">

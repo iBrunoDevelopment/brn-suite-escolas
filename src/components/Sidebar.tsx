@@ -133,9 +133,20 @@ const Sidebar: React.FC<SidebarProps> = ({
 
             {/* Header / Logo */}
             <div className={`h-20 flex items-center ${showFull ? 'px-6' : 'justify-center'} border-b border-[#1e293b]/50 overflow-hidden`}>
-                <div className="flex items-center gap-2 text-primary font-black text-2xl tracking-tighter shrink-0">
-                    <span className="material-symbols-outlined text-3xl">account_balance</span>
-                    {showFull && <span className="animate-in fade-in slide-in-from-left-2">BRN <span className="text-white">Suite</span></span>}
+                <div className="flex items-center gap-3 shrink-0 transition-all duration-500">
+                    {showFull ? (
+                        <img
+                            src="/assets/logo/logo-horizontal.png"
+                            alt="BRN GROUP"
+                            className="h-10 w-auto animate-in fade-in slide-in-from-left-4 duration-700"
+                        />
+                    ) : (
+                        <img
+                            src="/assets/logo/logo-circle.png"
+                            alt="B"
+                            className="h-10 w-10 min-w-[40px] rounded-xl animate-in zoom-in duration-500"
+                        />
+                    )}
                 </div>
             </div>
 
