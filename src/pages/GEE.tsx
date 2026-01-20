@@ -81,7 +81,9 @@ const GEEPage: React.FC<{ user: User }> = ({ user }) => {
         setLoading(false);
     };
 
-    if (user.role !== UserRole.ADMIN) return <div className="p-8 text-white">Acesso negado.</div>;
+    const isManager = user.role === UserRole.ADMIN || user.role === UserRole.OPERADOR;
+
+    if (!isManager) return <div className="p-8 text-white">Acesso negado.</div>;
 
     return (
         <div className="flex flex-col gap-6">

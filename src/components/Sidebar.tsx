@@ -78,7 +78,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 title: 'Gestão',
                 items: [
                     { id: 'schools', label: 'Escolas', icon: 'school', roles: [UserRole.ADMIN, UserRole.OPERADOR, UserRole.TECNICO_GEE] },
-                    { id: 'gee', label: 'Regionais (GEE)', icon: 'map', roles: [UserRole.ADMIN] },
+                    { id: 'gee', label: 'Regionais (GEE)', icon: 'map', roles: [UserRole.ADMIN, UserRole.OPERADOR] },
                     { id: 'users', label: 'Usuários', icon: 'group', roles: [UserRole.ADMIN] },
                 ]
             },
