@@ -19,6 +19,7 @@ CREATE TABLE schools (
     city TEXT,
     uf TEXT,
     image_url TEXT,
+    plan_id TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

@@ -130,6 +130,7 @@ export interface School {
     image_url?: string;
     gee?: string; // Gerência Executiva de Educação
     gee_id?: string;
+    plan_id?: string; // ID do plano contratado
 }
 
 export interface Program {

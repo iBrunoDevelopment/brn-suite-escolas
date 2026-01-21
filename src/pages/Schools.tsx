@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { User, School, UserRole } from '../types';
+import { User, School, UserRole, ContractSignature } from '../types';
 import { usePermissions, useAccessibleSchools } from '../hooks/usePermissions';
+import Contract from './Contract';
 
 const Schools: React.FC<{ user: User }> = ({ user }) => {
     const [schools, setSchools] = useState<School[]>([]);
@@ -13,6 +14,9 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [isLoadingCities, setIsLoadingCities] = useState(false);
+    const [viewingContract, setViewingContract] = useState<{ school: School, directorUser: User, signature: ContractSignature } | null>(null);
+    const [isFetchingContract, setIsFetchingContract] = useState(false);
+    const [availablePlans, setAvailablePlans] = useState<any[]>([]);
 
     // Verificação de Acesso
     const isAuthorized = user.role === UserRole.ADMIN || user.role === UserRole.OPERADOR || user.role === UserRole.TECNICO_GEE;
@@ -46,13 +50,20 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
         uf: '',
         image_url: '',
         gee: '',
-        gee_id: ''
+        gee_id: '',
+        plan_id: ''
     });
 
     useEffect(() => {
         fetchSchools();
         fetchGEEs();
+        fetchPlans();
     }, []);
+
+    const fetchPlans = async () => {
+        const { data } = await supabase.from('system_settings').select('value').eq('key', 'landing_page_plans').maybeSingle();
+        if (data?.value) setAvailablePlans(data.value);
+    };
 
     useEffect(() => {
         if (formData.uf) {
@@ -164,7 +175,8 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
             uf: school.uf || '',
             image_url: school.image_url || '',
             gee: school.gee || '',
-            gee_id: school.gee_id || ''
+            gee_id: school.gee_id || '',
+            plan_id: school.plan_id || ''
         });
         setShowForm(true);
     };
@@ -184,6 +196,49 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
             fetchSchools();
         }
         setLoading(false);
+    };
+
+    const handleViewContract = async (school: School) => {
+        setIsFetchingContract(true);
+        try {
+            // 1. Buscar o usuário diretor da escola
+            const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('*')
+                .eq('school_id', school.id)
+                .eq('role', UserRole.DIRETOR)
+                .limit(1)
+                .maybeSingle();
+
+            if (userError || !userData) {
+                alert('Não foi possível localizar o cadastro do diretor vinculado a esta escola.');
+                return;
+            }
+
+            // 2. Buscar a assinatura do contrato deste diretor
+            const { data: sigData, error: sigError } = await supabase
+                .from('contract_signatures')
+                .select('*')
+                .eq('user_id', userData.id)
+                .order('signed_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (sigError || !sigData) {
+                alert('Este diretor ainda não assinou o contrato digital.');
+                return;
+            }
+
+            setViewingContract({
+                school,
+                directorUser: userData,
+                signature: sigData
+            });
+        } catch (error: any) {
+            alert('Erro ao carregar contrato: ' + error.message);
+        } finally {
+            setIsFetchingContract(false);
+        }
     };
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -229,7 +284,8 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
             uf: '',
             image_url: '',
             gee: '',
-            gee_id: ''
+            gee_id: '',
+            plan_id: ''
         });
     };
 
@@ -304,6 +360,19 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                                     <span>{school.phone || 'N/A'}</span>
                                 </div>
                             </div>
+
+                            <div className="mt-6 pt-6 border-t border-slate-100/5 flex items-center justify-between">
+                                <button
+                                    onClick={() => handleViewContract(school)}
+                                    disabled={isFetchingContract}
+                                    className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-emerald-500 hover:text-emerald-400 transition-colors disabled:opacity-50"
+                                >
+                                    <span className="material-symbols-outlined text-sm">description</span>
+                                    Ver Contrato
+                                </button>
+
+                                <span className="text-[9px] text-slate-600 font-bold uppercase">BRN Suite v1.0</span>
+                            </div>
                         </div>
                     </div>
                 ))}
@@ -374,6 +443,20 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                                     <p className="text-xs text-slate-500 mt-1">Vincule esta escola a uma Gerência Executiva para gestão de técnicos.</p>
                                 </div>
                                 <div className="md:col-span-2">
+                                    <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Plano Contratado</label>
+                                    <select
+                                        value={formData.plan_id}
+                                        onChange={e => setFormData({ ...formData, plan_id: e.target.value })}
+                                        className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none border-emerald-500/30"
+                                    >
+                                        <option value="">Selecione o plano...</option>
+                                        {availablePlans.map(plan => (
+                                            <option key={plan.id} value={plan.id}>{plan.title} ({plan.price_value}{plan.price_period})</option>
+                                        ))}
+                                    </select>
+                                    <p className="text-xs text-emerald-500/60 mt-1 font-medium">Os itens deste plano serão descritos automaticamente no contrato digital.</p>
+                                </div>
+                                <div className="md:col-span-2">
                                     <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Conselho Escolar</label>
                                     <input type="text" value={formData.conselho_escolar} onChange={e => setFormData({ ...formData, conselho_escolar: e.target.value.toUpperCase() })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" placeholder="Nome do conselho..." />
                                 </div>
@@ -414,7 +497,28 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                 </div>
             )}
 
+            {/* Contract Viewer Modal */}
+            {viewingContract && (
+                <div className="fixed inset-0 z-[60] bg-[#0f172a] overflow-y-auto pt-16 md:pt-0">
+                    <div className="sticky top-0 z-[70] bg-[#1e293b] p-4 flex justify-between items-center sm:hidden border-b border-white/10">
+                        <h3 className="font-bold text-white uppercase text-xs">Visualizando Contrato</h3>
+                        <button onClick={() => setViewingContract(null)} className="text-white bg-white/10 p-2 rounded-lg"><span className="material-symbols-outlined">close</span></button>
+                    </div>
 
+                    <div className="relative">
+                        <button
+                            onClick={() => setViewingContract(null)}
+                            className="fixed top-6 right-10 z-[70] hidden sm:flex items-center gap-2 text-white bg-slate-800/80 hover:bg-slate-700 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 transition-all font-bold uppercase text-xs print:hidden"
+                        >
+                            <span className="material-symbols-outlined">close</span> Fechar
+                        </button>
+
+                        <div className="max-w-5xl mx-auto py-8 px-4">
+                            <Contract user={viewingContract.directorUser} />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

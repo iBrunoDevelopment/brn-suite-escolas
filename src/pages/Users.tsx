@@ -44,6 +44,7 @@ const Users: React.FC<UsersProps> = ({ user }) => {
     const [sendingNotice, setSendingNotice] = useState(false);
     const [rolePermissions, setRolePermissions] = useState<RolePermission[]>([]);
     const [isLoadingPerms, setIsLoadingPerms] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; userId: string | null }>({ isOpen: false, userId: null });
     const [closureSummary, setClosureSummary] = useState<any[]>([]);
     const [isCalculatingClosure, setIsCalculatingClosure] = useState(false);
     const [closurePeriodName, setClosurePeriodName] = useState('');
@@ -358,14 +359,28 @@ const Users: React.FC<UsersProps> = ({ user }) => {
             alert('Você não pode excluir sua própria conta.');
             return;
         }
-        if (!confirm('Deseja excluir este usuário?')) return;
+        setConfirmDelete({ isOpen: true, userId });
+    };
+
+    const processDelete = async () => {
+        if (!confirmDelete.userId) return;
+        const userId = confirmDelete.userId;
 
         try {
             const { error } = await supabase.from('users').delete().eq('id', userId);
-            if (error) throw error;
+            if (error) {
+                if (error.code === '23503') {
+                    throw new Error('Este usuário não pode ser excluído pois possui vínculos históricos no sistema (notificações, assinaturas ou conferências). Recomendamos apenas DESATIVAR o perfil para manter a integridade dos dados.');
+                }
+                throw error;
+            }
+            // Sucesso!
             fetchUsers();
+            setConfirmDelete({ isOpen: false, userId: null });
         } catch (error: any) {
             console.error('Erro ao excluir usuário:', error);
+            alert('Erro ao excluir: ' + (error.message || 'Erro desconhecido. Verifique se o usuário possui registros vinculados em outras partes do sistema.'));
+            setConfirmDelete({ isOpen: false, userId: null });
         }
     };
 
@@ -378,6 +393,7 @@ const Users: React.FC<UsersProps> = ({ user }) => {
             fetchUsers();
         } catch (error: any) {
             console.error('Erro ao alterar status:', error);
+            alert('Erro ao alterar status: ' + (error.message || 'Tente novamente mais tarde.'));
         }
     };
 
@@ -649,12 +665,20 @@ const Users: React.FC<UsersProps> = ({ user }) => {
                                                 <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase ${getRoleBadgeColor(u.role)}`}>{u.role}</span>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <button onClick={() => handleToggleStatus(u.id, u.active)} className={`text-xs font-bold ${u.active ? 'text-emerald-500' : 'text-rose-500'}`}>{u.active ? 'Ativo' : 'Inativo'}</button>
+                                                <button
+                                                    onClick={() => handleToggleStatus(u.id, u.active)}
+                                                    disabled={u.id === user.id}
+                                                    className={`text-xs font-bold ${u.active ? 'text-emerald-500' : 'text-rose-500'} ${u.id === user.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                >
+                                                    {u.active ? 'Ativo' : 'Inativo'}
+                                                </button>
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex justify-end gap-2">
                                                     <button onClick={() => handleEdit(u)} className="p-2 hover:bg-primary/10 rounded-lg text-primary"><span className="material-symbols-outlined text-sm">edit</span></button>
-                                                    <button onClick={() => handleDelete(u.id)} className="p-2 hover:bg-rose-50 rounded-lg text-rose-500"><span className="material-symbols-outlined text-sm">delete</span></button>
+                                                    {u.id !== user.id && (
+                                                        <button onClick={() => handleDelete(u.id)} className="p-2 hover:bg-rose-50 rounded-lg text-rose-500"><span className="material-symbols-outlined text-sm">delete</span></button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -679,12 +703,20 @@ const Users: React.FC<UsersProps> = ({ user }) => {
                                             </div>
                                             <div className="flex gap-1">
                                                 <button onClick={() => handleEdit(u)} className="p-2 text-primary"><span className="material-symbols-outlined text-[20px]">edit</span></button>
-                                                <button onClick={() => handleDelete(u.id)} className="p-2 text-rose-500"><span className="material-symbols-outlined text-[20px]">delete</span></button>
+                                                {u.id !== user.id && (
+                                                    <button onClick={() => handleDelete(u.id)} className="p-2 text-rose-500"><span className="material-symbols-outlined text-[20px]">delete</span></button>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="flex items-center justify-between pt-1">
                                             <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${getRoleBadgeColor(u.role)}`}>{u.role}</span>
-                                            <button onClick={() => handleToggleStatus(u.id, u.active)} className={`text-[11px] font-black uppercase px-3 py-1 bg-slate-100 dark:bg-slate-700 rounded-lg ${u.active ? 'text-emerald-500' : 'text-rose-500'}`}>{u.active ? 'Ativo' : 'Inativo'}</button>
+                                            <button
+                                                onClick={() => handleToggleStatus(u.id, u.active)}
+                                                disabled={u.id === user.id}
+                                                className={`text-[11px] font-black uppercase px-3 py-1 bg-slate-100 dark:bg-slate-700 rounded-lg ${u.active ? 'text-emerald-500' : 'text-rose-500'} ${u.id === user.id ? 'opacity-50' : ''}`}
+                                            >
+                                                {u.active ? 'Ativo' : 'Inativo'}
+                                            </button>
                                         </div>
                                     </div>
                                 ))
@@ -986,6 +1018,37 @@ const Users: React.FC<UsersProps> = ({ user }) => {
                             )}
                         </div>
                         <div className="p-6 bg-slate-50 dark:bg-slate-900/50 flex justify-end gap-3"><button onClick={() => setShowModal(false)} className="px-6 py-2 rounded-xl text-sm font-bold text-slate-500">Cancelar</button><button onClick={handleSave} className="btn-primary px-8">Salvar</button></div>
+                    </div>
+                </div>
+            )}
+            {/* Deletion Confirmation Modal */}
+            {confirmDelete.isOpen && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="w-full max-w-md bg-[#0f172a] border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6 text-center">
+                            <div className="w-16 h-16 bg-rose-500/10 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                <span className="material-symbols-outlined text-4xl">warning</span>
+                            </div>
+                            <h3 className="text-xl font-bold text-white mb-2">Confirmar Exclusão</h3>
+                            <p className="text-slate-400 text-sm leading-relaxed mb-6">
+                                ATENÇÃO: A exclusão deve ser feita apenas para cadastros incorretos ou duplicados que <span className="text-rose-400 font-bold underline">NÃO possuem movimentação</span> no sistema.<br /><br />
+                                Para quem já utilizou o sistema, recomendamos apenas <span className="text-emerald-400 font-bold">DESATIVAR</span> o acesso.
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setConfirmDelete({ isOpen: false, userId: null })}
+                                    className="flex-1 h-12 rounded-xl bg-white/5 text-white font-bold hover:bg-white/10 transition-all active:scale-95"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={processDelete}
+                                    className="flex-1 h-12 rounded-xl bg-rose-600 text-white font-bold hover:bg-rose-700 shadow-lg shadow-rose-500/20 transition-all active:scale-95"
+                                >
+                                    Excluir Agora
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

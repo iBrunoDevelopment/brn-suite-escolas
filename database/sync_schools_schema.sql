@@ -16,6 +16,7 @@ ALTER TABLE schools ADD COLUMN IF NOT EXISTS uf TEXT;
 ALTER TABLE schools ADD COLUMN IF NOT EXISTS image_url TEXT;
 ALTER TABLE schools ADD COLUMN IF NOT EXISTS gee TEXT;
 ALTER TABLE schools ADD COLUMN IF NOT EXISTS gee_id UUID REFERENCES gee(id);
+ALTER TABLE schools ADD COLUMN IF NOT EXISTS plan_id TEXT;
 
 -- Recarregar o cache do PostgREST (Supabase faz isso automaticamente após DDL, 
 -- mas às vezes é necessário garantir que as políticas RLS não bloqueiem)

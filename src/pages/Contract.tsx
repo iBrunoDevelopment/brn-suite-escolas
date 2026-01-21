@@ -73,44 +73,131 @@ const Contract: React.FC<ContractProps> = ({ user, onSigned }) => {
 
     if (signed && signatureData) {
         return (
-            <div className="min-h-screen bg-[#111827] flex items-center justify-center p-6 text-white font-sans">
-                <div className="max-w-2xl w-full bg-[#16202a] border border-emerald-500/30 p-8 rounded-3xl shadow-2xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[80px] rounded-full -mr-10 -mt-10"></div>
+            <div className="min-h-screen bg-[#111827] flex flex-col items-center p-4 md:p-8 text-white font-sans overflow-y-auto print:bg-white print:p-0 print:block print:overflow-visible">
+                <style dangerouslySetInnerHTML={{
+                    __html: `
+                    @media print {
+                        @page { 
+                            size: A4; 
+                            margin: 2cm; 
+                        }
+                        
+                        /* Garantir que nada impeça o fluxo de múltiplas páginas */
+                        body, html, #root {
+                            height: auto !important;
+                            overflow: visible !important;
+                            background: white !important;
+                        }
 
-                    <div className="flex flex-col items-center text-center gap-6 relative z-10">
-                        <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 mb-2">
-                            <span className="material-symbols-outlined text-5xl">verified_user</span>
+                        /* Esconder UI do sistema */
+                        aside, nav, header, .sidebar, .topbar, button:not(.print-root button) {
+                            display: none !important;
+                        }
+
+                        /* Forçar o container do contrato a ser o fluxo principal */
+                        .print-root {
+                            position: static !important;
+                            display: block !important;
+                            width: 100% !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            background: white !important;
+                            color: black !important;
+                        }
+
+                        .print-inner {
+                            padding: 0 !important;
+                            margin: 0 !important;
+                            border: none !important;
+                            box-shadow: none !important;
+                        }
+
+                        /* Estilização de texto para papel */
+                        h1, h2, h3, p, li, strong, span, div {
+                            color: black !important;
+                        }
+
+                        /* Quebras de página inteligentes */
+                        .clause-block {
+                            page-break-inside: avoid;
+                            break-inside: avoid;
+                            margin-bottom: 20px !important;
+                            display: block !important;
+                        }
+
+                        .signature-block {
+                            page-break-inside: avoid;
+                            break-inside: avoid;
+                            margin-top: 50px !important;
+                        }
+
+                        /* Esconder o que sobrar */
+                        .print-hidden { display: none !important; }
+                    }
+                ` }} />
+
+                <div className="print-root print-inner max-w-4xl w-full bg-[#16202a] border border-emerald-500/30 p-8 md:p-12 rounded-3xl shadow-2xl relative overflow-hidden mb-8 print:shadow-none print:border-none print:bg-white print:text-black print:p-0 print:m-0 print:overflow-visible">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[80px] rounded-full -mr-10 -mt-10 print:hidden pointer-events-none"></div>
+
+                    <div className="relative z-10 flex flex-col md:flex-row justify-between items-start mb-8 gap-6 print:flex-row print:items-center print:border-b print:border-slate-200 print:pb-6 print:mb-8">
+                        <div className="flex items-center gap-4">
+                            <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 print:bg-slate-100 print:text-slate-800 print:w-12 print:h-12">
+                                <span className="material-symbols-outlined text-4xl print:text-2xl">verified_user</span>
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-black text-white print:text-black print:text-xl uppercase">Contrato Digital</h1>
+                                <p className="text-emerald-500 font-bold text-xs uppercase tracking-widest print:text-slate-500 print:text-[10px]">Documento Assinado e Vigente</p>
+                            </div>
                         </div>
+                        <button
+                            onClick={() => window.print()}
+                            className="bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl flex items-center gap-2 border border-white/10 transition-all active:scale-95 print:hidden cursor-pointer"
+                        >
+                            <span className="material-symbols-outlined text-sm">print</span>
+                            Imprimir / PDF
+                        </button>
+                    </div>
 
-                        <h1 className="text-2xl font-black text-white">Contrato Assinado</h1>
-
-                        <div className="bg-black/30 w-full p-6 rounded-2xl border border-white/5 text-sm md:text-base">
-                            <p className="text-slate-300 mb-2">Este contrato foi assinado digitalmente por:</p>
-                            <p className="text-white font-bold text-lg uppercase tracking-wider mb-6">{user.name}</p>
-
-                            <div className="grid grid-cols-2 gap-4 text-xs md:text-sm text-slate-400 border-t border-white/5 pt-4">
-                                <div className="text-left">
-                                    <span className="block font-bold text-emerald-500 uppercase text-[10px]">Data e Hora</span>
-                                    {new Date(signatureData.signed_at).toLocaleString('pt-BR')}
-                                </div>
-                                <div className="text-right">
-                                    <span className="block font-bold text-emerald-500 uppercase text-[10px]">Endereço IP</span>
-                                    {signatureData.ip_address || 'N/A'}
-                                </div>
-                                <div className="text-left">
-                                    <span className="block font-bold text-emerald-500 uppercase text-[10px]">Versão</span>
-                                    {signatureData.contract_version}
-                                </div>
-                                <div className="text-right">
-                                    <span className="block font-bold text-emerald-500 uppercase text-[10px]">Status</span>
-                                    <span className="text-emerald-400 font-bold uppercase">Vigente</span>
+                    <div className="bg-black/30 p-6 rounded-2xl border border-white/5 mb-8 print:bg-white print:border-none print:p-0 print:mb-10">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 print:grid-cols-2 print:gap-12">
+                            <div>
+                                <h2 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-4 print:text-slate-400">Informações do Signatário</h2>
+                                <p className="text-white font-bold text-lg uppercase print:text-black print:text-base">{user.name}</p>
+                                <p className="text-slate-400 text-sm print:text-slate-600 print:text-xs">{user.email}</p>
+                            </div>
+                            <div className="flex flex-col gap-4">
+                                <h2 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-2 print:text-slate-400">Selo de Autenticidade Digital</h2>
+                                <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl font-mono text-[10px] leading-relaxed break-all text-emerald-300 print:bg-slate-50 print:border-slate-200 print:text-slate-600 print:p-3 print:text-[9px]">
+                                    AUTH_ID: {signatureData.id}<br />
+                                    TIMESTAMP: {new Date(signatureData.signed_at).toISOString()}<br />
+                                    NETWORK_IP: {signatureData.ip_address || '0.0.0.0'}<br />
+                                    VERSION: {signatureData.contract_version}<br />
+                                    SIGNED_DOC_VERIFIED_BY_BRN_SYSTEM
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <p className="text-slate-500 text-xs">O comprovante de assinatura está armazenado em nossos servidores seguros.</p>
+                    <div className="prose prose-invert max-w-none text-slate-400 text-sm space-y-6 print:text-black print:prose-p:text-xs print:prose-h3:text-sm print:prose-h3:mt-6 print:prose-h3:mb-2 print:space-y-4">
+                        <h3 className="text-white font-bold uppercase text-xs border-b border-white/10 pb-2 print:text-black print:border-slate-300 print:font-black">Termos do Contrato</h3>
+                        <ContractTerms user={user} />
+                    </div>
+
+                    <div className="signature-block mt-12 pt-8 border-t border-white/10 flex flex-col items-center text-center gap-2 opacity-50 print:opacity-100 print:mt-16 print:pt-8 print:border-slate-200">
+                        <div className="w-48 h-px bg-slate-500 mb-2 print:bg-slate-300"></div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-300 print:text-black print:text-xs">{user.name}</p>
+                        <p className="text-[9px] text-slate-500 print:text-slate-500">Assinado Eletronicamente em {new Date(signatureData.signed_at).toLocaleString('pt-BR')}</p>
                     </div>
                 </div>
+
+                {onSigned && (
+                    <button
+                        onClick={() => onSigned()}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-12 py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-emerald-500/20 mb-12 print:hidden"
+                    >
+                        Continuar para o Sistema
+                    </button>
+                )}
             </div>
         );
     }
@@ -131,31 +218,13 @@ const Contract: React.FC<ContractProps> = ({ user, onSigned }) => {
                 </div>
 
                 {/* Content - Scrollable */}
-                <div className="flex-1 overflow-y-auto p-8 space-y-6 text-slate-300 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-                    <div className="prose prose-invert max-w-none prose-p:text-sm prose-headings:text-white">
+                <div className="flex-1 overflow-y-auto p-8 text-slate-300 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                    <div className="prose prose-invert max-w-none text-sm leading-relaxed">
                         <p className="text-lg font-medium text-white mb-6">
                             Pelo presente instrumento, eu, <strong className="text-yellow-500 uppercase">{user.name}</strong>, inscrito como usuário do sistema <strong>BRN Suite Escolas</strong>, declaro para os devidos fins que:
                         </p>
 
-                        <h3 className="text-white font-bold uppercase text-sm border-b border-white/10 pb-2 mb-3 mt-6">1. Acesso e Segurança</h3>
-                        <p>
-                            Estou ciente de que meu acesso (login e senha) é <strong>pessoal e intransferível</strong>. Assumo total responsabilidade por todas as ações realizadas no sistema sob minhas credenciais, comprometendo-me a manter minha senha em sigilo absoluto e a não compartilhá-la com terceiros, sob pena de responsabilização administrativa.
-                        </p>
-
-                        <h3 className="text-white font-bold uppercase text-sm border-b border-white/10 pb-2 mb-3 mt-6">2. Veracidade das Informações</h3>
-                        <p>
-                            Declaro que todas as informações inseridas no sistema, incluindo lançamentos financeiros, cadastros de fornecedores e documentos anexados, são <strong>verdadeiras e correspondem fielmente aos documentos originais</strong>. Reconheço que a inserção de dados falsos pode acarretar em sanções legais, conforme legislação vigente sobre falsidade ideológica e improbidade administrativa.
-                        </p>
-
-                        <h3 className="text-white font-bold uppercase text-sm border-b border-white/10 pb-2 mb-3 mt-6">3. Conformidade Legal (PNAE/FNDE)</h3>
-                        <p>
-                            Comprometo-me a seguir rigorosamente as normas e resoluções do FNDE (Fundo Nacional de Desenvolvimento da Educação), especialmente no que tange à execução dos recursos do PNAE (Programa Nacional de Alimentação Escolar) e PDDE, garantindo a aplicação correta dos recursos públicos e a devida prestação de contas.
-                        </p>
-
-                        <h3 className="text-white font-bold uppercase text-sm border-b border-white/10 pb-2 mb-3 mt-6">4. Auditoria e Monitoramento</h3>
-                        <p>
-                            Estou ciente de que todas as minhas ações no sistema são registradas (logs de auditoria), incluindo data, hora e endereço IP, e que esses dados podem ser utilizados para fins de auditoria interna ou externa pelos órgãos de controle.
-                        </p>
+                        <ContractTerms user={user} />
 
                         <div className="bg-yellow-500/10 border border-yellow-500/30 p-4 rounded-xl mt-8">
                             <p className="text-yellow-200 text-xs font-bold uppercase tracking-wider mb-2">Declaração Final</p>
@@ -188,6 +257,89 @@ const Contract: React.FC<ContractProps> = ({ user, onSigned }) => {
                 </div>
             </div>
         </div>
+    );
+};
+
+const ContractTerms: React.FC<{ user: User }> = ({ user }) => {
+    const [plan, setPlan] = React.useState<any>(null);
+
+    React.useEffect(() => {
+        const fetchPlanData = async () => {
+            if (!user.schoolId) return;
+
+            // 1. Get school's plan_id
+            const { data: school } = await supabase
+                .from('schools')
+                .select('plan_id')
+                .eq('id', user.schoolId)
+                .maybeSingle();
+
+            if (school?.plan_id) {
+                // 2. Get plans from settings
+                const { data: settings } = await supabase
+                    .from('system_settings')
+                    .select('value')
+                    .eq('key', 'landing_page_plans')
+                    .maybeSingle();
+
+                if (settings?.value) {
+                    const matchedPlan = settings.value.find((p: any) => p.id === school.plan_id);
+                    if (matchedPlan) setPlan(matchedPlan);
+                }
+            }
+        };
+
+        fetchPlanData();
+    }, [user.schoolId]);
+
+    return (
+        <>
+            <div className="clause-block">
+                <h3 className="text-white font-bold uppercase text-sm border-b border-white/10 pb-2 mb-3 mt-6 print:text-black print:border-slate-300">1. Acesso e Segurança</h3>
+                <p>
+                    Estou ciente de que meu acesso (login e senha) é <strong>pessoal e intransferível</strong>. Assumo total responsabilidade por todas as ações realizadas no sistema sob minhas credenciais, comprometendo-me a manter minha senha em sigilo absoluto e a não compartilhá-la com terceiros, sob pena de responsabilização administrativa.
+                </p>
+            </div>
+
+            <div className="clause-block">
+                <h3 className="text-white font-bold uppercase text-sm border-b border-white/10 pb-2 mb-3 mt-6 print:text-black print:border-slate-300">2. Veracidade das Informações</h3>
+                <p>
+                    Declaro que todas as informações inseridas no sistema, incluindo lançamentos financeiros, cadastros de fornecedores e documentos anexados, são <strong>verdadeiras e correspondem fielmente aos documentos originais</strong>. Reconheço que a inserção de dados falsos pode acarretar em sanções legais, conforme legislação vigente sobre falsidade ideológica e improbidade administrativa.
+                </p>
+            </div>
+
+            <div className="clause-block">
+                <h3 className="text-white font-bold uppercase text-sm border-b border-white/10 pb-2 mb-3 mt-6 print:text-black print:border-slate-300">3. Responsabilidades do Gestor</h3>
+                <p>
+                    É de inteira responsabilidade do gestor a <strong>coleta de todas as assinaturas</strong> necessárias nos documentos gerados pelo sistema, bem como a guarda dos mesmos. Além disso, o gestor compromete-me a fornecer/anexar no sistema a <strong>Nota Fiscal, Comprovante de Pagamento, Extratos de Investimento e Conta Corrente</strong> de cada conta bancária vinculada, além das certidões negativas de débito, impreterivelmente até o <strong>5º dia útil de cada mês</strong>.
+                </p>
+            </div>
+
+            <div className="clause-block">
+                <h3 className="text-white font-bold uppercase text-sm border-b border-white/10 pb-2 mb-3 mt-6 print:text-black print:border-slate-300">4. Obrigações da BRN GROUP</h3>
+                <div className="space-y-3">
+                    <p>
+                        A empresa <strong>BRN GROUP</strong> obriga-se a cumprir com os itens descritos no plano <strong>{plan?.title || 'Contratado'}</strong>, garantindo:
+                    </p>
+                    {plan?.features ? (
+                        <ul className="list-disc pl-5 space-y-1 text-slate-400 print:text-black">
+                            {plan.features.map((feature: string, idx: number) => (
+                                <li key={idx} className="text-xs">{feature}</li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-xs italic text-slate-500">Planos e funcionalidades conforme proposta comercial aceita.</p>
+                    )}
+                </div>
+            </div>
+
+            <div className="clause-block">
+                <h3 className="text-white font-bold uppercase text-sm border-b border-white/10 pb-2 mb-3 mt-6 print:text-black print:border-slate-300">5. Conformidade Legal e Auditoria</h3>
+                <p>
+                    Comprometo-me a seguir as normas do FNDE (PNAE/PDDE). Estou ciente de que todas as ações no sistema são registradas para fins de auditoria interna ou externa pelos órgãos de controle, incluindo registro de IP e timestamp de cada operação.
+                </p>
+            </div>
+        </>
     );
 };
 
