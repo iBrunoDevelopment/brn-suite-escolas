@@ -463,7 +463,7 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
             {/* Modals (Reprogrammed & Form) - Keeping these in page for now as they are very tied to local state */}
             {showReprogrammedModal && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-                    <div className="w-full max-w-4xl bg-[#0f172a] border border-blue-500/20 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[90vh]">
+                    <div className="w-full max-w-4xl bg-[#0f172a] border border-blue-500/20 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[95vh] md:max-h-[90vh]">
                         <div className="p-6 border-b border-white/5 flex justify-between items-center bg-blue-500/5 shrink-0">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400">
@@ -477,9 +477,9 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                             <button onClick={() => setShowReprogrammedModal(false)} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5 text-slate-400"><span className="material-symbols-outlined">close</span></button>
                         </div>
 
-                        <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-8 overflow-hidden h-full">
+                        <div className="p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-8 overflow-y-auto lg:overflow-hidden flex-1 custom-scrollbar">
                             {/* Form Area */}
-                            <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5 flex flex-col gap-4 text-xs h-fit overflow-y-auto">
+                            <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5 flex flex-col gap-4 text-xs h-fit lg:h-full lg:overflow-y-auto custom-scrollbar shrink-0 lg:shrink">
                                 <h4 className="text-sm font-bold text-blue-400 mb-2 flex items-center gap-2">
                                     <span className="material-symbols-outlined text-sm">add_circle</span>
                                     Novo Registro
@@ -512,13 +512,13 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                                 </div>
                                 <label className="text-slate-400 uppercase font-black">Valor R$</label>
                                 <input type="number" step="0.01" value={newReprogrammed.value} onChange={e => setNewReprogrammed({ ...newReprogrammed, value: e.target.value })} className="bg-[#1e293b] rounded-lg h-10 px-3 text-white border-none outline-none focus:ring-1 focus:ring-blue-500 font-mono text-lg" placeholder="0,00" />
-                                <button onClick={handleSaveReprogrammed} disabled={isSavingReprogrammed} className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold h-12 rounded-xl transition-all shadow-lg shadow-blue-900/20 active:scale-95 flex items-center justify-center gap-2">
+                                <button onClick={handleSaveReprogrammed} disabled={isSavingReprogrammed} className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold min-h-[48px] py-3 rounded-xl transition-all shadow-lg shadow-blue-900/20 active:scale-95 flex items-center justify-center gap-2 shrink-0">
                                     {isSavingReprogrammed ? <span className="material-symbols-outlined animate-spin text-sm">sync</span> : 'Salvar Saldo'}
                                 </button>
                             </div>
 
                             {/* List Area */}
-                            <div className="lg:col-span-2 flex flex-col gap-4 h-full overflow-hidden">
+                            <div className="lg:col-span-2 flex flex-col gap-4 h-full lg:overflow-hidden min-h-[400px] lg:min-h-0">
                                 <div className="flex flex-col md:flex-row gap-3 bg-black/20 p-3 rounded-xl border border-white/5">
                                     <div className="flex-1 relative">
                                         <span className="material-symbols-outlined absolute left-3 top-2.5 text-slate-500 text-sm">search</span>
