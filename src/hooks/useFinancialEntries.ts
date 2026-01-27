@@ -52,6 +52,8 @@ export function useFinancialEntries(user: User, initialFilters: any = {}) {
     const [suppliers, setSuppliers] = useState<any[]>([]);
     const [bankAccounts, setBankAccounts] = useState<any[]>([]);
     const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+    const [reprogrammedBalances, setReprogrammedBalances] = useState<any[]>([]);
+    const [periods, setPeriods] = useState<any[]>([]);
 
     const fetchAuxData = useCallback(async () => {
         const [s, p, r, sup, b, pm] = await Promise.all([
@@ -69,6 +71,20 @@ export function useFinancialEntries(user: User, initialFilters: any = {}) {
         if (sup.data) setSuppliers(sup.data);
         if (b.data) setBankAccounts(b.data);
         if (pm.data) setPaymentMethods(pm.data);
+
+        // Fetch Periods
+        const { data: per } = await supabase.from('periods').select('name, is_active').order('name', { ascending: false });
+        if (per) setPeriods(per);
+
+        // Fetch initial reprogrammed
+        await fetchReprogrammedBalances();
+    }, []);
+
+    const fetchReprogrammedBalances = useCallback(async () => {
+        const { data } = await supabase.from('reprogrammed_balances').select(`
+            *, schools(name), programs(name), rubrics(name)
+        `).order('period', { ascending: false });
+        if (data) setReprogrammedBalances(data);
     }, []);
 
     const fetchEntries = useCallback(async (filters: any) => {
@@ -178,8 +194,11 @@ export function useFinancialEntries(user: User, initialFilters: any = {}) {
             rubrics,
             suppliers,
             bankAccounts,
-            paymentMethods
+            paymentMethods,
+            periods
         },
+        reprogrammedBalances,
+        fetchReprogrammedBalances,
         refresh: fetchEntries
     };
 }
