@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { User } from '../types';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '../context/ToastContext';
 
 export interface BankTransaction {
     id: string;
@@ -15,18 +17,10 @@ export interface BankTransaction {
 }
 
 export const useBankReconciliation = (user: User) => {
+    const queryClient = useQueryClient();
     const [transactions, setTransactions] = useState<BankTransaction[]>([]);
-    const [systemEntries, setSystemEntries] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [isMatching, setIsMatching] = useState(false);
     const [dragActive, setDragActive] = useState(false);
-
-    // Aux Data
-    const [schools, setSchools] = useState<any[]>([]);
-    const [bankAccounts, setBankAccounts] = useState<any[]>([]);
-    const [programs, setPrograms] = useState<any[]>([]);
-    const [rubrics, setRubrics] = useState<any[]>([]);
-    const [suppliers, setSuppliers] = useState<any[]>([]);
+    const { addToast } = useToast();
 
     // Selection/Filters
     const [selectedSchoolId, setSelectedSchoolId] = useState(user.schoolId || '');
@@ -45,41 +39,133 @@ export const useBankReconciliation = (user: User) => {
     const [manualSearch, setManualSearch] = useState('');
     const [quickForm, setQuickForm] = useState({ program_id: '', rubric_id: '', supplier_id: '', description: '', nature: 'Custeio' });
 
-    useEffect(() => {
-        fetchInitialData();
-    }, []);
+    // Queries
+    const { data: auxData = {
+        schools: [],
+        bankAccounts: [],
+        programs: [],
+        rubrics: [],
+        suppliers: []
+    } } = useQuery({
+        queryKey: ['reconciliation_aux'],
+        queryFn: async () => {
+            const [s, b, p, r, sup] = await Promise.all([
+                supabase.from('schools').select('id, name').order('name'),
+                supabase.from('bank_accounts').select('*').order('name'),
+                supabase.from('programs').select('id, name').order('name'),
+                supabase.from('rubrics').select('id, name, program_id').order('name'),
+                supabase.from('suppliers').select('id, name').order('name')
+            ]);
+            return {
+                schools: s.data || [],
+                bankAccounts: b.data || [],
+                programs: p.data || [],
+                rubrics: r.data || [],
+                suppliers: sup.data || []
+            };
+        },
+        staleTime: 1000 * 60 * 30
+    });
 
-    const fetchInitialData = async () => {
-        const [{ data: schoolsData }, { data: banksData }, { data: progs }, { data: rubs }, { data: suppliersData }] = await Promise.all([
-            supabase.from('schools').select('id, name').order('name'),
-            supabase.from('bank_accounts').select('*').order('name'),
-            supabase.from('programs').select('id, name').order('name'),
-            supabase.from('rubrics').select('id, name, program_id').order('name'),
-            supabase.from('suppliers').select('id, name').order('name')
-        ]);
-        if (schoolsData) setSchools(schoolsData);
-        if (banksData) setBankAccounts(banksData);
-        if (progs) setPrograms(progs);
-        if (rubs) setRubrics(rubs);
-        if (suppliersData) setSuppliers(suppliersData);
-    };
+    const { schools, bankAccounts, programs, rubrics, suppliers } = auxData;
 
-    const fetchSystemEntries = async () => {
-        if (!selectedSchoolId) return;
+    const { data: systemEntries = [], isLoading: isLoadingSystem, refetch: fetchSystemEntries } = useQuery({
+        queryKey: ['system_entries', selectedSchoolId, selectedBankAccountId],
+        queryFn: async () => {
+            if (!selectedSchoolId) return [];
+            let query = supabase.from('financial_entries')
+                .select('*')
+                .eq('is_reconciled', false)
+                .eq('school_id', selectedSchoolId);
 
-        let query = supabase.from('financial_entries')
-            .select('*')
-            .eq('is_reconciled', false)
-            .eq('school_id', selectedSchoolId);
+            if (selectedBankAccountId) {
+                query = query.eq('bank_account_id', selectedBankAccountId);
+            }
 
-        if (selectedBankAccountId) {
-            query = query.eq('bank_account_id', selectedBankAccountId);
+            const { data, error } = await query;
+            if (error) throw error;
+            return data || [];
+        },
+        enabled: !!selectedSchoolId
+    });
+
+    // Mutations
+    const reconcileMutation = useMutation({
+        mutationFn: async ({ bt, entryId }: { bt: BankTransaction, entryId: string }) => {
+            const { error } = await supabase
+                .from('financial_entries')
+                .update({
+                    is_reconciled: true,
+                    reconciled_at: new Date().toISOString(),
+                    bank_transaction_ref: bt.fitid,
+                    status: 'Pago'
+                })
+                .eq('id', entryId);
+
+            if (error) throw error;
+        },
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['system_entries'] });
+            setTransactions(prev => prev.filter(t => t.id !== variables.bt.id));
+            setShowManualMatch(false);
+            setManualMatchBT(null);
         }
+    });
 
-        const { data } = await query;
-        if (data) setSystemEntries(data);
-    };
+    const bulkReconcileMutation = useMutation({
+        mutationFn: async (matchedList: BankTransaction[]) => {
+            const updates = matchedList.map(bt =>
+                supabase
+                    .from('financial_entries')
+                    .update({
+                        is_reconciled: true,
+                        reconciled_at: new Date().toISOString(),
+                        bank_transaction_ref: bt.fitid,
+                        status: 'Pago'
+                    })
+                    .eq('id', bt.matched_entry_id)
+            );
 
+            const results = await Promise.all(updates);
+            const errors = results.filter(r => r.error);
+            if (errors.length > 0) throw new Error('Alguns lançamentos falharam na conciliação.');
+        },
+        onSuccess: (_, matchedList) => {
+            queryClient.invalidateQueries({ queryKey: ['system_entries'] });
+            const matchedIds = matchedList.map(m => m.id);
+            setTransactions(prev => prev.filter(t => !matchedIds.includes(t.id)));
+        }
+    });
+
+    const quickCreateMutation = useMutation({
+        mutationFn: async ({ bt, form }: { bt: BankTransaction, form: any }) => {
+            const { error } = await supabase.from('financial_entries').insert({
+                school_id: selectedSchoolId,
+                bank_account_id: selectedBankAccountId,
+                date: bt.date,
+                description: form.description || bt.description,
+                value: bt.value,
+                type: bt.type === 'C' ? 'Entrada' : 'Saída',
+                nature: form.nature,
+                program_id: form.program_id,
+                rubric_id: form.rubric_id,
+                supplier_id: form.supplier_id || null,
+                status: 'Pago',
+                is_reconciled: true,
+                reconciled_at: new Date().toISOString(),
+                bank_transaction_ref: bt.fitid
+            });
+            if (error) throw error;
+        },
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['system_entries'] });
+            setTransactions(prev => prev.filter(t => t.id !== variables.bt.id));
+            setShowQuickCreate(false);
+            setQuickCreateBT(null);
+        }
+    });
+
+    // Parsing Logic
     const parseOFX = (text: string, uploadType: 'corrente' | 'investimento') => {
         const newTransactions: BankTransaction[] = [];
         const stmtRows = text.split('<STMTTRN>');
@@ -111,7 +197,6 @@ export const useBankReconciliation = (user: User) => {
                 });
             }
         });
-
         return newTransactions;
     };
 
@@ -136,10 +221,8 @@ export const useBankReconciliation = (user: User) => {
                         const parts = dateRaw.split('/');
                         if (parts[0].length === 2) date = `${parts[2]}-${parts[1]}-${parts[0]}`;
                     }
-
                     const cleanVal = valueRaw.replace(/[R$\s.]/g, '').replace(',', '.');
                     const value = parseFloat(cleanVal);
-
                     if (!isNaN(value)) {
                         newTransactions.push({
                             id: Math.random().toString(36).substr(2, 9),
@@ -155,7 +238,6 @@ export const useBankReconciliation = (user: User) => {
                 }
             }
         });
-
         return newTransactions;
     };
 
@@ -167,157 +249,68 @@ export const useBankReconciliation = (user: User) => {
                 const typeMatch = (bt.type === 'C' && se.type === 'Entrada') || (bt.type === 'D' && se.type === 'Saída');
                 return dateDiff <= 3 && valueMatch && typeMatch;
             });
-
-            if (match) {
-                return { ...bt, matched_entry_id: match.id, status: 'matched' as const };
-            }
-            return bt;
+            return match ? { ...bt, matched_entry_id: match.id, status: 'matched' as const } : bt;
         });
     };
 
+    // Public Handlers
     const handleFileUpload = async (file: File) => {
         if (!selectedSchoolId || !selectedBankAccountId) {
-            alert('Por favor, selecione a Escola e a Conta Bancária antes de importar o extrato.');
+            addToast('Por favor, selecione a Escola e a Conta Bancária antes de importar o extrato.', 'warning');
             return;
         }
-        setLoading(true);
+
         try {
             const text = await file.text();
-            let newTransactions: BankTransaction[] = [];
-
-            if (file.name.toLowerCase().endsWith('.ofx')) {
-                newTransactions = parseOFX(text, uploadType);
-            } else if (file.name.toLowerCase().endsWith('.csv')) {
-                newTransactions = parseCSV(text, file.name, uploadType);
-            } else {
-                alert('Por favor, envie um arquivo .OFX ou .CSV');
-                return;
-            }
+            let newBatch: BankTransaction[] = [];
+            if (file.name.toLowerCase().endsWith('.ofx')) newBatch = parseOFX(text, uploadType);
+            else if (file.name.toLowerCase().endsWith('.csv')) newBatch = parseCSV(text, file.name, uploadType);
+            else return addToast('Apenas .OFX ou .CSV são aceitos.', 'error');
 
             const combined = [...transactions];
-            newTransactions.forEach(nt => {
-                if (!combined.some(t => t.fitid === nt.fitid)) {
-                    combined.push(nt);
-                }
+            newBatch.forEach(nt => {
+                if (!combined.some(t => t.fitid === nt.fitid)) combined.push(nt);
             });
 
-            setTransactions(combined);
-
-            // Sync entries after setting transactions
-            let currentSystemEntries = systemEntries;
-            const query = supabase.from('financial_entries')
-                .select('*')
-                .eq('is_reconciled', false)
-                .eq('school_id', selectedSchoolId);
-            const { data } = await (selectedBankAccountId ? query.eq('bank_account_id', selectedBankAccountId) : query);
-            if (data) {
-                setSystemEntries(data);
-                currentSystemEntries = data;
-            }
-
-            const matched = autoMatch(combined, currentSystemEntries);
+            // Perform auto-match using the latest systemEntries from Query
+            const matched = autoMatch(combined, systemEntries);
             setTransactions(matched);
-
         } catch (e) {
             console.error(e);
-        } finally {
-            setLoading(false);
         }
     };
 
     const handleConfirmMatch = async (bt: BankTransaction, customEntryId?: string) => {
         const entryId = customEntryId || bt.matched_entry_id;
         if (!entryId) return;
-
-        setIsMatching(true);
-        try {
-            const { error } = await supabase
-                .from('financial_entries')
-                .update({
-                    is_reconciled: true,
-                    reconciled_at: new Date().toISOString(),
-                    bank_transaction_ref: bt.fitid,
-                    status: 'Pago'
-                })
-                .eq('id', entryId);
-
-            if (error) throw error;
-
-            setTransactions(prev => prev.filter(t => t.id !== bt.id));
-            setSystemEntries(prev => prev.filter(e => e.id !== entryId));
-            setShowManualMatch(false);
-            setManualMatchBT(null);
-        } catch (error) {
-            alert('Erro ao conciliar: ' + (error as any).message);
-        } finally {
-            setIsMatching(false);
-        }
+        reconcileMutation.mutate({ bt, entryId }, {
+            onError: (err: any) => addToast('Erro ao conciliar: ' + err.message, 'error'),
+            onSuccess: () => addToast('Conciliado com sucesso!', 'success')
+        });
     };
 
     const handleBulkReconcile = async () => {
         const matched = transactions.filter(t => t.status === 'matched' && t.matched_entry_id);
         if (matched.length === 0) return;
-
-        if (!confirm(`Deseja conciliar ${matched.length} lançamentos identificados de uma vez?`)) return;
-
-        setIsMatching(true);
-        try {
-            const updates = matched.map(bt =>
-                supabase
-                    .from('financial_entries')
-                    .update({
-                        is_reconciled: true,
-                        reconciled_at: new Date().toISOString(),
-                        bank_transaction_ref: bt.fitid,
-                        status: 'Pago'
-                    })
-                    .eq('id', bt.matched_entry_id)
-            );
-
-            const results = await Promise.all(updates);
-            const errors = results.filter(r => r.error);
-
-            if (errors.length > 0) {
-                console.error(errors);
-                alert('Alguns itens não puderam ser conciliados. Verifique o console.');
-            }
-
-            const matchedIds = matched.map(m => m.id);
-            const matchedSystemIds = matched.map(m => m.matched_entry_id);
-
-            setTransactions(prev => prev.filter(t => !matchedIds.includes(t.id)));
-            setSystemEntries(prev => prev.filter(e => !matchedSystemIds.includes(e.id)));
-        } catch (error) {
-            alert('Erro na conciliação em lote: ' + (error as any).message);
-        } finally {
-            setIsMatching(false);
-        }
+        if (!confirm(`Deseja conciliar ${matched.length} lançamentos?`)) return;
+        bulkReconcileMutation.mutate(matched, {
+            onError: (err: any) => addToast('Erro na conciliação batch: ' + err.message, 'error'),
+            onSuccess: () => addToast(`${matched.length} lançamentos conciliados!`, 'success')
+        });
     };
 
     const handleQuickCreateStart = (bt: BankTransaction) => {
         const desc = bt.description.toUpperCase();
-        let suggestedProgramId = '';
-        let suggestedRubricId = '';
-        let suggestedNature = 'Custeio';
+        let suggestedProgramId = '', suggestedRubricId = '', suggestedNature = 'Custeio';
 
-        if (bt.extract_type === 'investimento' || desc.includes('RENDIMENTO') || desc.includes('APLIC') || desc.includes('JUROS')) {
-            const rubric = rubrics.find(r => r.name.toUpperCase().includes('RENDIMENTO') || r.name.toUpperCase().includes('APLICAÇÃO'));
-            if (rubric) {
-                suggestedRubricId = rubric.id;
-                suggestedProgramId = rubric.program_id;
-            }
-        } else if (desc.includes('TARIFA') || desc.includes('MANUT') || desc.includes('CESTA') || desc.includes('EXTRATO')) {
-            const rubric = rubrics.find(r => r.name.toUpperCase().includes('TARIFA') || r.name.toUpperCase().includes('SERVIÇO'));
-            if (rubric) {
-                suggestedRubricId = rubric.id;
-                suggestedProgramId = rubric.program_id;
-            }
-        } else if (desc.includes('DOC') || desc.includes('TED') || desc.includes('PIX') || desc.includes('PAG')) {
-            const rubric = rubrics.find(r => r.name.toUpperCase().includes('CONSUMO') || r.name.toUpperCase().includes('SERVIÇO'));
-            if (rubric) {
-                suggestedRubricId = rubric.id;
-                suggestedProgramId = rubric.program_id;
-            }
+        const findRubric = (term: string) => rubrics.find((r: any) => r.name.toUpperCase().includes(term));
+
+        if (bt.extract_type === 'investimento' || desc.includes('RENDIMENTO') || desc.includes('APLIC')) {
+            const r = findRubric('RENDIMENTO') || findRubric('APLICAÇÃO');
+            if (r) { suggestedRubricId = r.id; suggestedProgramId = r.program_id; }
+        } else if (desc.includes('TARIFA') || desc.includes('CESTA')) {
+            const r = findRubric('TARIFA') || findRubric('SERVIÇO');
+            if (r) { suggestedRubricId = r.id; suggestedProgramId = r.program_id; }
         }
 
         setQuickCreateBT(bt);
@@ -333,42 +326,17 @@ export const useBankReconciliation = (user: User) => {
 
     const handleQuickCreate = async () => {
         if (!quickCreateBT || !selectedSchoolId || !selectedBankAccountId) return;
-
-        setIsMatching(true);
-        try {
-            const { error } = await supabase.from('financial_entries').insert({
-                school_id: selectedSchoolId,
-                bank_account_id: selectedBankAccountId,
-                date: quickCreateBT.date,
-                description: quickForm.description || quickCreateBT.description,
-                value: quickCreateBT.value,
-                type: quickCreateBT.type === 'C' ? 'Entrada' : 'Saída',
-                nature: quickForm.nature,
-                program_id: quickForm.program_id,
-                rubric_id: quickForm.rubric_id,
-                supplier_id: quickForm.supplier_id || null,
-                status: 'Pago',
-                is_reconciled: true,
-                reconciled_at: new Date().toISOString(),
-                bank_transaction_ref: quickCreateBT.fitid
-            });
-
-            if (error) throw error;
-
-            setTransactions(prev => prev.filter(t => t.id !== quickCreateBT.id));
-            setShowQuickCreate(false);
-            setQuickCreateBT(null);
-        } catch (error) {
-            alert('Erro ao criar lançamento: ' + (error as any).message);
-        } finally {
-            setIsMatching(false);
-        }
+        quickCreateMutation.mutate({ bt: quickCreateBT, form: quickForm }, {
+            onError: (err: any) => addToast('Erro: ' + err.message, 'error'),
+            onSuccess: () => addToast('Lançamento criado e conciliado!', 'success')
+        });
     };
 
     return {
         transactions, setTransactions,
         systemEntries,
-        loading, isMatching,
+        loading: isLoadingSystem,
+        isMatching: reconcileMutation.isPending || bulkReconcileMutation.isPending || quickCreateMutation.isPending,
         dragActive, setDragActive,
         schools, bankAccounts, programs, rubrics, suppliers,
         selectedSchoolId, setSelectedSchoolId,

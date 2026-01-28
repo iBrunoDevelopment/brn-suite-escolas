@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { User, UserRole, School, Permission, RolePermission } from '../types';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '../context/ToastContext';
 
 export interface SupportRequest {
     id: string;
@@ -26,9 +28,8 @@ export interface UserForm {
 }
 
 export const useUsers = (currentUser: User) => {
-    const [users, setUsers] = useState<User[]>([]);
-    const [schools, setSchools] = useState<School[]>([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
+    const { addToast } = useToast();
     const [showModal, setShowModal] = useState(false);
     const [editingUser, setEditingUser] = useState<UserForm | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -38,42 +39,16 @@ export const useUsers = (currentUser: User) => {
     const [activeTab, setActiveTab] = useState<'users' | 'approvals' | 'permissions' | 'support' | 'announcements' | 'closure'>('users');
     const [announcement, setAnnouncement] = useState({ title: '', message: '', target: 'all' as UserRole | 'all' });
     const [sendingNotice, setSendingNotice] = useState(false);
-    const [rolePermissions, setRolePermissions] = useState<RolePermission[]>([]);
-    const [isLoadingPerms, setIsLoadingPerms] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; userId: string | null }>({ isOpen: false, userId: null });
-    const [closureSummary, setClosureSummary] = useState<any[]>([]);
-    const [isCalculatingClosure, setIsCalculatingClosure] = useState(false);
     const [closurePeriodName, setClosurePeriodName] = useState('');
 
-    const [supportRequests, setSupportRequests] = useState<SupportRequest[]>([]);
-    const [counts, setCounts] = useState({ pendingUsers: 0, pendingSupport: 0 });
-
-    useEffect(() => {
-        fetchData();
-        fetchSchools();
-        fetchRolePermissions();
-    }, []);
-
-    useEffect(() => {
-        if (activeTab === 'closure') fetchClosureData();
-    }, [activeTab]);
-
-    const fetchData = async () => {
-        setLoading(true);
-        await Promise.all([fetchUsers(), fetchSupportRequests()]);
-        setLoading(false);
-    };
-
-    const fetchUsers = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('users')
-                .select('*')
-                .order('name');
-
+    // Queries
+    const { data: users = [], isLoading: isLoadingUsers } = useQuery({
+        queryKey: ['users'],
+        queryFn: async () => {
+            const { data, error } = await supabase.from('users').select('*').order('name');
             if (error) throw error;
-
-            const mappedUsers = data.map(u => ({
+            return data.map(u => ({
                 id: u.id,
                 name: u.name,
                 email: u.email,
@@ -83,70 +58,32 @@ export const useUsers = (currentUser: User) => {
                 active: u.active ?? true,
                 gee: u.gee,
                 avatar_url: u.avatar_url
-            }));
-            setUsers(mappedUsers);
-
-            const pending = mappedUsers.filter(u => u.active === false || (u.role === UserRole.CLIENTE && !u.schoolId)).length;
-            setCounts(prev => ({ ...prev, pendingUsers: pending }));
-        } catch (error) {
-            console.error('Erro ao carregar usuários:', error);
+            })) as User[];
         }
-    };
+    });
 
-    const fetchSupportRequests = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('support_requests')
-                .select('*')
-                .order('created_at', { ascending: false });
-
+    const { data: supportRequests = [], isLoading: isLoadingSupport } = useQuery({
+        queryKey: ['support_requests'],
+        queryFn: async () => {
+            const { data, error } = await supabase.from('support_requests').select('*').order('created_at', { ascending: false });
             if (error) throw error;
-            setSupportRequests(data || []);
-            setCounts(prev => ({ ...prev, pendingSupport: data?.filter(r => r.status === 'Pendente').length || 0 }));
-        } catch (error) {
-            console.error('Erro ao buscar suporte:', error);
+            return data as SupportRequest[];
         }
-    };
+    });
 
-    const handleSupportStatus = async (id: string, status: SupportRequest['status']) => {
-        try {
-            const { error } = await supabase
-                .from('support_requests')
-                .update({ status })
-                .eq('id', id);
-
+    const { data: schools = [] } = useQuery({
+        queryKey: ['schools'],
+        queryFn: async () => {
+            const { data, error } = await supabase.from('schools').select('*').order('name');
             if (error) throw error;
-
-            const newRequests = supportRequests.map(r => r.id === id ? { ...r, status } : r);
-            setSupportRequests(newRequests);
-            setCounts(prev => ({ ...prev, pendingSupport: newRequests.filter(r => r.status === 'Pendente').length || 0 }));
-        } catch (error) {
-            console.error('Erro ao atualizar suporte:', error);
+            return data as School[];
         }
-    };
+    });
 
-    const fetchSchools = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('schools')
-                .select('*')
-                .order('name');
-
-            if (error) throw error;
-            setSchools(data || []);
-        } catch (error) {
-            console.error('Erro ao carregar escolas:', error);
-        }
-    };
-
-    const fetchRolePermissions = async () => {
-        setIsLoadingPerms(true);
-        try {
-            const { data, error } = await supabase
-                .from('role_permissions')
-                .select('*')
-                .order('role', { ascending: true });
-
+    const { data: rolePermissions = [], isLoading: isLoadingPerms } = useQuery({
+        queryKey: ['role_permissions'],
+        queryFn: async () => {
+            const { data, error } = await supabase.from('role_permissions').select('*').order('role', { ascending: true });
             if (error) throw error;
 
             if (!data || data.length === 0) {
@@ -179,23 +116,97 @@ export const useUsers = (currentUser: User) => {
                 ];
                 const { data: newData, error: insertError } = await supabase.from('role_permissions').upsert(defaults, { onConflict: 'role, resource' }).select();
                 if (insertError) throw insertError;
-                setRolePermissions(newData || []);
-            } else {
-                setRolePermissions(data);
+                return newData || [];
             }
-        } catch (error: any) {
-            console.error('Erro ao buscar/criar permissões:', error);
-        } finally {
-            setIsLoadingPerms(false);
+            return data;
         }
-    };
+    });
 
-    const handleTogglePermission = async (role: UserRole, resource: RolePermission['resource'], field: string) => {
-        const dbField = field === 'canView' ? 'can_view' : field === 'canCreate' ? 'can_create' : field === 'canEdit' ? 'can_edit' : 'can_delete';
-        const existing = rolePermissions.find(rp => rp.role === role && rp.resource === resource);
-        const newValue = existing ? !(existing as any)[dbField] : true;
+    const { data: closureSummary = [], isLoading: isCalculatingClosure } = useQuery({
+        queryKey: ['closure_summary'],
+        queryFn: async () => {
+            const [entriesRes, reprogRes] = await Promise.all([
+                supabase.from('financial_entries').select('school_id, program_id, value, type'),
+                supabase.from('reprogrammed_balances').select('school_id, program_id, value')
+            ]);
+            const entries = entriesRes.data || [];
+            const reprogs = reprogRes.data || [];
+            const map = new Map();
 
-        try {
+            reprogs.forEach(r => {
+                const key = `${r.school_id}-${r.program_id}`;
+                if (!map.has(key)) map.set(key, { school_id: r.school_id, program_id: r.program_id, balance: 0 });
+                map.get(key).balance += Number(r.value);
+            });
+
+            entries.forEach(e => {
+                const key = `${e.school_id}-${e.program_id}`;
+                if (!map.has(key)) map.set(key, { school_id: e.school_id, program_id: e.program_id, balance: 0 });
+                const val = Number(e.value);
+                if (e.type === 'Entrada') map.get(key).balance += val;
+                else map.get(key).balance -= val;
+            });
+
+            return Array.from(map.values());
+        },
+        enabled: activeTab === 'closure'
+    });
+
+    // Mutations
+    const saveUserMutation = useMutation({
+        mutationFn: async (userData: any) => {
+            if (userData.id) {
+                const { error } = await supabase.from('users').update(userData).eq('id', userData.id);
+                if (error) throw error;
+            } else {
+                const { error } = await supabase.from('users').insert([userData]);
+                if (error) throw error;
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['users'] });
+            setShowModal(false);
+            setEditingUser(null);
+        }
+    });
+
+    const deleteUserMutation = useMutation({
+        mutationFn: async (userId: string) => {
+            const { error } = await supabase.from('users').delete().eq('id', userId);
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['users'] });
+            setConfirmDelete({ isOpen: false, userId: null });
+        }
+    });
+
+    const toggleStatusMutation = useMutation({
+        mutationFn: async ({ userId, active }: { userId: string, active: boolean }) => {
+            const { error } = await supabase.from('users').update({ active }).eq('id', userId);
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['users'] });
+        }
+    });
+
+    const updateSupportStatusMutation = useMutation({
+        mutationFn: async ({ id, status }: { id: string, status: SupportRequest['status'] }) => {
+            const { error } = await supabase.from('support_requests').update({ status }).eq('id', id);
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['support_requests'] });
+        }
+    });
+
+    const togglePermissionMutation = useMutation({
+        mutationFn: async ({ role, resource, field }: { role: UserRole, resource: RolePermission['resource'], field: string }) => {
+            const dbField = field === 'canView' ? 'can_view' : field === 'canCreate' ? 'can_create' : field === 'canEdit' ? 'can_edit' : 'can_delete';
+            const existing = rolePermissions.find(rp => rp.role === role && rp.resource === resource);
+            const newValue = existing ? !(existing as any)[dbField] : true;
+
             if (existing) {
                 const { error } = await supabase.from('role_permissions').update({ [dbField]: newValue }).eq('id', existing.id);
                 if (error) throw error;
@@ -203,16 +214,14 @@ export const useUsers = (currentUser: User) => {
                 const { error } = await supabase.from('role_permissions').insert([{ role, resource, [dbField]: newValue }]);
                 if (error) throw error;
             }
-            fetchRolePermissions();
-        } catch (error) {
-            console.error('Erro ao salvar permissão:', error);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['role_permissions'] });
         }
-    };
+    });
 
-    const handleResetPermissions = async () => {
-        if (!confirm('Deseja redefinir todas as permissões para os padrões do sistema?')) return;
-        setIsLoadingPerms(true);
-        try {
+    const resetPermissionsMutation = useMutation({
+        mutationFn: async () => {
             const defaults = [
                 { role: 'Administrador', resource: 'entries', can_view: true, can_create: true, can_edit: true, can_delete: true },
                 { role: 'Administrador', resource: 'schools', can_view: true, can_create: true, can_edit: true, can_delete: true },
@@ -242,129 +251,17 @@ export const useUsers = (currentUser: User) => {
             ];
             const { error } = await supabase.from('role_permissions').upsert(defaults, { onConflict: 'role, resource' });
             if (error) throw error;
-            fetchRolePermissions();
-        } catch (error: any) {
-            console.error('Erro ao resetar permissões:', error);
-        } finally {
-            setIsLoadingPerms(false);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['role_permissions'] });
         }
-    };
+    });
 
-    const handleSendAnnouncement = async () => {
-        if (!announcement.title || !announcement.message) return alert('Preencha o título e a mensagem.');
-        setSendingNotice(true);
-        try {
-            let targetUsers = users;
-            if (announcement.target !== 'all') targetUsers = users.filter(u => u.role === announcement.target);
-            const notifications = targetUsers.map(u => ({ user_id: u.id, title: announcement.title, message: announcement.message, type: 'info' }));
-            const { error } = await supabase.from('notifications').insert(notifications);
-            if (error) throw error;
-            alert('Comunicado enviado!');
-            setAnnouncement({ title: '', message: '', target: 'all' });
-        } catch (error: any) {
-            alert('Erro: ' + error.message);
-        } finally {
-            setSendingNotice(false);
-        }
-    };
-
-    const handleSaveUser = async () => {
-        if (!editingUser) return;
-        if (!editingUser.name.trim() || !editingUser.email.trim()) return alert('Nome e Email são obrigatórios');
-
-        try {
-            const userData = {
-                name: editingUser.name.trim(),
-                email: editingUser.email.trim().toLowerCase(),
-                role: editingUser.role,
-                school_id: (editingUser.role === UserRole.DIRETOR || editingUser.role === UserRole.CLIENTE) ? editingUser.schoolId : null,
-                gee: editingUser.role === UserRole.TECNICO_GEE ? editingUser.gee : null,
-                assigned_schools: editingUser.role === UserRole.TECNICO_GEE ? editingUser.assignedSchools : null,
-                active: editingUser.active,
-                avatar_url: editingUser.avatar_url
-            };
-
-            if (editingUser.id) {
-                const { error } = await supabase.from('users').update(userData).eq('id', editingUser.id);
-                if (error) throw error;
-            } else {
-                const { error } = await supabase.from('users').insert([userData]);
-                if (error) throw error;
-            }
-
-            setShowModal(false);
-            setEditingUser(null);
-            fetchUsers();
-        } catch (error: any) {
-            alert('Erro ao salvar: ' + error.message);
-        }
-    };
-
-    const processDelete = async () => {
-        if (!confirmDelete.userId) return;
-        try {
-            const { error } = await supabase.from('users').delete().eq('id', confirmDelete.userId);
-            if (error) throw error;
-            fetchUsers();
-            setConfirmDelete({ isOpen: false, userId: null });
-        } catch (error: any) {
-            alert('Erro ao excluir: ' + error.message);
-        }
-    };
-
-    const handleToggleStatus = async (userId: string, currentStatus: boolean) => {
-        if (userId === currentUser.id) return;
-        try {
-            const { error } = await supabase.from('users').update({ active: !currentStatus }).eq('id', userId);
-            if (error) throw error;
-            fetchUsers();
-        } catch (error: any) {
-            alert('Erro ao alterar status: ' + error.message);
-        }
-    };
-
-    const fetchClosureData = async () => {
-        setIsCalculatingClosure(true);
-        try {
-            const [entriesRes, reprogRes] = await Promise.all([
-                supabase.from('financial_entries').select('school_id, program_id, value, type'),
-                supabase.from('reprogrammed_balances').select('school_id, program_id, value')
-            ]);
-            const entries = entriesRes.data || [];
-            const reprogs = reprogRes.data || [];
-            const map = new Map();
-
-            reprogs.forEach(r => {
-                const key = `${r.school_id}-${r.program_id}`;
-                if (!map.has(key)) map.set(key, { school_id: r.school_id, program_id: r.program_id, balance: 0 });
-                map.get(key).balance += Number(r.value);
-            });
-
-            entries.forEach(e => {
-                const key = `${e.school_id}-${e.program_id}`;
-                if (!map.has(key)) map.set(key, { school_id: e.school_id, program_id: e.program_id, balance: 0 });
-                const val = Number(e.value);
-                if (e.type === 'Entrada') map.get(key).balance += val;
-                else map.get(key).balance -= val;
-            });
-
-            setClosureSummary(Array.from(map.values()));
-        } catch (error) {
-            console.error('Erro ao calcular encerramento:', error);
-        } finally {
-            setIsCalculatingClosure(false);
-        }
-    };
-
-    const handleExecuteClosure = async () => {
-        if (!closurePeriodName.trim()) return alert('Informe o nome do novo período');
-        if (!confirm(`Deseja realizar o encerramento do exercício atual?`)) return;
-
-        setIsCalculatingClosure(true);
-        try {
+    const executeClosureMutation = useMutation({
+        mutationFn: async () => {
             const inserts = closureSummary
-                .filter(c => c.balance > 0)
-                .map(c => ({ school_id: c.school_id, program_id: c.program_id, period: closurePeriodName, value: c.balance, nature: 'Custeio' }));
+                .filter((c: any) => c.balance > 0)
+                .map((c: any) => ({ school_id: c.school_id, program_id: c.program_id, period: closurePeriodName, value: c.balance, nature: 'Custeio' }));
 
             if (inserts.length > 0) {
                 const { error } = await supabase.from('reprogrammed_balances').insert(inserts);
@@ -372,24 +269,130 @@ export const useUsers = (currentUser: User) => {
             }
 
             await supabase.from('periods').insert([{ name: closurePeriodName, is_active: true }]);
-            alert('Encerramento realizado!');
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['closure_summary'] });
             setClosurePeriodName('');
-            fetchClosureData();
+            addToast('Encerramento realizado!', 'success');
+        }
+    });
+
+    // Helper counts
+    const counts = {
+        pendingUsers: users.filter(u => u.active === false || (u.role === UserRole.CLIENTE && !u.schoolId)).length,
+        pendingSupport: supportRequests.filter(r => r.status === 'Pendente').length
+    };
+
+    // Public Handlers
+    const handleSaveUser = async () => {
+        if (!editingUser) return;
+        if (!editingUser.name.trim() || !editingUser.email.trim()) return addToast('Nome e Email são obrigatórios', 'warning');
+
+        const userData = {
+            id: editingUser.id,
+            name: editingUser.name.trim(),
+            email: editingUser.email.trim().toLowerCase(),
+            role: editingUser.role,
+            school_id: (editingUser.role === UserRole.DIRETOR || editingUser.role === UserRole.CLIENTE) ? editingUser.schoolId : null,
+            gee: editingUser.role === UserRole.TECNICO_GEE ? editingUser.gee : null,
+            assigned_schools: editingUser.role === UserRole.TECNICO_GEE ? editingUser.assignedSchools : null,
+            active: editingUser.active,
+            avatar_url: editingUser.avatar_url
+        };
+
+        saveUserMutation.mutate(userData, {
+            onError: (err: any) => addToast('Erro ao salvar: ' + err.message, 'error'),
+            onSuccess: () => addToast('Usuário salvo com sucesso!', 'success')
+        });
+    };
+
+    const processDelete = async () => {
+        if (!confirmDelete.userId) return;
+        deleteUserMutation.mutate(confirmDelete.userId, {
+            onError: (err: any) => addToast('Erro ao excluir: ' + err.message, 'error'),
+            onSuccess: () => addToast('Usuário excluído!', 'success')
+        });
+    };
+
+    const handleToggleStatus = async (userId: string, currentStatus: boolean) => {
+        if (userId === currentUser.id) return;
+        toggleStatusMutation.mutate({ userId, active: !currentStatus }, {
+            onError: (err: any) => addToast('Erro ao alterar status: ' + err.message, 'error'),
+            onSuccess: () => addToast('Status alterado!', 'success')
+        });
+    };
+
+    const handleSupportStatus = (id: string, status: SupportRequest['status']) => {
+        updateSupportStatusMutation.mutate({ id, status }, {
+            onError: (err: any) => addToast('Erro ao atualizar suporte: ' + err.message, 'error'),
+            onSuccess: () => addToast('Status de suporte atualizado!', 'success')
+        });
+    };
+
+    const handleTogglePermission = (role: UserRole, resource: RolePermission['resource'], field: string) => {
+        togglePermissionMutation.mutate({ role, resource, field }, {
+            onError: (err: any) => addToast('Erro ao salvar permissão: ' + err.message, 'error')
+        });
+    };
+
+    const handleResetPermissions = () => {
+        if (!confirm('Deseja redefinir todas as permissões para os padrões do sistema?')) return;
+        resetPermissionsMutation.mutate(undefined, {
+            onError: (err: any) => addToast('Erro ao resetar permissões: ' + err.message, 'error'),
+            onSuccess: () => addToast('Permissões redefinidas!', 'success')
+        });
+    };
+
+    const handleSendAnnouncement = async () => {
+        if (!announcement.title || !announcement.message) return addToast('Preencha o título e a mensagem.', 'warning');
+        setSendingNotice(true);
+        try {
+            let targetUsers = users;
+            if (announcement.target !== 'all') targetUsers = users.filter(u => u.role === announcement.target);
+            const notifications = targetUsers.map(u => ({ user_id: u.id, title: announcement.title, message: announcement.message, type: 'info' }));
+            const { error } = await supabase.from('notifications').insert(notifications);
+            if (error) throw error;
+            addToast('Comunicado enviado!', 'success');
+            setAnnouncement({ title: '', message: '', target: 'all' });
         } catch (error: any) {
-            alert('Erro: ' + error.message);
+            addToast('Erro: ' + error.message, 'error');
         } finally {
-            setIsCalculatingClosure(false);
+            setSendingNotice(false);
         }
     };
 
+    const handleExecuteClosure = async () => {
+        if (!closurePeriodName.trim()) return addToast('Informe o nome do novo período', 'warning');
+        if (!confirm(`Deseja realizar o encerramento do exercício atual?`)) return;
+        executeClosureMutation.mutate(undefined, {
+            onError: (err: any) => addToast('Erro: ' + err.message, 'error')
+        });
+    };
+
     return {
-        users, setUsers, schools, loading, showModal, setShowModal, editingUser, setEditingUser,
-        searchTerm, setSearchTerm, filterRole, setFilterRole, filterStatus, setFilterStatus,
-        uploading, setUploading, activeTab, setActiveTab, announcement, setAnnouncement,
-        sendingNotice, rolePermissions, isLoadingPerms, confirmDelete, setConfirmDelete,
-        closureSummary, isCalculatingClosure, closurePeriodName, setClosurePeriodName,
-        supportRequests, counts,
-        handleSupportStatus, handleTogglePermission, handleResetPermissions, handleSendAnnouncement,
-        handleSaveUser, processDelete, handleToggleStatus, handleExecuteClosure, fetchClosureData
+        users, schools, supportRequests, rolePermissions, closureSummary,
+        loading: isLoadingUsers || isLoadingSupport,
+        isLoadingPerms,
+        isCalculatingClosure,
+        showModal, setShowModal,
+        editingUser, setEditingUser,
+        searchTerm, setSearchTerm,
+        filterRole, setFilterRole,
+        filterStatus, setFilterStatus,
+        uploading, setUploading,
+        activeTab, setActiveTab,
+        announcement, setAnnouncement,
+        sendingNotice,
+        confirmDelete, setConfirmDelete,
+        closurePeriodName, setClosurePeriodName,
+        counts,
+        handleSupportStatus,
+        handleTogglePermission,
+        handleResetPermissions,
+        handleSendAnnouncement,
+        handleSaveUser,
+        processDelete,
+        handleToggleStatus,
+        handleExecuteClosure
     };
 };

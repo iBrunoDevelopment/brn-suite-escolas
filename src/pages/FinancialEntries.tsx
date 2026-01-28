@@ -7,9 +7,10 @@ import { usePermissions, useAccessibleSchools } from '../hooks/usePermissions';
 import StatsCards from '../components/financial/StatsCards';
 import FilterBar from '../components/financial/FilterBar';
 import FinancialTable from '../components/financial/FinancialTable';
-import { useFinancialEntries } from '../hooks/useFinancialEntries';
+import { useFinancialEntries, FinancialEntryExtended } from '../hooks/useFinancialEntries';
 import ReprogrammedBalancesModal from '../components/financial/ReprogrammedBalancesModal';
 import EntryFormModal from '../components/financial/EntryFormModal';
+import { useToast } from '../context/ToastContext';
 
 const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
     // Search and Filter States
@@ -53,37 +54,47 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
     const entryPerm = usePermissions(user, 'entries');
     const accessibleSchools = useAccessibleSchools(user, schools);
 
-    // Filter Debounce
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            refresh({ ...filters, quick: quickFilter });
-        }, 300);
-        return () => clearTimeout(timer);
-    }, [filters, quickFilter, refresh]);
+    const { addToast } = useToast();
 
     // Handlers
-    const handleEdit = (id: string, batchId?: string) => {
-        setEditingId(id);
-        setEditingBatchId(batchId || null);
+    const handleEdit = (entry: FinancialEntryExtended) => {
+        setEditingId(entry.id);
+        setEditingBatchId(entry.batch_id || null);
         setShowForm(true);
     };
 
-    const handleDelete = async (id: string, batchId?: string) => {
+    const handleDelete = async (entry: FinancialEntryExtended) => {
         if (!confirm('Excluir este lançamento?')) return;
-        const { error } = batchId
-            ? await supabase.from('financial_entries').delete().eq('batch_id', batchId)
-            : await supabase.from('financial_entries').delete().eq('id', id);
+        const { error } = entry.batch_id
+            ? await supabase.from('financial_entries').delete().eq('batch_id', entry.batch_id)
+            : await supabase.from('financial_entries').delete().eq('id', entry.id);
 
-        if (error) alert(`Erro: ${error.message}`);
-        refresh({ ...filters, quick: quickFilter });
+        if (error) {
+            addToast(`Erro: ${error.message}`, 'error');
+        } else {
+            addToast('Lançamento excluído com sucesso', 'success');
+            refresh();
+        }
+    };
+
+    const onToggleSelect = (id: string) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    };
+
+    const onToggleSelectAll = () => {
+        setSelectedIds(prev => prev.length === entries.length ? [] : entries.map(e => e.id));
     };
 
     const handleBulkDelete = async () => {
         if (!confirm(`Excluir ${selectedIds.length} lançamentos selecionados?`)) return;
         const { error } = await supabase.from('financial_entries').delete().in('id', selectedIds);
-        if (error) alert(`Erro: ${error.message}`);
-        setSelectedIds([]);
-        refresh({ ...filters, quick: quickFilter });
+        if (error) {
+            addToast(`Erro: ${error.message}`, 'error');
+        } else {
+            addToast(`${selectedIds.length} lançamentos excluídos!`, 'success');
+            setSelectedIds([]);
+            refresh();
+        }
     };
 
     const handleExport = async () => {
@@ -102,7 +113,11 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
     const reconcileEntries = async (ids: string[]) => {
         if (!confirm(`Deseja conciliar ${ids.length} lançamentos selecionados?`)) return;
         const { error } = await supabase.from('financial_entries').update({ status: TransactionStatus.CONCILIADO }).in('id', ids);
-        if (error) alert(`Erro: ${error.message}`);
+        if (error) {
+            addToast(`Erro: ${error.message}`, 'error');
+        } else {
+            addToast(`${ids.length} lançamentos conciliados`, 'success');
+        }
         setSelectedIds([]);
         refresh({ ...filters, quick: quickFilter });
     };
@@ -138,15 +153,6 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                         <span className="material-symbols-outlined">restart_alt</span>
                         Saldos Reprogramados
                     </button>
-                    <button
-                        onClick={handleExport}
-                        disabled={isExporting}
-                        className="w-12 h-12 md:w-auto md:px-4 bg-surface-dark hover:bg-emerald-500/10 text-slate-400 hover:text-emerald-400 rounded-2xl flex items-center justify-center border border-white/5 transition-all group"
-                        title="Exportar Relatório"
-                    >
-                        <span className="material-symbols-outlined">{isExporting ? 'sync' : 'picture_as_pdf'}</span>
-                        <span className="hidden md:block ml-2 font-bold uppercase text-[10px]">PDF</span>
-                    </button>
                 </div>
             </div>
 
@@ -164,28 +170,33 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                         showFilters={showFilters}
                         setShowFilters={setShowFilters}
                         auxData={auxData}
+                        onPrintReport={handleExport}
+                        onExportCSV={handleExport}
                     />
 
                     <FinancialTable
                         entries={entries}
                         loading={loading}
                         selectedIds={selectedIds}
-                        setSelectedIds={setSelectedIds}
+                        canEdit={entryPerm.canEdit}
+                        isAdmin={user.role === UserRole.ADMIN}
+                        onToggleSelect={onToggleSelect}
+                        onToggleSelectAll={onToggleSelectAll}
                         onEdit={handleEdit}
                         onDelete={handleDelete}
-                        onReconcile={(id) => reconcileEntries([id])}
+                        onConciliate={(id) => reconcileEntries([id])}
                     />
                 </div>
             </div>
 
             {/* Selection Toolbar (Floating) */}
             {selectedIds.length > 0 && (
-                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[#0f172a] border border-primary/30 px-6 py-4 rounded-3xl shadow-2xl shadow-primary/20 flex items-center gap-8 z-40 animate-in slide-in-from-bottom-8">
+                <div className="fixed bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 bg-[#0f172a] border border-primary/30 w-[95%] md:w-auto px-4 py-3 md:px-6 md:py-4 rounded-3xl shadow-2xl shadow-primary/20 flex flex-row items-center justify-between md:justify-center gap-3 md:gap-8 z-40 animate-in slide-in-from-bottom-8">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-black">
+                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-black shrink-0">
                             {selectedIds.length}
                         </div>
-                        <span className="text-white font-bold text-sm tracking-tight">Selecionados</span>
+                        <span className="hidden md:inline text-white font-bold text-sm tracking-tight">Selecionados</span>
                     </div>
                     <div className="h-8 w-px bg-white/10" />
                     <div className="flex items-center gap-2">

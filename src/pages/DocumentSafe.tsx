@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { User, UserRole, TransactionNature } from '../types';
 import { usePermissions, useAccessibleSchools } from '../hooks/usePermissions';
+import { useToast } from '../context/ToastContext';
 
 interface DocumentFile {
     id: string;
@@ -36,6 +37,7 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
     const [filterCategory, setFilterCategory] = useState('');
     const [filterSchool, setFilterSchool] = useState('');
     const [filterProcess, setFilterProcess] = useState('');
+    const { addToast } = useToast();
     const [schools, setSchools] = useState<any[]>([]);
     const [processes, setProcesses] = useState<any[]>([]);
     const [selectedDoc, setSelectedDoc] = useState<DocumentFile | null>(null);
@@ -132,7 +134,7 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
             fetchDocuments(); // Refresh list
             setShowChecklist(false);
         } catch (error) {
-            alert('Erro ao salvar conferência: ' + (error as any).message);
+            addToast('Erro ao salvar conferência: ' + (error as any).message, 'error');
         } finally {
             setIsSavingChecklist(false);
         }
@@ -182,7 +184,7 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                     </div>
                     <span className="text-3xl font-black text-white">{stats.total}</span>
                     <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden mt-2">
-                        <div className="h-full bg-slate-500" style={{ width: '100%' }}></div>
+                        <div className="h-full bg-slate-500 w-full"></div>
                     </div>
                 </div>
                 <div className="bg-emerald-500/5 border border-emerald-500/10 p-6 rounded-3xl flex flex-col gap-2">
@@ -191,9 +193,11 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                         <span className="material-symbols-outlined text-emerald-500">task_alt</span>
                     </div>
                     <span className="text-3xl font-black text-emerald-400">{stats.checked}</span>
-                    <div className="h-1.5 w-full bg-emerald-500/10 rounded-full overflow-hidden mt-2">
-                        <div className="h-full bg-emerald-500" style={{ width: `${(stats.checked / (stats.total || 1)) * 100}%` }}></div>
-                    </div>
+                    <progress
+                        value={stats.checked}
+                        max={stats.total || 1}
+                        className="w-full h-1.5 rounded-full overflow-hidden mt-2 appearance-none [&::-webkit-progress-bar]:bg-emerald-500/10 [&::-webkit-progress-value]:bg-emerald-500 [&::-moz-progress-bar]:bg-emerald-500"
+                    />
                 </div>
                 <div className="bg-amber-500/5 border border-amber-500/10 p-6 rounded-3xl flex flex-col gap-2">
                     <div className="flex justify-between items-center">
@@ -201,9 +205,11 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                         <span className="material-symbols-outlined text-amber-500">pending_actions</span>
                     </div>
                     <span className="text-3xl font-black text-amber-400">{stats.pending}</span>
-                    <div className="h-1.5 w-full bg-amber-500/10 rounded-full overflow-hidden mt-2">
-                        <div className="h-full bg-amber-500" style={{ width: `${(stats.pending / (stats.total || 1)) * 100}%` }}></div>
-                    </div>
+                    <progress
+                        value={stats.pending}
+                        max={stats.total || 1}
+                        className="w-full h-1.5 rounded-full overflow-hidden mt-2 appearance-none [&::-webkit-progress-bar]:bg-amber-500/10 [&::-webkit-progress-value]:bg-amber-500 [&::-moz-progress-bar]:bg-amber-500"
+                    />
                 </div>
             </div>
 
@@ -223,6 +229,7 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Categoria</label>
                     <select
                         value={filterCategory}
+                        aria-label="Filtrar por Categoria"
                         onChange={e => setFilterCategory(e.target.value)}
                         className="bg-surface-dark border border-surface-border rounded-xl px-4 py-2 text-xs text-white outline-none"
                     >
@@ -234,6 +241,7 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Escola</label>
                     <select
                         value={filterSchool}
+                        aria-label="Filtrar por Escola"
                         onChange={e => { setFilterSchool(e.target.value); setFilterProcess(''); }}
                         className="bg-surface-dark border border-surface-border rounded-xl px-4 py-2 text-xs text-white outline-none"
                     >
@@ -245,6 +253,7 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Prestação (Processo)</label>
                     <select
                         value={filterProcess}
+                        aria-label="Filtrar por Prestação de Contas"
                         onChange={e => setFilterProcess(e.target.value)}
                         className="bg-surface-dark border border-surface-border rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-indigo-500"
                     >

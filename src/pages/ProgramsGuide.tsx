@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { printDocument } from '../lib/printUtils';
 import { generateAtaHTML, generateOrdemHTML, generateConsolidacaoHTML } from '../lib/documentTemplates';
+import { useToast } from '../context/ToastContext';
 
 interface ProgramsGuideProps {
     onBack: () => void;
 }
 
 const ProgramsGuide: React.FC<ProgramsGuideProps> = ({ onBack }) => {
+    const { addToast } = useToast();
     const [activeTab, setActiveTab] = useState<'federal' | 'estadual' | 'execucao'>('federal');
 
     const handleDownload = (type: 'ata' | 'ordem' | 'consolidacao') => {
@@ -126,10 +128,10 @@ const ProgramsGuide: React.FC<ProgramsGuideProps> = ({ onBack }) => {
                                     em caráter suplementar, a fim de contribuir para manutenção e melhoria da infraestrutura física e pedagógica.
                                 </p>
                                 <div className="flex flex-wrap gap-4">
-                                    <a href="https://www.gov.br/fnde/pt-br/acesso-a-informacao/acoes-e-programas/financiamento/pdde" target="_blank" className="btn-outline">
+                                    <a href="https://www.gov.br/fnde/pt-br/acesso-a-informacao/acoes-e-programas/financiamento/pdde" target="_blank" rel="noopener noreferrer" className="btn-outline">
                                         Portal do FNDE
                                     </a>
-                                    <a href="https://www.fnde.gov.br/index.php/programas/pdde/area-para-gestores/manuais-e-orientacoes-pdde" target="_blank" className="btn-outline">
+                                    <a href="https://www.fnde.gov.br/index.php/programas/pdde/area-para-gestores/manuais-e-orientacoes-pdde" target="_blank" rel="noopener noreferrer" className="btn-outline">
                                         Manuais Oficiais
                                     </a>
                                 </div>
@@ -335,13 +337,13 @@ const ProgramsGuide: React.FC<ProgramsGuideProps> = ({ onBack }) => {
                             <h3 className="text-2xl font-black text-white mb-8 text-center">Documentos e Modelos Úteis</h3>
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                 <DocButton icon="group" label="Modelo de Ata de Reunião" onClick={() => handleDownload('ata')} />
-                                <DocButton icon="request_quote" label="Planilha de Pesquisa de Preço" onClick={() => alert('Modelo disponível no portal FNDE.')} />
-                                <DocButton icon="gavel" label="Termo de Referência" onClick={() => alert('Modelo disponível no portal FNDE.')} />
-                                <DocButton icon="inventory" label="Termo de Doação (Capital)" onClick={() => alert('Modelo em desenvolvimento.')} />
+                                <DocButton icon="request_quote" label="Planilha de Pesquisa de Preço" onClick={() => addToast('Modelo disponível no portal FNDE.', 'info')} />
+                                <DocButton icon="gavel" label="Termo de Referência" onClick={() => addToast('Modelo disponível no portal FNDE.', 'info')} />
+                                <DocButton icon="inventory" label="Termo de Doação (Capital)" onClick={() => addToast('Modelo em desenvolvimento.', 'info')} />
                                 <DocButton icon="shopping_cart_checkout" label="Ordem de Compra/Serviço" onClick={() => handleDownload('ordem')} />
                                 <DocButton icon="analytics" label="Consolidação de Preços" onClick={() => handleDownload('consolidacao')} />
-                                <DocButton icon="check_circle" label="Atestado de Recebimento" onClick={() => alert('Utilize o carimbo no verso da Nota Fiscal.')} />
-                                <DocButton icon="rule" label="Parecer do Conselho Fiscal" onClick={() => alert('Modelo em desenvolvimento.')} />
+                                <DocButton icon="check_circle" label="Atestado de Recebimento" onClick={() => addToast('Utilize o carimbo no verso da Nota Fiscal.', 'info')} />
+                                <DocButton icon="rule" label="Parecer do Conselho Fiscal" onClick={() => addToast('Modelo em desenvolvimento.', 'info')} />
                             </div>
                         </div>
 

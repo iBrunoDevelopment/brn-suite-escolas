@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { User, ContractSignature } from '../types';
+import { useToast } from '../context/ToastContext';
 
 interface ContractProps {
     user: User;
@@ -12,6 +13,7 @@ const Contract: React.FC<ContractProps> = ({ user, onSigned }) => {
     const [signed, setSigned] = useState(false);
     const [signatureData, setSignatureData] = useState<ContractSignature | null>(null);
     const [ip, setIp] = useState('');
+    const { addToast } = useToast();
 
     useEffect(() => {
         checkSignature();
@@ -57,15 +59,14 @@ const Contract: React.FC<ContractProps> = ({ user, onSigned }) => {
             });
 
             if (error) throw error;
-
-            alert('Contrato assinado com sucesso! O acesso ao sistema está liberado.');
+            addToast('Contrato assinado com sucesso! O acesso ao sistema está liberado.', 'success');
             setSigned(true);
             checkSignature();
             if (onSigned) onSigned();
 
         } catch (error: any) {
             console.error(error);
-            alert('Erro ao assinar contrato: ' + error.message);
+            addToast('Erro ao assinar contrato: ' + error.message, 'error');
         } finally {
             setLoading(false);
         }

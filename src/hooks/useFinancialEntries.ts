@@ -1,7 +1,7 @@
-
-import { useState, useEffect, useCallback } from 'react';
+import { useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { TransactionStatus, TransactionNature, User, UserRole } from '../types';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export interface FinancialEntryExtended {
     id: string;
@@ -31,65 +31,60 @@ export interface FinancialEntryExtended {
     attachments?: any[];
 }
 
-export function useFinancialEntries(user: User, initialFilters: any = {}) {
-    const [entries, setEntries] = useState<FinancialEntryExtended[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState({
-        income: 0,
-        expense: 0,
-        balance: 0,
-        pending: 0,
-        repasses: 0,
-        rendimentos: 0,
-        tarifas: 0,
-        impostosDevolucoes: 0
+export function useFinancialEntries(user: User, filters: any = {}) {
+    const queryClient = useQueryClient();
+
+    // Query for Auxiliary Data
+    const { data: auxData = {
+        schools: [],
+        programs: [],
+        rubrics: [],
+        suppliers: [],
+        bankAccounts: [],
+        paymentMethods: [],
+        periods: []
+    } } = useQuery({
+        queryKey: ['aux_data'],
+        queryFn: async () => {
+            const [s, p, r, sup, b, pm, per] = await Promise.all([
+                supabase.from('schools').select('id, name').order('name'),
+                supabase.from('programs').select('id, name').order('name'),
+                supabase.from('rubrics').select('id, name, program_id, default_nature, school_id').order('name'),
+                supabase.from('suppliers').select('id, name').order('name'),
+                supabase.from('bank_accounts').select('id, name, program_id, school_id, account_number, bank_name, agency').order('name'),
+                supabase.from('payment_methods').select('id, name').order('name'),
+                supabase.from('periods').select('name, is_active').order('name', { ascending: false })
+            ]);
+
+            return {
+                schools: s.data || [],
+                programs: p.data || [],
+                rubrics: r.data || [],
+                suppliers: sup.data || [],
+                bankAccounts: b.data || [],
+                paymentMethods: pm.data || [],
+                periods: per.data || []
+            };
+        },
+        staleTime: 1000 * 60 * 30 // Aux data changes rarely
     });
 
-    // Aux Data
-    const [schools, setSchools] = useState<any[]>([]);
-    const [programs, setPrograms] = useState<any[]>([]);
-    const [rubrics, setRubrics] = useState<any[]>([]);
-    const [suppliers, setSuppliers] = useState<any[]>([]);
-    const [bankAccounts, setBankAccounts] = useState<any[]>([]);
-    const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
-    const [reprogrammedBalances, setReprogrammedBalances] = useState<any[]>([]);
-    const [periods, setPeriods] = useState<any[]>([]);
+    // Query for Reprogrammed Balances
+    const { data: reprogrammedBalances = [] } = useQuery({
+        queryKey: ['reprogrammed_balances'],
+        queryFn: async () => {
+            const { data, error } = await supabase.from('reprogrammed_balances').select(`
+                *, schools(name), programs(name), rubrics(name)
+            `).order('period', { ascending: false });
+            if (error) throw error;
+            return data || [];
+        }
+    });
 
-    const fetchAuxData = useCallback(async () => {
-        const [s, p, r, sup, b, pm] = await Promise.all([
-            supabase.from('schools').select('id, name').order('name'),
-            supabase.from('programs').select('id, name').order('name'),
-            supabase.from('rubrics').select('id, name, program_id, default_nature, school_id').order('name'),
-            supabase.from('suppliers').select('id, name').order('name'),
-            supabase.from('bank_accounts').select('id, name, program_id, school_id, account_number, bank_name, agency').order('name'),
-            supabase.from('payment_methods').select('id, name').order('name'),
-        ]);
-
-        if (s.data) setSchools(s.data);
-        if (p.data) setPrograms(p.data);
-        if (r.data) setRubrics(r.data);
-        if (sup.data) setSuppliers(sup.data);
-        if (b.data) setBankAccounts(b.data);
-        if (pm.data) setPaymentMethods(pm.data);
-
-        // Fetch Periods
-        const { data: per } = await supabase.from('periods').select('name, is_active').order('name', { ascending: false });
-        if (per) setPeriods(per);
-
-        // Fetch initial reprogrammed
-        await fetchReprogrammedBalances();
-    }, []);
-
-    const fetchReprogrammedBalances = useCallback(async () => {
-        const { data } = await supabase.from('reprogrammed_balances').select(`
-            *, schools(name), programs(name), rubrics(name)
-        `).order('period', { ascending: false });
-        if (data) setReprogrammedBalances(data);
-    }, []);
-
-    const fetchEntries = useCallback(async (filters: any) => {
-        setLoading(true);
-        try {
+    // Main Query for Financial Entries
+    const { data: entries = [], isLoading: loading, refetch: refresh } = useQuery({
+        queryKey: ['financial_entries', user.id, filters],
+        queryFn: async () => {
             let q = supabase.from('financial_entries').select(`
                 *, 
                 schools(name), 
@@ -108,9 +103,7 @@ export function useFinancialEntries(user: User, initialFilters: any = {}) {
                     if (user.assignedSchools && user.assignedSchools.length > 0) {
                         q = q.in('school_id', user.assignedSchools);
                     } else {
-                        setEntries([]);
-                        setStats({ income: 0, expense: 0, balance: 0, pending: 0, repasses: 0, rendimentos: 0, tarifas: 0, impostosDevolucoes: 0 });
-                        return;
+                        return [];
                     }
                 }
             }
@@ -130,75 +123,70 @@ export function useFinancialEntries(user: User, initialFilters: any = {}) {
             const { data, error } = await q;
             if (error) throw error;
 
-            if (data) {
-                const fmt: FinancialEntryExtended[] = data.map((i: any) => {
-                    const ba = Array.isArray(i.bank_accounts) ? i.bank_accounts[0] : i.bank_accounts;
-                    return {
-                        ...i,
-                        school: i.schools?.name || 'N/A',
-                        program: i.programs?.name || 'N/A',
-                        rubric: i.rubrics?.name || 'Geral',
-                        supplier: i.suppliers?.name || 'Não Informado',
-                        bank_account: ba ? `Ag: ${ba.agency || 'N/A'} / Cc: ${ba.account_number || 'N/A'}` : '-',
-                        payment_method: i.payment_methods?.name || '-',
-                        value: Number(i.value)
-                    };
-                });
+            return (data || []).map((i: any) => {
+                const ba = Array.isArray(i.bank_accounts) ? i.bank_accounts[0] : i.bank_accounts;
+                return {
+                    ...i,
+                    school: i.schools?.name || 'N/A',
+                    program: i.programs?.name || 'N/A',
+                    rubric: i.rubrics?.name || 'Geral',
+                    supplier: i.suppliers?.name || 'Não Informado',
+                    bank_account: ba ? `Ag: ${ba.agency || 'N/A'} / Cc: ${ba.account_number || 'N/A'}` : '-',
+                    payment_method: i.payment_methods?.name || '-',
+                    value: Number(i.value)
+                };
+            }) as FinancialEntryExtended[];
+        },
+        enabled: !!user // Only run if user is loaded
+    });
 
-                setEntries(fmt);
+    // Compute stats derived from entries
+    const stats = useMemo(() => {
+        let inc = 0, exp = 0, pen = 0, rep = 0, rend = 0, tar = 0, impDev = 0, reprogTotal = 0;
 
-                // Calculate Stats
-                let inc = 0, exp = 0, pen = 0, rep = 0, rend = 0, tar = 0, impDev = 0;
-                fmt.forEach((e) => {
-                    const val = Math.abs(e.value);
-                    if (e.type === 'Entrada') {
-                        inc += val;
-                        if (e.category === 'Repasse / Crédito') rep += val;
-                        if (e.category === 'Rendimento de Aplicação') rend += val;
-                    } else {
-                        exp += val;
-                        if (e.category === 'Tarifa Bancária') tar += val;
-                        if (e.category === 'Impostos / Tributos' || e.category === 'Devolução de Recurso (FNDE/Estado)') impDev += val;
-                    }
-                    if (e.status === TransactionStatus.PENDENTE) pen++;
-                });
-                setStats({
-                    income: inc,
-                    expense: exp,
-                    balance: inc - exp,
-                    pending: pen,
-                    repasses: rep,
-                    rendimentos: rend,
-                    tarifas: tar,
-                    impostosDevolucoes: impDev
-                });
+        // Sum reprogrammed balances based on filters
+        reprogrammedBalances.forEach((r: any) => {
+            const matchesSchool = !filters.school || r.school_id === filters.school;
+            const matchesProgram = !filters.program || r.program_id === filters.program;
+            if (matchesSchool && matchesProgram) {
+                reprogTotal += Number(r.value);
             }
-        } catch (e) {
-            console.error('Error fetching entries:', e);
-        } finally {
-            setLoading(false);
-        }
-    }, [user.schoolId, user.assignedSchools, user.role]);
+        });
 
-    useEffect(() => {
-        fetchAuxData();
-    }, [fetchAuxData]);
+        entries.forEach((e) => {
+            const val = Math.abs(e.value);
+            if (e.type === 'Entrada') {
+                inc += val;
+                if (e.category === 'Repasse / Crédito') rep += val;
+                if (e.category === 'Rendimento de Aplicação') rend += val;
+            } else {
+                exp += val;
+                if (e.category === 'Tarifa Bancária') tar += val;
+                if (e.category === 'Impostos / Tributos' || e.category === 'Devolução de Recurso (FNDE/Estado)') impDev += val;
+            }
+            if (e.status === TransactionStatus.PENDENTE) pen++;
+        });
+
+        return {
+            income: inc,
+            expense: exp,
+            balance: inc - exp,
+            pending: pen,
+            repasses: rep,
+            rendimentos: rend,
+            tarifas: tar,
+            impostosDevolucoes: impDev,
+            reprogrammed: reprogTotal
+        };
+    }, [entries, reprogrammedBalances, filters.school, filters.program]);
 
     return {
         entries,
         loading,
         stats,
-        auxData: {
-            schools,
-            programs,
-            rubrics,
-            suppliers,
-            bankAccounts,
-            paymentMethods,
-            periods
-        },
+        auxData,
         reprogrammedBalances,
-        fetchReprogrammedBalances,
-        refresh: fetchEntries
+        fetchReprogrammedBalances: () => queryClient.invalidateQueries({ queryKey: ['reprogrammed_balances'] }),
+        refresh
     };
 }

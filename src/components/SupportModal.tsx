@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { User } from '../types';
+import { useToast } from '../context/ToastContext';
 
 interface SupportModalProps {
     user: User;
@@ -14,6 +15,7 @@ const SupportModal: React.FC<SupportModalProps> = ({ user, isOpen, onClose }) =>
     const [phone, setPhone] = useState('');
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
+    const { addToast } = useToast();
 
     const formatPhone = (value: string) => {
         const cleanValue = value.replace(/\D/g, '');
@@ -70,7 +72,7 @@ const SupportModal: React.FC<SupportModalProps> = ({ user, isOpen, onClose }) =>
                 setPhone('');
             }, 3000);
         } catch (err: any) {
-            alert(`Erro ao enviar mensagem: ${err.message}`);
+            addToast(`Erro ao enviar mensagem: ${err.message}`, 'error');
         } finally {
             setLoading(false);
         }
@@ -106,8 +108,9 @@ const SupportModal: React.FC<SupportModalProps> = ({ user, isOpen, onClose }) =>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">E-mail</label>
+                                    <label htmlFor="support-email" className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">E-mail</label>
                                     <input
+                                        id="support-email"
                                         type="email"
                                         disabled
                                         className="w-full bg-[#0f172a]/50 border border-[#334155] text-slate-500 text-sm rounded-xl p-3 outline-none opacity-70 cursor-not-allowed"
@@ -115,8 +118,9 @@ const SupportModal: React.FC<SupportModalProps> = ({ user, isOpen, onClose }) =>
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Telefone / WhatsApp</label>
+                                    <label htmlFor="support-phone" className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Telefone / WhatsApp</label>
                                     <input
+                                        id="support-phone"
                                         type="text"
                                         required
                                         className="w-full bg-[#0f172a] border border-[#334155] text-white text-sm rounded-xl p-3 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none"
@@ -128,8 +132,9 @@ const SupportModal: React.FC<SupportModalProps> = ({ user, isOpen, onClose }) =>
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Sua Mensagem</label>
+                                <label htmlFor="support-message" className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Sua Mensagem</label>
                                 <textarea
+                                    id="support-message"
                                     required
                                     rows={4}
                                     className="w-full bg-[#0f172a] border border-[#334155] text-white text-sm rounded-xl p-3 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none resize-none"

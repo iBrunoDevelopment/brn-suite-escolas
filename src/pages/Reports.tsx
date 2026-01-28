@@ -6,6 +6,7 @@ import { generateAtaHTML, generateConsolidacaoHTML, generateOrdemHTML } from '..
 import { supabase } from '../lib/supabaseClient';
 import { usePermissions, useAccessibleSchools } from '../hooks/usePermissions';
 import { useReports } from '../hooks/useReports';
+import { useToast } from '../context/ToastContext';
 
 // Subcomponents
 import ReportsTable from '../components/reports/ReportsTable';
@@ -15,6 +16,7 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
   // UI State
   const [showNewProcessModal, setShowNewProcessModal] = useState(false);
   const [editingProcessId, setEditingProcessId] = useState<string | null>(null);
+  const { addToast } = useToast();
 
   // Filters
   const [filters, setFilters] = useState({
@@ -67,9 +69,9 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
     const { error } = await supabase.from('accountability_processes').delete().eq('id', id);
 
     if (error) {
-      alert('Erro ao excluir: ' + error.message);
+      addToast('Erro ao excluir: ' + error.message, 'error');
     } else {
-      alert('Excluído com sucesso.');
+      addToast('Excluído com sucesso.', 'success');
       refresh();
     }
   };

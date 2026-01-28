@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { User, UserRole } from '../types';
+import { useToast } from '../context/ToastContext';
 
 interface GEE {
     id: string;
@@ -12,6 +13,7 @@ interface GEE {
 
 const GEEPage: React.FC<{ user: User }> = ({ user }) => {
     const [gees, setGees] = useState<GEE[]>([]);
+    const { addToast } = useToast();
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [editingGee, setEditingGee] = useState<GEE | null>(null);
@@ -35,7 +37,7 @@ const GEEPage: React.FC<{ user: User }> = ({ user }) => {
 
     const handleSave = async () => {
         if (!formData.name) {
-            alert('O nome da GEE é obrigatório.');
+            addToast('O nome da GEE é obrigatório.', 'warning');
             return;
         }
 
@@ -59,7 +61,7 @@ const GEEPage: React.FC<{ user: User }> = ({ user }) => {
             setFormData({ name: '', description: '' });
             fetchGEEs();
         } catch (error: any) {
-            alert(`Erro ao salvar: ${error.message}`);
+            addToast(`Erro ao salvar: ${error.message}`, 'error');
         } finally {
             setLoading(false);
         }
@@ -76,7 +78,7 @@ const GEEPage: React.FC<{ user: User }> = ({ user }) => {
 
         setLoading(true);
         const { error } = await supabase.from('gee').delete().eq('id', id);
-        if (error) alert(error.message);
+        if (error) addToast(error.message, 'error');
         else fetchGEEs();
         setLoading(false);
     };

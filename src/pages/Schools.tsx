@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { User, School, UserRole, ContractSignature } from '../types';
 import { usePermissions, useAccessibleSchools } from '../hooks/usePermissions';
+import { useToast } from '../context/ToastContext';
 import Contract from './Contract';
 
 const Schools: React.FC<{ user: User }> = ({ user }) => {
@@ -24,6 +25,7 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
     // Permissions
     const schoolPerm = usePermissions(user, 'schools');
     const filteredSchools = useAccessibleSchools(user, schools);
+    const { addToast } = useToast();
 
     if (!isAuthorized) {
         return (
@@ -130,7 +132,7 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
 
     const handleSave = async () => {
         if (!formData.name) {
-            alert('O nome da escola é obrigatório.');
+            addToast('O nome da escola é obrigatório.', 'warning');
             return;
         }
 
@@ -153,7 +155,7 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
             resetForm();
             fetchSchools();
         } catch (error: any) {
-            alert(`Erro ao salvar: ${error.message}`);
+            addToast(`Erro ao salvar: ${error.message}`, 'error');
         } finally {
             setLoading(false);
         }
@@ -191,8 +193,9 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
             .eq('id', id);
 
         if (error) {
-            alert(`Erro ao excluir: ${error.message}`);
+            addToast(`Erro ao excluir: ${error.message}`, 'error');
         } else {
+            addToast('Escola excluída com sucesso', 'success');
             fetchSchools();
         }
         setLoading(false);
@@ -211,7 +214,7 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                 .maybeSingle();
 
             if (userError || !userData) {
-                alert('Não foi possível localizar o cadastro do diretor vinculado a esta escola.');
+                addToast('Não foi possível localizar o cadastro do diretor vinculado a esta escola.', 'warning');
                 return;
             }
 
@@ -225,7 +228,7 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                 .maybeSingle();
 
             if (sigError || !sigData) {
-                alert('Este diretor ainda não assinou o contrato digital.');
+                addToast('Este diretor ainda não assinou o contrato digital.', 'info');
                 return;
             }
 
@@ -235,7 +238,7 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                 signature: sigData
             });
         } catch (error: any) {
-            alert('Erro ao carregar contrato: ' + error.message);
+            addToast('Erro ao carregar contrato: ' + error.message, 'error');
         } finally {
             setIsFetchingContract(false);
         }
@@ -262,7 +265,7 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
 
             setFormData(prev => ({ ...prev, image_url: publicUrl }));
         } catch (error: any) {
-            alert(`Erro no upload: ${error.message}`);
+            addToast(`Erro no upload: ${error.message}`, 'error');
         } finally {
             setIsUploading(false);
         }
@@ -393,7 +396,7 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                             <div className="flex flex-col items-center gap-4">
                                 <div className="relative group">
                                     {formData.image_url ? (
-                                        <img src={formData.image_url} className="w-32 h-32 rounded-3xl object-cover border-4 border-slate-700 shadow-xl" />
+                                        <img src={formData.image_url} alt="Logo da Escola" className="w-32 h-32 rounded-3xl object-cover border-4 border-slate-700 shadow-xl" />
                                     ) : (
                                         <div className="w-32 h-32 rounded-3xl bg-slate-800 flex items-center justify-center border-4 border-slate-700 border-dashed">
                                             <span className="material-symbols-outlined text-4xl text-slate-600">add_a_photo</span>
@@ -409,27 +412,28 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="md:col-span-2">
                                     <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Nome da Instituição (Escola)</label>
-                                    <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value.toUpperCase() })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" />
+                                    <input type="text" aria-label="Nome da Instituição (Escola)" placeholder="Ex: ESCOLA ESTADUAL..." value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value.toUpperCase() })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" />
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">CNPJ</label>
-                                    <input type="text" value={formData.cnpj} onChange={e => setFormData({ ...formData, cnpj: formatCNPJ(e.target.value) })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" placeholder="00.000.000/0001-00" maxLength={18} />
+                                    <input type="text" aria-label="CNPJ" value={formData.cnpj} onChange={e => setFormData({ ...formData, cnpj: formatCNPJ(e.target.value) })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" placeholder="00.000.000/0001-00" maxLength={18} />
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Telefone</label>
-                                    <input type="text" value={formData.phone} onChange={e => setFormData({ ...formData, phone: formatPhone(e.target.value) })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" placeholder="(00) 0 0000-0000" maxLength={16} />
+                                    <input type="text" aria-label="Telefone" value={formData.phone} onChange={e => setFormData({ ...formData, phone: formatPhone(e.target.value) })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" placeholder="(00) 0 0000-0000" maxLength={16} />
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Código INEP</label>
-                                    <input type="text" value={formData.inep} onChange={e => setFormData({ ...formData, inep: e.target.value })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" />
+                                    <input type="text" aria-label="Código INEP" placeholder="00000000" value={formData.inep} onChange={e => setFormData({ ...formData, inep: e.target.value })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" />
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Código SEEC</label>
-                                    <input type="text" value={formData.seec} onChange={e => setFormData({ ...formData, seec: e.target.value })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" />
+                                    <input type="text" aria-label="Código SEEC" placeholder="000" value={formData.seec} onChange={e => setFormData({ ...formData, seec: e.target.value })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" />
                                 </div>
                                 <div className="md:col-span-2">
                                     <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Regional (GEE)</label>
                                     <select
+                                        aria-label="Regional (GEE)"
                                         value={formData.gee_id}
                                         onChange={e => {
                                             const selected = gees.find(g => g.id === e.target.value);
@@ -445,6 +449,7 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                                 <div className="md:col-span-2">
                                     <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Plano Contratado</label>
                                     <select
+                                        aria-label="Plano Contratado"
                                         value={formData.plan_id}
                                         onChange={e => setFormData({ ...formData, plan_id: e.target.value })}
                                         className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none border-emerald-500/30"
@@ -458,30 +463,30 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                                 </div>
                                 <div className="md:col-span-2">
                                     <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Conselho Escolar</label>
-                                    <input type="text" value={formData.conselho_escolar} onChange={e => setFormData({ ...formData, conselho_escolar: e.target.value.toUpperCase() })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" placeholder="Nome do conselho..." />
+                                    <input type="text" aria-label="Conselho Escolar" value={formData.conselho_escolar} onChange={e => setFormData({ ...formData, conselho_escolar: e.target.value.toUpperCase() })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" placeholder="Nome do conselho..." />
                                 </div>
                                 <div className="md:col-span-2">
                                     <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Diretor(a)</label>
-                                    <input type="text" value={formData.director} onChange={e => setFormData({ ...formData, director: e.target.value.toUpperCase() })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" />
+                                    <input type="text" aria-label="Diretor(a)" placeholder="Nome completo do diretor" value={formData.director} onChange={e => setFormData({ ...formData, director: e.target.value.toUpperCase() })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" />
                                 </div>
                                 <div className="md:col-span-2">
                                     <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Secretário(a) do Conselho</label>
-                                    <input type="text" value={formData.secretary} onChange={e => setFormData({ ...formData, secretary: e.target.value.toUpperCase() })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" />
+                                    <input type="text" aria-label="Secretário(a) do Conselho" placeholder="Nome do secretário" value={formData.secretary} onChange={e => setFormData({ ...formData, secretary: e.target.value.toUpperCase() })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" />
                                 </div>
                                 <div className="md:col-span-2">
                                     <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Logradouro / Endereço</label>
-                                    <input type="text" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value.toUpperCase() })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" />
+                                    <input type="text" aria-label="Logradouro / Endereço" placeholder="Endereço, Nº, Bairro" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value.toUpperCase() })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" />
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">UF</label>
-                                    <select value={formData.uf} onChange={e => setFormData({ ...formData, uf: e.target.value, city: '' })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none">
+                                    <select aria-label="UF" value={formData.uf} onChange={e => setFormData({ ...formData, uf: e.target.value, city: '' })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none">
                                         <option value="">Selecione...</option>
                                         {['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'].map(uf => <option key={uf} value={uf}>{uf}</option>)}
                                     </select>
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Cidade</label>
-                                    <select disabled={!formData.uf || isLoadingCities} value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none disabled:opacity-50">
+                                    <select aria-label="Cidade" disabled={!formData.uf || isLoadingCities} value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none disabled:opacity-50">
                                         <option value="">{isLoadingCities ? 'Carregando...' : 'Selecione...'}</option>
                                         {cities.map(city => <option key={city} value={city}>{city}</option>)}
                                     </select>

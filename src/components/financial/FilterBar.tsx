@@ -80,12 +80,13 @@ const FilterBar: React.FC<FilterBarProps> = ({
             </div>
 
             {showFilters && (
-                <div className="bg-[#111a22] border border-surface-border rounded-2xl p-6 grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-6 items-end animate-in fade-in slide-in-from-top-4">
+                <div className="bg-[#111a22] border border-surface-border rounded-2xl p-4 md:p-6 grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-6 items-end animate-in fade-in slide-in-from-top-4">
                     <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Unidade Escolar</label>
                         <select
                             value={filters.school}
                             onChange={e => setFilters({ ...filters, school: e.target.value })}
+                            aria-label="Filtrar por Unidade Escolar"
                             className="w-full bg-[#1c2936] text-white text-xs h-10 px-3 rounded-xl border border-white/10 outline-none focus:border-primary"
                         >
                             <option value="">Todas as Escolas</option>
@@ -97,6 +98,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                         <select
                             value={filters.program}
                             onChange={e => setFilters({ ...filters, program: e.target.value })}
+                            aria-label="Filtrar por Programa"
                             className="w-full bg-[#1c2936] text-white text-xs h-10 px-3 rounded-xl border border-white/10 outline-none focus:border-primary"
                         >
                             <option value="">Todos</option>
@@ -105,15 +107,15 @@ const FilterBar: React.FC<FilterBarProps> = ({
                     </div>
                     <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Data Inicial</label>
-                        <input type="date" value={filters.startDate} onChange={e => setFilters({ ...filters, startDate: e.target.value })} className="w-full bg-[#1c2936] text-white text-xs h-10 px-3 rounded-xl border border-white/10 outline-none focus:border-primary" />
+                        <input type="date" aria-label="Data Inicial" value={filters.startDate} onChange={e => setFilters({ ...filters, startDate: e.target.value })} className="w-full bg-[#1c2936] text-white text-xs h-10 px-3 rounded-xl border border-white/10 outline-none focus:border-primary" />
                     </div>
                     <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Data Final</label>
-                        <input type="date" value={filters.endDate} onChange={e => setFilters({ ...filters, endDate: e.target.value })} className="w-full bg-[#1c2936] text-white text-xs h-10 px-3 rounded-xl border border-white/10 outline-none focus:border-primary" />
+                        <input type="date" aria-label="Data Final" value={filters.endDate} onChange={e => setFilters({ ...filters, endDate: e.target.value })} className="w-full bg-[#1c2936] text-white text-xs h-10 px-3 rounded-xl border border-white/10 outline-none focus:border-primary" />
                     </div>
                     <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Natureza</label>
-                        <select value={filters.nature} onChange={e => setFilters({ ...filters, nature: e.target.value })} className="w-full bg-[#1c2936] text-white text-xs h-10 px-3 rounded-xl border border-white/10 outline-none focus:border-primary">
+                        <select aria-label="Filtrar por Natureza" value={filters.nature} onChange={e => setFilters({ ...filters, nature: e.target.value })} className="w-full bg-[#1c2936] text-white text-xs h-10 px-3 rounded-xl border border-white/10 outline-none focus:border-primary">
                             <option value="">Todas</option>
                             <option value="Custeio">Custeio</option>
                             <option value="Capital">Capital</option>
@@ -121,14 +123,14 @@ const FilterBar: React.FC<FilterBarProps> = ({
                     </div>
                     <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Fornecedor</label>
-                        <select value={filters.supplier} onChange={e => setFilters({ ...filters, supplier: e.target.value })} className="w-full bg-[#1c2936] text-white text-xs h-10 px-3 rounded-xl border border-white/10 outline-none focus:border-primary">
+                        <select aria-label="Filtrar por Fornecedor" value={filters.supplier} onChange={e => setFilters({ ...filters, supplier: e.target.value })} className="w-full bg-[#1c2936] text-white text-xs h-10 px-3 rounded-xl border border-white/10 outline-none focus:border-primary">
                             <option value="">Todos</option>
                             {auxData.suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                     </div>
                     <div className="md:col-span-3 lg:col-span-4 flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Pesquisar por Descrição</label>
-                        <input type="text" value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })} className="w-full bg-[#1c2936] text-white text-xs h-10 px-4 rounded-xl border border-white/10 outline-none focus:border-primary" placeholder="Digite algo para buscar..." />
+                        <input type="text" aria-label="Pesquisar por Descrição" value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })} className="w-full bg-[#1c2936] text-white text-xs h-10 px-4 rounded-xl border border-white/10 outline-none focus:border-primary" placeholder="Digite algo para buscar..." />
                     </div>
                     <div className="md:col-span-1 lg:col-span-2 grid grid-cols-3 gap-2">
                         <button onClick={clearFilters} className="bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-tighter h-10 rounded-xl hover:bg-white/10 transition-colors">Limpar</button>

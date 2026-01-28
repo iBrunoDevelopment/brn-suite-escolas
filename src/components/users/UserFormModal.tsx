@@ -2,6 +2,7 @@ import React from 'react';
 import { UserRole, School } from '../../types';
 import { UserForm } from '../../hooks/useUsers';
 import { supabase } from '../../lib/supabaseClient';
+import { useToast } from '../../context/ToastContext';
 
 interface UserFormModalProps {
     editingUser: UserForm;
@@ -16,6 +17,7 @@ interface UserFormModalProps {
 const UserFormModal: React.FC<UserFormModalProps> = ({
     editingUser, setEditingUser, schools, uploading, setUploading, onSave, onClose
 }) => {
+    const { addToast } = useToast();
     const geeList = Array.from(new Set(schools.map(s => s.gee).filter(Boolean))) as string[];
     const schoolsByGee = editingUser.gee ? schools.filter(s => s.gee === editingUser.gee) : [];
 
@@ -53,7 +55,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
             setEditingUser({ ...editingUser, avatar_url: publicUrl });
         } catch (err) {
             console.error(err);
-            alert('Erro no upload');
+            addToast('Erro no upload', 'error');
         } finally {
             setUploading(false);
         }

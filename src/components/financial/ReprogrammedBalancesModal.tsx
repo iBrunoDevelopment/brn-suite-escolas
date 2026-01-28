@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { TransactionNature } from '../../types';
+import { useToast } from '../../context/ToastContext';
 
 interface ReprogrammedBalancesModalProps {
     isOpen: boolean;
@@ -28,10 +29,11 @@ const ReprogrammedBalancesModal: React.FC<ReprogrammedBalancesModalProps> = ({
     const [isSavingReprogrammed, setIsSavingReprogrammed] = useState(false);
     const [reprogSearch, setReprogSearch] = useState('');
     const [reprogSchoolFilter, setReprogSchoolFilter] = useState('');
+    const { addToast } = useToast();
 
     const handleSaveReprogrammed = async () => {
         if (!newReprogrammed.school_id || !newReprogrammed.program_id || !newReprogrammed.value || !newReprogrammed.period) {
-            alert('Escola, Programa, Ano/Período e Valor são obrigatórios.');
+            addToast('Escola, Programa, Ano/Período e Valor são obrigatórios.', 'warning');
             return;
         }
         setIsSavingReprogrammed(true);
@@ -46,16 +48,24 @@ const ReprogrammedBalancesModal: React.FC<ReprogrammedBalancesModalProps> = ({
             });
             if (error) throw error;
             fetchReprogrammedBalances();
+            addToast('Saldo salvo com sucesso!', 'success');
             setNewReprogrammed({ ...newReprogrammed, value: '', rubric_id: '' });
         } catch (error: any) {
-            alert(`Erro ao salvar saldo reprogramado: ${error.message}`);
+            addToast(`Erro ao salvar saldo reprogramado: ${error.message}`, 'error');
         } finally { setIsSavingReprogrammed(false); }
     };
 
     const handleDeleteReprogrammed = async (id: string) => {
         if (!confirm('Excluir este saldo reprogramado?')) return;
-        await supabase.from('reprogrammed_balances').delete().eq('id', id);
-        fetchReprogrammedBalances();
+
+        try {
+            const { error } = await supabase.from('reprogrammed_balances').delete().eq('id', id);
+            if (error) throw error;
+            addToast('Saldo excluído com sucesso.', 'success');
+            fetchReprogrammedBalances();
+        } catch (error: any) {
+            addToast(`Erro ao excluir: ${error.message}`, 'error');
+        }
     };
 
     if (!isOpen) return null;

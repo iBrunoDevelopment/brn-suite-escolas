@@ -1,12 +1,12 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, Line, ComposedChart
 } from 'recharts';
 import { User, UserRole } from '../types';
-import { supabase } from '../lib/supabaseClient';
 import { usePermissions, useAccessibleSchools } from '../hooks/usePermissions';
+import { useDashboard } from '../hooks/useDashboard';
 
 const COLORS = ['#137fec', '#0bda5b', '#fb923c', '#94a3b8'];
 
@@ -22,426 +22,38 @@ const ChartEmptyState: React.FC<{ message: string, icon: string }> = ({ message,
 );
 
 const Dashboard: React.FC<{ user: User }> = ({ user }) => {
-  const [stats, setStats] = useState({
-    receita: 0,
-    despesa: 0,
-    saldo: 0,
-    pendencias: 0,
-    reprogramado: 0,
-    totalDisponivel: 0,
-    repasses: 0,
-    rendimentos: 0,
-    tarifas: 0,
-    impostosDevolucoes: 0
-  });
+  // Use custom hook
+  const {
+    // Data
+    isLoading: loading,
+    auxData: availableOptions,
+    stats,
+    flowData,
+    pieData,
+    alerts,
 
-  const [loading, setLoading] = useState(true);
+    // State & Setters
+    filters, setFilters,
+    showBroadcast, setShowBroadcast,
+    selectedAlert, setSelectedAlert,
+    broadcastForm, setBroadcastForm,
 
-  const [flowData, setFlowData] = useState<any[]>([]);
-  const [alerts, setAlerts] = useState<any[]>([]);
+    // Actions
+    refresh,
+    sendBroadcast,
+    isSendingBroadcast
+  } = useDashboard(user);
 
-  // Filters State
-  const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState({
-    schoolId: user.schoolId || '',
-    program: '', // Conta
-    rubric: '',
-    supplier: '',
-    nature: ''
-  });
-
-  const [availableOptions, setAvailableOptions] = useState<{
-    schools: { id: string, name: string }[],
-    programs: { id: string, name: string }[],
-    rubrics: { id: string, name: string, program_id: string }[],
-    suppliers: { id: string, name: string }[]
-  }>({
-    schools: [],
-    programs: [],
-    rubrics: [],
-    suppliers: []
-  });
-
-  const [pieData, setPieData] = useState<any[]>([]);
-
-  const [rawData, setRawData] = useState<any[]>([]);
-  const [rawProcesses, setRawProcesses] = useState<any[]>([]);
-  const [rawReprogrammed, setRawReprogrammed] = useState<any[]>([]);
-  const [pendingUsersCount, setPendingUsersCount] = useState(0);
-  const [selectedAlert, setSelectedAlert] = useState<any | null>(null);
-
-  // Broadcast State
-  const [showBroadcast, setShowBroadcast] = useState(false);
-  const [broadcastForm, setBroadcastForm] = useState({ title: '', message: '', targetRole: 'Todos' });
-  const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
-
-  // Permissions
+  // Permissions & Access
   const dashPerm = usePermissions(user, 'entries');
-  // ... (omitted lines for brevity, will use full block in tool call)
   const accessibleSchools = useAccessibleSchools(user, availableOptions.schools);
 
-  const handleSendBroadcast = async () => {
-    if (!broadcastForm.title || !broadcastForm.message) return alert('Preencha o título e a mensagem.');
-    setIsSendingBroadcast(true);
-    try {
-      // Buscar usuários destino
-      let query = supabase.from('users').select('id');
-      if (broadcastForm.targetRole !== 'Todos') {
-        query = query.eq('role', broadcastForm.targetRole);
-      }
-      const { data: targetUsers } = await query;
-
-      if (targetUsers && targetUsers.length > 0) {
-        const notifications = targetUsers.map(u => ({
-          user_id: u.id,
-          title: `📢 COMUNICADO: ${broadcastForm.title}`,
-          message: broadcastForm.message,
-          type: 'info',
-          is_read: false
-        }));
-
-        const { error } = await supabase.from('notifications').insert(notifications);
-        if (error) throw error;
-        alert('Comunicado enviado com sucesso!');
-        setShowBroadcast(false);
-        setBroadcastForm({ title: '', message: '', targetRole: 'Todos' });
-      }
-    } catch (error: any) {
-      alert('Erro ao enviar comunicado: ' + error.message);
-    } finally {
-      setIsSendingBroadcast(false);
-    }
+  // Define handleSendBroadcast correctly for the button click
+  const handleSendBroadcast = () => {
+    sendBroadcast();
   };
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []); // Initial load
-
-  useEffect(() => {
-    processData();
-    generateAlerts();
-  }, [filters, rawData, rawProcesses, rawReprogrammed, pendingUsersCount]); // Re-process when filters or data change
-
-  const fetchDashboardData = async () => {
-    setLoading(true);
-    try {
-      // 1. Fetch Basic Data (Schools, Programs, Rubrics)
-      const [schoolsRes, programsRes, rubricsRes, suppliersRes] = await Promise.all([
-        supabase.from('schools').select('*'),
-        supabase.from('programs').select('*'),
-        supabase.from('rubrics').select('*'),
-        supabase.from('suppliers').select('*')
-      ]);
-
-      const schoolsData = schoolsRes.data || [];
-      const programsData = programsRes.data || [];
-      const rubricsData = rubricsRes.data || [];
-      const suppliersData = suppliersRes.data || [];
-
-      setAvailableOptions({
-        schools: schoolsData,
-        programs: programsData,
-        rubrics: rubricsData,
-        suppliers: suppliersData
-      });
-
-      // Fetch Pending Users Count and Launch Reminders if Admin
-      if (user.role === UserRole.ADMIN) {
-        const { count } = await supabase
-          .from('users')
-          .select('*', { count: 'exact', head: true })
-          .or('active.eq.false,and(role.eq.Cliente,school_id.is.null)');
-        setPendingUsersCount(count || 0);
-
-        // Trigger automatic monthly reminders
-        await supabase.rpc('launch_monthly_reminders');
-      }
-
-      // 2. Fetch Entries with visibility restrictions
-      let entriesQuery = supabase.from('financial_entries').select('*');
-      if (user.role !== UserRole.ADMIN && user.role !== UserRole.OPERADOR) {
-        if (user.role === UserRole.DIRETOR || user.role === UserRole.CLIENTE) {
-          entriesQuery = entriesQuery.eq('school_id', user.schoolId);
-        } else if (user.role === UserRole.TECNICO_GEE) {
-          if (user.assignedSchools && user.assignedSchools.length > 0) {
-            entriesQuery = entriesQuery.in('school_id', user.assignedSchools);
-          } else {
-            setRawData([]);
-            setStats({ receita: 0, despesa: 0, saldo: 0, pendencias: 0 });
-            return;
-          }
-        }
-      }
-      const { data: entries } = await entriesQuery;
-
-      // 3. Fetch Processes with restrictions
-      let procQuery = supabase.from('accountability_processes').select('financial_entry_id');
-      if (user.role !== UserRole.ADMIN && user.role !== UserRole.OPERADOR) {
-        if (user.role === UserRole.DIRETOR || user.role === UserRole.CLIENTE) {
-          procQuery = procQuery.eq('school_id', user.schoolId);
-        } else if (user.role === UserRole.TECNICO_GEE) {
-          if (user.assignedSchools && user.assignedSchools.length > 0) {
-            procQuery = procQuery.in('school_id', user.assignedSchools);
-          } else {
-            setRawProcesses([]);
-            return;
-          }
-        }
-      }
-      const { data: processes } = await procQuery;
-
-      if (processes) setRawProcesses(processes);
-
-      if (entries) {
-        setRawData(entries);
-      }
-
-      // 4. Fetch Reprogrammed Balances
-      let reprogQuery = supabase.from('reprogrammed_balances').select('*');
-      if (user.role !== UserRole.ADMIN && user.role !== UserRole.OPERADOR) {
-        if (user.role === UserRole.DIRETOR || user.role === UserRole.CLIENTE) {
-          reprogQuery = reprogQuery.eq('school_id', user.schoolId);
-        } else if (user.role === UserRole.TECNICO_GEE) {
-          if (user.assignedSchools && user.assignedSchools.length > 0) {
-            reprogQuery = reprogQuery.in('school_id', user.assignedSchools);
-          }
-        }
-      }
-      const { data: reprog } = await reprogQuery;
-      if (reprog) setRawReprogrammed(reprog);
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const processData = () => {
-    if (!rawData) return;
-
-    let filtered = rawData;
-
-    // Apply Filters
-    if (filters.schoolId) {
-      filtered = filtered.filter(e => e.school_id === filters.schoolId);
-    }
-    if (filters.program) {
-      filtered = filtered.filter(e => e.program_id === filters.program);
-    }
-    if (filters.rubric) {
-      filtered = filtered.filter(e => e.rubric_id === filters.rubric);
-    }
-    if (filters.nature) {
-      filtered = filtered.filter(e => e.nature === filters.nature);
-    }
-    if (filters.supplier) {
-      filtered = filtered.filter(e => e.supplier_id === filters.supplier);
-    }
-
-    let filteredReprog = rawReprogrammed;
-    if (filters.schoolId) filteredReprog = filteredReprog.filter(r => r.school_id === filters.schoolId);
-    if (filters.program) filteredReprog = filteredReprog.filter(r => r.program_id === filters.program);
-    if (filters.nature) filteredReprog = filteredReprog.filter(r => r.nature === filters.nature);
-    if (filters.rubric) filteredReprog = filteredReprog.filter(r => r.rubric_id === filters.rubric);
-
-    const reprogramado = filteredReprog.reduce((acc, curr) => acc + Number(curr.value || 0), 0);
-
-    // Calculate Stats
-    let receita = 0;
-    let despesa = 0;
-    let pendencias = 0;
-    let repasses = 0;
-    let rendimentos = 0;
-    let tarifas = 0;
-    let impDev = 0;
-
-    // Group for charts
-    const monthsMap: Record<string, { name: string, receita: number, despesa: number }> = {};
-
-    filtered.forEach(e => {
-      const val = Number(e.value);
-      if (e.status === 'Pendente') pendencias++;
-
-      if (e.type === 'Entrada') {
-        receita += val;
-        if (e.category === 'Repasse / Crédito') repasses += val;
-        if (e.category === 'Rendimento de Aplicação') rendimentos += val;
-      } else {
-        despesa += Math.abs(val);
-        if (e.category === 'Tarifa Bancária') tarifas += Math.abs(val);
-        if (e.category === 'Impostos / Tributos' || e.category === 'Devolução de Recurso (FNDE/Estado)') impDev += Math.abs(val);
-      }
-
-      // Chart Data Builder
-      const dateObj = new Date(e.date);
-      // Adjusting for UTC to ensure correct month display
-      const monthKey = `${dateObj.getUTCFullYear()}-${dateObj.getUTCMonth()}`;
-      const monthName = dateObj.toLocaleDateString('pt-BR', { month: 'short', timeZone: 'UTC' });
-
-      if (!monthsMap[monthKey]) {
-        monthsMap[monthKey] = { name: monthName, receita: 0, despesa: 0 };
-      }
-      if (e.type === 'Entrada') monthsMap[monthKey].receita += val;
-      else monthsMap[monthKey].despesa += Math.abs(val);
-    });
-
-    setStats({
-      receita,
-      despesa,
-      saldo: receita - despesa,
-      pendencias,
-      reprogramado,
-      totalDisponivel: (receita - despesa) + reprogramado,
-      repasses,
-      rendimentos,
-      tarifas,
-      impostosDevolucoes: impDev
-    });
-
-    const sortedMonths = Object.keys(monthsMap)
-      .sort((a, b) => {
-        const [y1, m1] = a.split('-').map(Number);
-        const [y2, m2] = b.split('-').map(Number);
-        return y1 !== y2 ? y1 - y2 : m1 - m2;
-      })
-      .map(key => monthsMap[key]);
-
-    // Add accumulated balance to flowData
-    let accBal = reprogramado;
-    const flowWithAcc = sortedMonths.map(m => {
-      accBal += (m.receita - m.despesa);
-      return { ...m, saldoAcumulado: accBal };
-    });
-
-    // Pie Data (Natureza)
-    const natureMap: Record<string, number> = {};
-    filtered.forEach(e => {
-      natureMap[e.nature] = (natureMap[e.nature] || 0) + Math.abs(Number(e.value));
-    });
-    setPieData(Object.entries(natureMap).map(([name, value]) => ({ name, value })));
-
-    setFlowData(flowWithAcc);
-  };
-
-  const generateAlerts = () => {
-    if (!rawData) return;
-    const newAlerts: any[] = [];
-    const today = new Date();
-
-    // 0. Usuários Pendentes (Apenas para Admin)
-    if (user.role === UserRole.ADMIN && pendingUsersCount > 0) {
-      newAlerts.push({
-        id: 'pending-users-alert',
-        title: 'Usuários Aguardando Aprovação',
-        description: `Existem ${pendingUsersCount} usuários que ainda não foram vinculados a uma escola ou estão desativados.`,
-        severity: 'Médio',
-        timestamp: today.toISOString()
-      });
-    }
-
-    // 1. Pendências Antigas (> 15 dias)
-    const longPending = rawData.filter(e => {
-      if (e.status !== 'Pendente') return false;
-      const entryDate = new Date(e.date);
-      const diffTime = Math.abs(today.getTime() - entryDate.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays > 15;
-    });
-
-    if (longPending.length > 0) {
-      newAlerts.push({
-        id: 'pending-alert',
-        title: 'Pendências Antigas',
-        description: `Existem ${longPending.length} lançamentos pendentes há mais de 15 dias. Verifique se foram pagos ou cancelados.`,
-        severity: 'Médio',
-        timestamp: today.toISOString()
-      });
-    }
-
-    // 2. Pagamentos Sem Prestação de Contas
-    const paidExpenses = rawData.filter(e => e.type === 'Saída' && e.status === 'Pago');
-    const processedIds = new Set(rawProcesses.map(p => p.financial_entry_id));
-
-    const unaccounted = paidExpenses.filter(e => !processedIds.has(e.id));
-    if (unaccounted.length > 0) {
-      newAlerts.push({
-        id: 'unaccounted-alert',
-        title: 'Falta Prestação de Contas',
-        description: `${unaccounted.length} pagamentos confirmados ainda não possuem documentação de prestação de contas vinculada.`,
-        severity: 'Crítico',
-        timestamp: today.toISOString()
-      });
-    }
-
-    // 3. Alertas de Saldo Real por Natureza (Considerando Reprogramado)
-    const balances: Record<string, { balance: number, programId: string, schoolId: string, nature: string }> = {};
-
-    rawReprogrammed.forEach(r => {
-      const key = `${r.school_id}_${r.program_id}_${r.nature}`;
-      if (!balances[key]) balances[key] = { balance: 0, programId: r.program_id, schoolId: r.school_id, nature: r.nature };
-      balances[key].balance += Number(r.value || 0);
-    });
-
-    rawData.forEach(e => {
-      const key = `${e.school_id}_${e.program_id}_${e.nature}`;
-      if (!balances[key]) balances[key] = { balance: 0, programId: e.program_id, schoolId: e.school_id, nature: e.nature };
-      const val = Number(e.value);
-      balances[key].balance += (e.type === 'Entrada' ? val : -Math.abs(val));
-    });
-
-    Object.entries(balances).forEach(([key, data]) => {
-      const progName = availableOptions.programs.find(p => p.id === data.programId)?.name || 'Programa';
-      const schName = availableOptions.schools.find(s => s.id === data.schoolId)?.name || '';
-
-      if (data.balance < 0) {
-        newAlerts.push({
-          id: `bal-neg-${key}`,
-          title: 'Saldo Negativo Crítico',
-          description: `O programa ${progName} (${data.nature}) em ${schName} está com saldo de ${formatCurrency(data.balance)}.`,
-          severity: 'Crítico',
-          timestamp: today.toISOString()
-        });
-      } else if (data.balance > 0 && data.balance < 500) {
-        newAlerts.push({
-          id: `bal-low-${key}`,
-          title: 'Saldo Baixo',
-          description: `Atenção: O programa ${progName} (${data.nature}) em ${schName} possui apenas ${formatCurrency(data.balance)} restantes.`,
-          severity: 'Atenção',
-          timestamp: today.toISOString()
-        });
-      }
-    });
-
-    setAlerts(newAlerts);
-    syncAlertsToNotifications(newAlerts);
-  };
-
-  const syncAlertsToNotifications = async (alertsList: any[]) => {
-    // For each alert, check if it's already in the DB for today to avoid spamming
-    const today = new Date().toISOString().split('T')[0];
-
-    for (const alert of alertsList) {
-      // We only sync 'Crítico' and 'Médio' to persistent notifications
-      if (alert.severity !== 'Crítico' && alert.severity !== 'Médio') continue;
-
-      const { data: existing } = await supabase
-        .from('notifications')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('title', alert.title)
-        .filter('created_at', 'gte', `${today}T00:00:00Z`);
-
-      if (!existing || existing.length === 0) {
-        await supabase.from('notifications').insert({
-          user_id: user.id,
-          title: alert.title,
-          message: alert.description,
-          type: alert.severity === 'Crítico' ? 'error' : 'warning',
-          is_read: false
-        });
-      }
-    }
-  };
+  const [showFilters, setShowFilters] = React.useState(false);
 
   const formatCurrency = (val: number) => {
     return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -501,8 +113,8 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
                 <span className="text-[10px] font-black text-orange-500 uppercase">{stats.pendencias} <span className="hidden sm:inline">Pendentes</span></span>
               </div>
             )}
-            <button onClick={fetchDashboardData} className="flex items-center justify-center gap-2 bg-primary hover:bg-blue-600 text-white w-10 h-10 md:w-auto md:h-auto md:px-5 md:py-2.5 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-blue-500/20 active:scale-95">
-              <span className="material-symbols-outlined text-[18px]">refresh</span>
+            <button onClick={() => refresh()} className="flex items-center justify-center gap-2 bg-primary hover:bg-blue-600 text-white w-10 h-10 md:w-auto md:h-auto md:px-5 md:py-2.5 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-blue-500/20 active:scale-95">
+              <span className={`material-symbols-outlined text-[18px] ${loading ? 'animate-spin' : ''}`}>refresh</span>
               <span className="hidden md:inline">Atualizar</span>
             </button>
           </div>
@@ -521,6 +133,7 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
                 </div>
               ) : (
                 <select
+                  title="Filtrar por Escola"
                   value={filters.schoolId}
                   onChange={(e) => setFilters(prev => ({ ...prev, schoolId: e.target.value }))}
                   className="bg-background-dark text-white border border-border-dark rounded-lg px-3 py-2 text-xs focus:border-primary outline-none"
@@ -537,6 +150,7 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
             <div className="flex flex-col gap-1.5 w-full">
               <label className="text-text-secondary text-xs font-semibold uppercase tracking-wider">Conta / Programa</label>
               <select
+                title="Filtrar por Conta/Programa"
                 value={filters.program}
                 onChange={(e) => setFilters(prev => ({ ...prev, program: e.target.value, rubric: '' }))}
                 className="bg-background-dark text-white border border-border-dark rounded-lg px-3 py-2 text-xs focus:border-primary outline-none"
@@ -552,6 +166,7 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
             <div className="flex flex-col gap-1.5 w-full">
               <label className="text-text-secondary text-xs font-semibold uppercase tracking-wider">Rubrica</label>
               <select
+                title="Filtrar por Rubrica"
                 value={filters.rubric}
                 onChange={(e) => setFilters(prev => ({ ...prev, rubric: e.target.value }))}
                 className="bg-background-dark text-white border border-border-dark rounded-lg px-3 py-2 text-xs focus:border-primary outline-none"
@@ -569,6 +184,7 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
             <div className="flex flex-col gap-1.5 w-full">
               <label className="text-text-secondary text-xs font-semibold uppercase tracking-wider">Natureza</label>
               <select
+                title="Filtrar por Natureza"
                 value={filters.nature}
                 onChange={(e) => setFilters(prev => ({ ...prev, nature: e.target.value }))}
                 className="bg-background-dark text-white border border-border-dark rounded-lg px-3 py-2 text-xs focus:border-primary outline-none"
@@ -583,6 +199,7 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
             <div className="flex flex-col gap-1.5 w-full">
               <label className="text-text-secondary text-xs font-semibold uppercase tracking-wider">Fornecedor</label>
               <select
+                title="Filtrar por Fornecedor"
                 value={filters.supplier}
                 onChange={(e) => setFilters(prev => ({ ...prev, supplier: e.target.value }))}
                 className="bg-background-dark text-white border border-border-dark rounded-lg px-3 py-2 text-xs focus:border-primary outline-none"
@@ -869,6 +486,7 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Público Alvo</label>
                 <select
+                  title="Selecionar público alvo do comunicado"
                   value={broadcastForm.targetRole}
                   onChange={e => setBroadcastForm({ ...broadcastForm, targetRole: e.target.value })}
                   className="bg-background-dark text-white border border-border-dark rounded-xl px-4 py-3 text-sm focus:border-primary outline-none"

@@ -77,10 +77,10 @@ const FinancialTable: React.FC<FinancialTableProps> = ({
                             <div className="flex justify-between items-start relative z-10">
                                 <div className="flex flex-col gap-1">
                                     <div className="flex items-center gap-2">
-                                        <span className={`text-[9px] font-black uppercase tracking-[0.1em] px-2 py-0.5 rounded-md border ${entry.type === 'Entrada' ? 'text-green-400 bg-green-500/10 border-green-500/20' : 'text-orange-400 bg-orange-500/10 border-orange-500/20'}`}>
+                                        <span className={`text-[10px] font-black uppercase tracking-[0.1em] px-2 py-0.5 rounded-md border ${entry.type === 'Entrada' ? 'text-green-400 bg-green-500/10 border-green-500/20' : 'text-orange-400 bg-orange-500/10 border-orange-500/20'}`}>
                                             {entry.type}
                                         </span>
-                                        <span className="text-[10px] text-slate-400 font-bold bg-white/5 px-2 py-0.5 rounded-md">
+                                        <span className="text-xs text-slate-400 font-bold bg-white/5 px-2 py-0.5 rounded-md">
                                             {new Date(entry.date).toLocaleDateString('pt-BR')}
                                         </span>
                                     </div>
@@ -108,10 +108,10 @@ const FinancialTable: React.FC<FinancialTableProps> = ({
                                 <div className="h-px bg-white/[0.05] w-full" />
                                 <div className="flex items-center justify-between">
                                     <div className="flex flex-col gap-0.5">
-                                        <span className="text-[10px] text-blue-400 font-black uppercase tracking-wider">{entry.program}</span>
-                                        <span className="text-[10px] text-slate-500 font-medium line-clamp-1">{entry.rubric}</span>
+                                        <span className="text-xs text-blue-400 font-black uppercase tracking-wider">{entry.program}</span>
+                                        <span className="text-xs text-slate-500 font-medium line-clamp-1">{entry.rubric}</span>
                                     </div>
-                                    <div className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${entry.nature === 'Custeio' ? 'text-purple-400 bg-purple-500/10' : 'text-amber-400 bg-amber-500/10'}`}>
+                                    <div className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${entry.nature === 'Custeio' ? 'text-purple-400 bg-purple-500/10' : 'text-amber-400 bg-amber-500/10'}`}>
                                         {entry.nature}
                                     </div>
                                 </div>
@@ -124,11 +124,11 @@ const FinancialTable: React.FC<FinancialTableProps> = ({
                                 </div>
                                 {canEdit && (
                                     <div className="flex items-center gap-2">
-                                        <button onClick={() => onEdit(entry)} className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center transition-all active:scale-95 shadow-sm border border-primary/20">
-                                            <span className="material-symbols-outlined text-[18px]">edit</span>
+                                        <button onClick={() => onEdit(entry)} className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center transition-all active:scale-95 shadow-sm border border-primary/20">
+                                            <span className="material-symbols-outlined text-[20px]">edit</span>
                                         </button>
-                                        <button onClick={() => onDelete(entry)} className="w-9 h-9 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center transition-all active:scale-95 shadow-sm border border-red-500/20">
-                                            <span className="material-symbols-outlined text-[18px]">{isAdmin ? 'delete' : (entry.status === TransactionStatus.ESTORNADO ? 'restore_from_trash' : 'block')}</span>
+                                        <button onClick={() => onDelete(entry)} className="w-11 h-11 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center transition-all active:scale-95 shadow-sm border border-red-500/20">
+                                            <span className="material-symbols-outlined text-[20px]">{isAdmin ? 'delete' : (entry.status === TransactionStatus.ESTORNADO ? 'restore_from_trash' : 'block')}</span>
                                         </button>
                                     </div>
                                 )}
@@ -146,6 +146,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({
                             <th className="p-5 w-12">
                                 <input
                                     type="checkbox"
+                                    aria-label="Selecionar todos"
                                     checked={selectedIds.length === entries.length && entries.length > 0}
                                     onChange={onToggleSelectAll}
                                     className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-primary focus:ring-primary focus:ring-offset-background-dark"
@@ -172,6 +173,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({
                                     <td className="p-5 w-12">
                                         <input
                                             type="checkbox"
+                                            aria-label="Selecionar"
                                             checked={selectedIds.includes(entry.id)}
                                             onChange={() => onToggleSelect(entry.id)}
                                             className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-primary"

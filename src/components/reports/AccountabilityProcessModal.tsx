@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { User, FinancialEntry, AccountabilityProcess, AccountabilityItem, AccountabilityQuoteItem, Supplier, UserRole } from '../../types';
 import { formatCurrency } from '../../lib/printUtils';
+import { useToast } from '../../context/ToastContext';
 
 interface AccountabilityProcessModalProps {
     isOpen: boolean;
@@ -59,6 +60,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
     const [supplierSearch, setSupplierSearch] = useState('');
     const [entrySearch, setEntrySearch] = useState('');
     const [importText, setImportText] = useState('');
+    const { addToast } = useToast();
 
     const ACCOUNTABILITY_DOC_CATEGORIES = ['Ata de Assembleia', 'Pesquisa de Preços', 'Certidão de Proponente', 'Nota Fiscal', 'Certidão de Regularidade', 'Ordem de Compra', 'Recibo / Quitação', 'Outros'];
 
@@ -156,11 +158,11 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
         if (quoteIdx === -1) return;
 
         if (selectedEntry?.supplier_id === supplier.id || (selectedEntry as any)?.suppliers?.id === supplier.id) {
-            return alert('Este fornecedor já é o GANHADOR deste processo.');
+            return addToast('Este fornecedor já é o GANHADOR deste processo.', 'warning');
         }
 
         if (competitorQuotes.some((q, idx) => idx !== quoteIdx && q.supplier_id === supplier.id)) {
-            return alert('Este fornecedor já foi selecionado como proponente.');
+            return addToast('Este fornecedor já foi selecionado como proponente.', 'warning');
         }
 
         const cq = [...competitorQuotes];
@@ -175,7 +177,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
     const handleSave = async () => {
         if (!selectedEntry) return;
         if (competitorQuotes.some(q => !q.supplier_id)) {
-            return alert('Selecione os 2 fornecedores proponentes.');
+            return addToast('Selecione os 2 fornecedores proponentes.', 'warning');
         }
 
         const subtotal = items.reduce((acc, it) => acc + ((it.quantity || 0) * (it.winner_unit_price || 0)), 0);
@@ -183,7 +185,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
         const targetValue = Math.abs(selectedEntry.value);
 
         if (Math.abs(totalAfterDiscount - targetValue) > 0.01) {
-            return alert(`O valor líquido (${formatCurrency(totalAfterDiscount)}) não corresponde ao valor da nota (${formatCurrency(targetValue)}).`);
+            return addToast(`O valor líquido (${formatCurrency(totalAfterDiscount)}) não corresponde ao valor da nota (${formatCurrency(targetValue)}).`, 'error');
         }
 
         setLoading(true);
@@ -258,7 +260,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
             onSave();
             onClose();
         } catch (err: any) {
-            alert('Erro: ' + err.message);
+            addToast('Erro: ' + err.message, 'error');
         } finally {
             setLoading(false);
         }
@@ -295,7 +297,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
             });
         }
 
-        if (parsedRows.length === 0) return alert('Formato inválido.');
+        if (parsedRows.length === 0) return addToast('Formato inválido.', 'error');
 
         const newItemsList = parsedRows.map(r => r.item);
         setItems(prev => {
@@ -542,7 +544,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                                                 if (uploadError) throw uploadError;
                                                 const { data: publicUrlData } = supabase.storage.from('documents').getPublicUrl(path);
                                                 setProcessAttachments([...processAttachments, { id: Math.random().toString(), name: file.name, url: publicUrlData.publicUrl, category: cat }]);
-                                            } catch (err: any) { alert(err.message); } finally { setIsUploadingDoc(false); }
+                                            } catch (err: any) { addToast(err.message, 'error'); } finally { setIsUploadingDoc(false); }
                                         }} />
                                     </label>
                                 ))}

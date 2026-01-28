@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { TransactionStatus, TransactionNature, User, UserRole } from '../../types';
+import { useToast } from '../../context/ToastContext';
 
 interface SplitItem {
     id: string; rubricId: string; rubricName: string; nature: TransactionNature; value: number; description: string;
@@ -31,6 +32,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
     // UI States
     const [activeTab, setActiveTab] = useState<'dados' | 'historico'>('dados');
     const [isUploading, setIsUploading] = useState(false);
+    const { addToast } = useToast();
 
     // Form State
     const [type, setType] = useState<'Entrada' | 'Saída'>('Saída');
@@ -194,7 +196,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
 
             setAttachments(prev => [...prev, newAttachment]);
         } catch (error: any) {
-            alert(`Erro no upload: ${error.message}`);
+            addToast(`Erro no upload: ${error.message}`, 'error');
         } finally {
             setIsUploading(false);
         }
@@ -206,11 +208,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
 
     const handleSave = async () => {
         if (!selectedSchoolId || !date || !selectedProgramId || !totalValue || !mainDescription) {
-            return alert('Preencha os campos obrigatórios: Escola, Data, Programa, Valor e Descritivo.');
+            return addToast('Preencha os campos obrigatórios: Escola, Data, Programa, Valor e Descritivo.', 'warning');
         }
 
         if (user.role === UserRole.DIRETOR && (editingId || editingBatchId)) {
-            return alert('O perfil de Diretor não tem permissão para editar lançamentos existentes.');
+            return addToast('O perfil de Diretor não tem permissão para editar lançamentos existentes.', 'error');
         }
 
         const valNum = parseFloat(totalValue);
@@ -226,11 +228,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
             if (isSplitMode) {
                 const totalSplit = splitItems.reduce((acc, curr) => acc + curr.value, 0);
                 if (Math.abs(totalSplit - valNum) > 0.01) {
-                    return alert(`O valor total das rubricas (R$ ${totalSplit.toFixed(2)}) deve ser igual ao valor total informado (R$ ${valNum.toFixed(2)}).`);
+                    return addToast(`O valor total das rubricas (R$ ${totalSplit.toFixed(2)}) deve ser igual ao valor total informado (R$ ${valNum.toFixed(2)}).`, 'warning');
                 }
 
                 if (splitItems.some(i => !i.rubricId || i.value <= 0)) {
-                    return alert('Todos os itens do rateio devem ter uma rubrica selecionada e valor maior que zero.');
+                    return addToast('Todos os itens do rateio devem ter uma rubrica selecionada e valor maior que zero.', 'warning');
                 }
 
                 const batchId = editingBatchId || `batch_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -276,7 +278,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                     });
                 }
             } else {
-                if (!singleRubricId) return alert('Selecione uma rubrica.');
+                if (!singleRubricId) return addToast('Selecione uma rubrica.', 'warning');
 
                 const payload = {
                     school_id: selectedSchoolId,
@@ -327,9 +329,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                 }
             }
             onSave();
+            addToast('Lançamento salvo com sucesso!', 'success');
             onClose();
         } catch (err: any) {
-            alert(`Erro ao salvar: ${err.message}`);
+            addToast(`Erro ao salvar: ${err.message}`, 'error');
         }
     };
 
@@ -339,7 +342,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
             <div className="w-full max-w-5xl bg-[#0f172a] border border-white/10 rounded-[32px] shadow-2xl flex flex-col min-h-[600px] max-h-[90vh] animate-in zoom-in-95 duration-200">
                 {/* Header */}
-                <div className="p-8 border-b border-white/5 flex flex-col gap-6 shrink-0">
+                <div className="p-6 md:p-8 border-b border-white/5 flex flex-col gap-6 shrink-0">
                     <div className="flex justify-between items-center">
                         <h3 className="text-xl font-bold text-white flex items-center gap-2">
                             <span className="material-symbols-outlined text-primary">edit_note</span>
@@ -359,7 +362,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                 </div>
 
                 {activeTab === 'dados' ? (
-                    <div className="flex-1 overflow-y-auto p-8 flex flex-col gap-6 custom-scrollbar">
+                    <div className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col gap-6 custom-scrollbar">
                         <div className="flex gap-4">
                             <button onClick={() => setType('Saída')} className={`flex-1 py-3 font-bold rounded-xl transition-all ${type === 'Saída' ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20' : 'bg-surface-dark text-slate-400'}`}>Saída</button>
                             <button onClick={() => setType('Entrada')} className={`flex-1 py-3 font-bold rounded-xl transition-all ${type === 'Entrada' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20' : 'bg-surface-dark text-slate-400'}`}>Entrada</button>
