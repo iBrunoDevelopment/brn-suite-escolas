@@ -111,6 +111,13 @@ export function useFinancialEntries(user: User, filters: any = {}) {
             // UI Filter logic
             if (filters.school) q = q.eq('school_id', filters.school);
             if (filters.program) q = q.eq('program_id', filters.program);
+            if (filters.rubric) {
+                if (filters.rubric === 'none') {
+                    q = q.is('rubric_id', null);
+                } else {
+                    q = q.eq('rubric_id', filters.rubric);
+                }
+            }
             if (filters.supplier) q = q.eq('supplier_id', filters.supplier);
             if (filters.startDate) q = q.gte('date', filters.startDate);
             if (filters.endDate) q = q.lte('date', filters.endDate);

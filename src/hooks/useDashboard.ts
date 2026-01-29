@@ -137,8 +137,13 @@ export const useDashboard = (user: User) => {
             filteredReprog = filteredReprog.filter((r: any) => r.program_id === filters.program);
         }
         if (filters.rubric) {
-            filteredEntries = filteredEntries.filter((e: any) => e.rubric_id === filters.rubric);
-            filteredReprog = filteredReprog.filter((r: any) => r.rubric_id === filters.rubric);
+            if (filters.rubric === 'none') {
+                filteredEntries = filteredEntries.filter((e: any) => !e.rubric_id);
+                filteredReprog = filteredReprog.filter((r: any) => !r.rubric_id);
+            } else {
+                filteredEntries = filteredEntries.filter((e: any) => e.rubric_id === filters.rubric);
+                filteredReprog = filteredReprog.filter((r: any) => r.rubric_id === filters.rubric);
+            }
         }
         if (filters.nature) {
             filteredEntries = filteredEntries.filter((e: any) => e.nature === filters.nature);

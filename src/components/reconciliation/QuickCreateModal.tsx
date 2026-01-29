@@ -71,15 +71,35 @@ const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
                     </div>
 
                     <div className="flex flex-col gap-1">
-                        <label htmlFor="qc-rubric" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Rubrica</label>
+                        <label htmlFor="qc-rubric" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Rubrica (Opcional)</label>
                         <select
                             id="qc-rubric"
                             value={quickForm.rubric_id}
-                            onChange={e => setQuickForm({ ...quickForm, rubric_id: e.target.value })}
+                            onChange={e => {
+                                const rub = rubrics.find(r => r.id === e.target.value);
+                                setQuickForm({
+                                    ...quickForm,
+                                    rubric_id: e.target.value,
+                                    nature: rub?.default_nature || quickForm.nature
+                                });
+                            }}
                             className="bg-card-dark border border-white/10 rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-indigo-500"
                         >
-                            <option value="">Selecione a Rubrica</option>
+                            <option value="">Nenhuma / Natureza Direta</option>
                             {rubrics.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                        </select>
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                        <label htmlFor="qc-nature" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Natureza</label>
+                        <select
+                            id="qc-nature"
+                            value={quickForm.nature}
+                            onChange={e => setQuickForm({ ...quickForm, nature: e.target.value })}
+                            className="bg-card-dark border border-white/10 rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-indigo-500"
+                        >
+                            <option value="Custeio">Custeio</option>
+                            <option value="Capital">Capital</option>
                         </select>
                     </div>
 
@@ -98,7 +118,7 @@ const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
 
                     <button
                         onClick={onConfirm}
-                        disabled={isMatching || !quickForm.program_id || !quickForm.rubric_id}
+                        disabled={isMatching || !quickForm.program_id}
                         className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 transition-all active:scale-95 disabled:opacity-50"
                     >
                         {isMatching ? 'Processando...' : 'Confirmar Lançamento e Conciliar'}

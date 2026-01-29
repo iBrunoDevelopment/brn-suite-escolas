@@ -11,6 +11,7 @@ interface FilterBarProps {
     auxData: {
         schools: any[];
         programs: any[];
+        rubrics: any[];
         suppliers: any[];
     };
     onPrintReport: () => void;
@@ -32,6 +33,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
         setFilters({
             school: '',
             program: '',
+            rubric: '',
             supplier: '',
             startDate: '',
             endDate: '',
@@ -97,12 +99,27 @@ const FilterBar: React.FC<FilterBarProps> = ({
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Programa / Recurso</label>
                         <select
                             value={filters.program}
-                            onChange={e => setFilters({ ...filters, program: e.target.value })}
+                            onChange={e => setFilters({ ...filters, program: e.target.value, rubric: '' })}
                             aria-label="Filtrar por Programa"
                             className="w-full bg-[#1c2936] text-white text-xs h-10 px-3 rounded-xl border border-white/10 outline-none focus:border-primary"
                         >
                             <option value="">Todos</option>
                             {auxData.programs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Rubrica</label>
+                        <select
+                            value={filters.rubric}
+                            onChange={e => setFilters({ ...filters, rubric: e.target.value })}
+                            aria-label="Filtrar por Rubrica"
+                            className="w-full bg-[#1c2936] text-white text-xs h-10 px-3 rounded-xl border border-white/10 outline-none focus:border-primary"
+                        >
+                            <option value="">Todas</option>
+                            <option value="none">Nenhuma / Natureza Direta</option>
+                            {auxData.rubrics
+                                .filter(r => !filters.program || r.program_id === filters.program)
+                                .map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                         </select>
                     </div>
                     <div className="flex flex-col gap-2">

@@ -307,10 +307,18 @@ export const useBankReconciliation = (user: User) => {
 
         if (bt.extract_type === 'investimento' || desc.includes('RENDIMENTO') || desc.includes('APLIC')) {
             const r = findRubric('RENDIMENTO') || findRubric('APLICAÇÃO');
-            if (r) { suggestedRubricId = r.id; suggestedProgramId = r.program_id; }
+            if (r) {
+                suggestedRubricId = r.id;
+                suggestedProgramId = r.program_id;
+                if ((r as any).default_nature) suggestedNature = (r as any).default_nature;
+            }
         } else if (desc.includes('TARIFA') || desc.includes('CESTA')) {
             const r = findRubric('TARIFA') || findRubric('SERVIÇO');
-            if (r) { suggestedRubricId = r.id; suggestedProgramId = r.program_id; }
+            if (r) {
+                suggestedRubricId = r.id;
+                suggestedProgramId = r.program_id;
+                if ((r as any).default_nature) suggestedNature = (r as any).default_nature;
+            }
         }
 
         setQuickCreateBT(bt);

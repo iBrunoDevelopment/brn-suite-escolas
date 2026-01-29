@@ -172,6 +172,7 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
                 className="bg-background-dark text-white border border-border-dark rounded-lg px-3 py-2 text-xs focus:border-primary outline-none"
               >
                 <option value="">Todas</option>
+                <option value="none">Nenhuma / Natureza Direta</option>
                 {availableOptions.rubrics
                   .filter(r => !filters.program || r.program_id === filters.program)
                   .map(r => (

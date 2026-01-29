@@ -231,8 +231,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                     return addToast(`O valor total das rubricas (R$ ${totalSplit.toFixed(2)}) deve ser igual ao valor total informado (R$ ${valNum.toFixed(2)}).`, 'warning');
                 }
 
-                if (splitItems.some(i => !i.rubricId || i.value <= 0)) {
-                    return addToast('Todos os itens do rateio devem ter uma rubrica selecionada e valor maior que zero.', 'warning');
+                if (splitItems.some(i => i.value <= 0)) {
+                    return addToast('Todos os itens do rateio devem ter um valor maior que zero.', 'warning');
                 }
 
                 const batchId = editingBatchId || `batch_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -255,7 +255,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                     status,
                     category,
                     nature: item.nature,
-                    rubric_id: item.rubricId,
+                    rubric_id: item.rubricId || null,
                     supplier_id: selectedSupplierId || null,
                     bank_account_id: selectedBankAccountId || null,
                     payment_method_id: selectedPaymentMethodId || null,
@@ -278,7 +278,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                     });
                 }
             } else {
-                if (!singleRubricId) return addToast('Selecione uma rubrica.', 'warning');
+                // Removed rubric requirement as nature is now the primary classification
 
                 const payload = {
                     school_id: selectedSchoolId,
@@ -290,7 +290,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                     status,
                     category,
                     nature: singleNature,
-                    rubric_id: singleRubricId,
+                    rubric_id: singleRubricId || null,
                     supplier_id: selectedSupplierId || null,
                     bank_account_id: selectedBankAccountId || null,
                     payment_method_id: selectedPaymentMethodId || null,
@@ -479,7 +479,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                                                         if (rub?.default_nature) ns[idx].nature = rub.default_nature as TransactionNature;
                                                         setSplitItems(ns);
                                                     }} className="bg-[#1e293b] text-white text-xs h-10 rounded-lg px-3 w-full border border-white/5 outline-none focus:border-primary">
-                                                        <option value="">Selecione...</option>
+                                                        <option value="">Nenhuma / Natureza Direta</option>
                                                         {filteredRubrics.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                                                     </select>
                                                 </div>
@@ -515,7 +515,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                                     <div className="md:col-span-2">
                                         <label htmlFor="single_rubric" className="sr-only">Rubrica</label>
                                         <select id="single_rubric" value={singleRubricId} onChange={e => { setSingleRubricId(e.target.value); const rub = allRubrics.find((r: any) => r.id === e.target.value); if (rub?.default_nature) setSingleNature(rub.default_nature as TransactionNature); }} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none w-full border border-white/5 focus:border-primary">
-                                            <option value="">Rubrica...</option>
+                                            <option value="">Nenhuma / Natureza Direta</option>
                                             {filteredRubrics.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                                         </select>
                                     </div>
