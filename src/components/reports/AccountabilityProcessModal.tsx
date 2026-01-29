@@ -62,7 +62,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
     const [importText, setImportText] = useState('');
     const { addToast } = useToast();
 
-    const ACCOUNTABILITY_DOC_CATEGORIES = ['Ata de Assembleia', 'Pesquisa de Preços', 'Certidão de Proponente', 'Nota Fiscal', 'Certidão de Regularidade', 'Ordem de Compra', 'Recibo / Quitação', 'Outros'];
+    const ACCOUNTABILITY_DOC_CATEGORIES = ['Ata de Assembleia', 'Pesquisa de Preços', 'Certidão de Proponente', 'Nota Fiscal', 'Espelho da Nota', 'Certidão de Regularidade', 'Ordem de Compra', 'Recibo / Quitação', 'Outros'];
 
     useEffect(() => {
         if (isOpen) {
@@ -340,29 +340,29 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
         const isOk = Math.abs(remaining) < 0.01;
 
         return (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 bg-white/[0.02] p-4 md:p-6 rounded-3xl border border-white/5 shadow-2xl">
-                <div className="flex flex-col gap-1.5 p-3 bg-black/20 rounded-2xl border border-white/5">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 bg-white/[0.02] p-4 md:p-6 rounded-2xl md:rounded-3xl border border-white/5 shadow-2xl">
+                <div className="flex flex-col gap-1.5 p-3 bg-black/20 rounded-xl md:rounded-2xl border border-white/5">
                     <span className="text-[8px] uppercase font-black text-slate-500 tracking-widest leading-none">Lançamento</span>
-                    <span className="text-[13px] font-bold text-white whitespace-nowrap">{formatCurrency(target)}</span>
+                    <span className="text-[11px] md:text-[13px] font-bold text-white whitespace-nowrap">{formatCurrency(target)}</span>
                 </div>
-                <div className="flex flex-col gap-1.5 p-3 bg-black/20 rounded-2xl border border-white/5">
+                <div className="flex flex-col gap-1.5 p-3 bg-black/20 rounded-xl md:rounded-2xl border border-white/5">
                     <span className="text-[8px] uppercase font-black text-slate-500 tracking-widest leading-none">Soma Itens</span>
-                    <span className="text-[13px] font-bold text-white whitespace-nowrap">{formatCurrency(subtotal)}</span>
+                    <span className="text-[11px] md:text-[13px] font-bold text-white whitespace-nowrap">{formatCurrency(subtotal)}</span>
                 </div>
-                <div className="flex flex-col gap-1.5 p-3 bg-amber-500/5 rounded-2xl border border-amber-500/10">
+                <div className="flex flex-col gap-1.5 p-3 bg-amber-500/5 rounded-xl md:rounded-2xl border border-amber-500/10">
                     <span className="text-[8px] uppercase font-black text-amber-500/70 tracking-widest leading-none">Desconto</span>
-                    <span className="text-[13px] font-bold text-amber-500">
+                    <span className="text-[11px] md:text-[13px] font-bold text-amber-500">
                         {discount > 0 ? `– ${formatCurrency(discount)}` : 'R$ 0,00'}
                     </span>
                 </div>
-                <div className="flex flex-col gap-1.5 p-3 bg-primary/5 rounded-2xl border border-primary/10">
+                <div className="flex flex-col gap-1.5 p-3 bg-primary/5 rounded-xl md:rounded-2xl border border-primary/10">
                     <span className="text-[8px] uppercase font-black text-primary/70 tracking-widest leading-none">Líquido</span>
-                    <span className={`text-[13px] font-bold ${isOk ? 'text-green-400' : 'text-primary'}`}>{formatCurrency(totalAfterDiscount)}</span>
+                    <span className={`text-[11px] md:text-[13px] font-bold ${isOk ? 'text-green-400' : 'text-primary'}`}>{formatCurrency(totalAfterDiscount)}</span>
                 </div>
-                <div className={`flex flex-col gap-1.5 p-3 rounded-2xl border col-span-2 md:col-span-1 transition-all ${isOk ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/5 border-red-500/10'}`}>
+                <div className={`flex flex-col gap-1.5 p-3 rounded-xl md:rounded-2xl border col-span-2 md:col-span-1 transition-all ${isOk ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/5 border-red-500/10'}`}>
                     <span className={`text-[8px] uppercase font-black tracking-widest leading-none ${isOk ? 'text-green-500' : 'text-red-400'}`}>Pendente</span>
                     <div className="flex items-center justify-between">
-                        <span className={`text-[13px] font-black ${isOk ? 'text-green-400' : 'text-red-400'}`}>{formatCurrency(remaining)}</span>
+                        <span className={`text-[11px] md:text-[13px] font-black ${isOk ? 'text-green-400' : 'text-red-400'}`}>{formatCurrency(remaining)}</span>
                         {isOk && <span className="material-symbols-outlined text-green-500 text-sm">verified</span>}
                     </div>
                 </div>
@@ -373,85 +373,85 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-8 bg-black/95 backdrop-blur-xl overflow-y-auto">
-            <div className="w-full max-w-7xl min-h-[90vh] bg-[#0a0f14] border border-white/10 rounded-[40px] shadow-2xl flex flex-col animate-in zoom-in-95 duration-300 relative">
+        <div className="fixed inset-0 z-[100] flex items-start justify-center p-0 md:p-8 bg-black/95 backdrop-blur-xl overflow-y-auto pt-0 md:pt-20">
+            <div className="w-full max-w-7xl bg-[#0a0f14] border-x md:border border-white/10 rounded-none md:rounded-[40px] shadow-2xl flex flex-col animate-in zoom-in-95 duration-300 relative min-h-screen md:min-h-0">
                 {/* Header */}
-                <div className="p-6 md:p-10 border-b border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 sticky top-0 bg-[#0a0f14]/80 backdrop-blur-xl z-30 rounded-t-[40px]">
-                    <div className="flex flex-col gap-1">
-                        <h2 className="text-2xl md:text-3xl font-black text-white flex items-center gap-3">
-                            <span className="material-symbols-outlined text-primary text-3xl">assignment_turned_in</span>
-                            {editingId ? 'Editar Prestação de Contas' : 'Novo Processo de Contas'}
+                <div className="p-5 md:p-10 border-b border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-[#0a0f14] rounded-t-none md:rounded-t-[40px]">
+                    <div className="flex flex-col gap-1 w-full md:w-auto">
+                        <h2 className="text-xl md:text-3xl font-black text-white flex items-center gap-3">
+                            <span className="material-symbols-outlined text-primary text-2xl md:text-3xl">assignment_turned_in</span>
+                            <span className="truncate">{editingId ? 'Editar Processo' : 'Novo Processo'}</span>
                         </h2>
-                        <p className="text-[10px] md:text-xs text-slate-500 uppercase font-black tracking-[0.2em]">Fluxo Completo: Lançamento • Cotações • Checklist • Finalização</p>
+                        <p className="text-[8px] md:text-xs text-slate-500 uppercase font-black tracking-widest md:tracking-[0.2em]">Fluxo: Lançamento • Cotações • Checklist</p>
                     </div>
-                    <div className="flex items-center gap-4 w-full md:w-auto">
-                        <button onClick={onClose} className="flex-1 md:flex-none h-14 px-8 rounded-2xl text-slate-400 font-bold hover:bg-white/5 transition-all text-sm uppercase tracking-widest">Descartar</button>
-                        <button onClick={handleSave} disabled={loading} className="flex-2 md:flex-none h-14 px-12 rounded-2xl bg-primary text-white font-black text-sm uppercase tracking-widest shadow-2xl shadow-primary/30 hover:bg-primary-hover active:scale-95 transition-all disabled:opacity-50">
-                            {loading ? 'Salvando...' : 'Finalizar Processo'}
+                    <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto">
+                        <button onClick={onClose} className="flex-1 md:flex-none h-12 md:h-14 px-4 md:px-8 rounded-xl md:rounded-2xl text-slate-400 font-bold hover:bg-white/5 transition-all text-[10px] md:text-sm uppercase tracking-widest">Descartar</button>
+                        <button onClick={handleSave} disabled={loading} className="flex-[2] md:flex-none h-12 md:h-14 px-4 md:px-12 rounded-xl md:rounded-2xl bg-primary text-white font-black text-[10px] md:text-sm uppercase tracking-widest shadow-2xl shadow-primary/30 hover:bg-primary-hover active:scale-95 transition-all disabled:opacity-50">
+                            {loading ? 'Sincronizando...' : 'Finalizar Processo'}
                         </button>
                     </div>
                 </div>
 
-                <div className="flex-1 p-6 md:p-10 space-y-10">
+                <div className="flex-1 p-4 md:p-10 space-y-6 md:space-y-10">
                     <ValueCounter />
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                         {/* Section 1 & 3 */}
                         <div className="space-y-10">
-                            <section className="bg-white/[0.02] p-8 rounded-[36px] border border-white/5 shadow-2xl space-y-8">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <section className="bg-white/[0.02] p-5 md:p-8 rounded-2xl md:rounded-[36px] border border-white/5 shadow-2xl space-y-6 md:space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                                     <div className="md:col-span-2">
-                                        <label htmlFor="entry_select" className="text-[10px] font-black uppercase text-primary tracking-[0.25em] mb-4 block opacity-60">1. Lançamento Base</label>
-                                        <button id="entry_select" onClick={() => setShowEntryModal(true)} className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 px-5 flex items-center justify-between hover:border-primary/40 hover:bg-black/60 transition-all group/btn">
-                                            <span className={`text-[12px] truncate uppercase tracking-tight ${selectedEntry ? 'text-white font-black' : 'text-slate-600 italic font-bold'}`}>
-                                                {selectedEntry ? selectedEntry.description : 'Selecionar Lançamento...'}
+                                        <label htmlFor="entry_select" className="text-[8px] md:text-[10px] font-black uppercase text-primary tracking-widest md:tracking-[0.25em] mb-3 block opacity-60">1. Lançamento Base</label>
+                                        <button id="entry_select" onClick={() => setShowEntryModal(true)} className="w-full bg-black/40 border border-white/10 rounded-xl md:rounded-2xl h-12 md:h-14 px-4 md:px-5 flex items-center justify-between hover:border-primary/40 hover:bg-black/60 transition-all group/btn">
+                                            <span className={`text-[11px] truncate uppercase tracking-tight ${selectedEntry ? 'text-white font-black' : 'text-slate-600 italic font-bold'}`}>
+                                                {selectedEntry ? selectedEntry.description : 'Selecionar...'}
                                             </span>
-                                            <span className="material-symbols-outlined text-primary/30 group-hover/btn:text-primary transition-all">receipt</span>
+                                            <span className="material-symbols-outlined text-primary/30 group-hover/btn:text-primary transition-all text-sm">receipt</span>
                                         </button>
                                     </div>
                                     <div>
-                                        <label htmlFor="process_status" className="text-[10px] font-black uppercase text-slate-500 tracking-[0.25em] mb-4 block opacity-60">Status</label>
-                                        <select id="process_status" value={processStatus} onChange={e => setProcessStatus(e.target.value as any)} className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 px-5 text-white text-[11px] font-black focus:border-primary outline-none transition-all">
+                                        <label htmlFor="process_status" className="text-[8px] md:text-[10px] font-black uppercase text-slate-500 tracking-widest md:tracking-[0.25em] mb-3 block opacity-60">Status</label>
+                                        <select id="process_status" value={processStatus} onChange={e => setProcessStatus(e.target.value as any)} className="w-full bg-black/40 border border-white/10 rounded-xl md:rounded-2xl h-12 md:h-14 px-4 md:px-5 text-white text-[11px] font-black focus:border-primary outline-none transition-all">
                                             <option value="Em Andamento">Em Andamento</option>
                                             <option value="Concluído">Concluído</option>
                                         </select>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 items-end">
                                     <div className="md:col-span-2">
                                         {selectedEntry && (
-                                            <div className="h-14 px-5 bg-primary/5 border border-primary/10 rounded-2xl flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                                                    <span className="material-symbols-outlined text-[18px] font-black">verified</span>
+                                            <div className="h-12 md:h-14 px-4 md:px-5 bg-primary/5 border border-primary/10 rounded-xl md:rounded-2xl flex items-center gap-3">
+                                                <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                                                    <span className="material-symbols-outlined text-sm md:text-[18px] font-black">verified</span>
                                                 </div>
                                                 <div className="truncate">
-                                                    <span className="text-[8px] font-black text-primary/60 uppercase tracking-[0.3em] block mb-1">Fornecedor Vencedor</span>
-                                                    <span className="text-[12px] font-black text-white uppercase truncate block">{(selectedEntry as any).suppliers?.name || 'N/A'}</span>
+                                                    <span className="text-[7px] font-black text-primary/60 uppercase tracking-widest block mb-0.5">Vencedor</span>
+                                                    <span className="text-[10px] md:text-[12px] font-black text-white uppercase truncate block">{(selectedEntry as any).suppliers?.name || 'N/A'}</span>
                                                 </div>
                                             </div>
                                         )}
                                     </div>
                                     <div>
-                                        <label htmlFor="discount_input" className="text-[10px] font-black uppercase text-amber-500/70 tracking-[0.25em] mb-4 block">Dsc. em Nota (R$)</label>
+                                        <label htmlFor="discount_input" className="text-[8px] md:text-[10px] font-black uppercase text-amber-500/70 tracking-widest md:tracking-[0.25em] mb-3 block">Desconto (R$)</label>
                                         <div className="relative">
                                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-500/40 font-black text-[10px]">R$</span>
-                                            <input id="discount_input" type="number" step="any" value={discount} onChange={e => setDiscount(Number(e.target.value))} className="w-full bg-black/40 border border-amber-500/20 rounded-2xl h-14 pl-10 pr-5 text-amber-500 text-[13px] font-black focus:border-amber-500 outline-none transition-all" />
+                                            <input id="discount_input" type="number" step="any" value={discount} onChange={e => setDiscount(Number(e.target.value))} className="w-full bg-black/40 border border-amber-500/20 rounded-xl md:rounded-2xl h-12 md:h-14 pl-10 pr-5 text-amber-500 text-[12px] md:text-[13px] font-black focus:border-amber-500 outline-none transition-all" />
                                         </div>
                                     </div>
                                 </div>
                             </section>
 
-                            <section className="bg-white/[0.02] p-8 rounded-[36px] border border-white/5 shadow-2xl space-y-6">
-                                <label className="text-[10px] font-black uppercase text-primary tracking-[0.25em] mb-4 block opacity-60">3. Checklist de Conformidade</label>
-                                <div className="grid grid-cols-1 gap-3">
+                            <section className="bg-white/[0.02] p-5 md:p-8 rounded-2xl md:rounded-[36px] border border-white/5 shadow-2xl space-y-4 md:space-y-6">
+                                <label className="text-[8px] md:text-[10px] font-black uppercase text-primary tracking-widest md:tracking-[0.25em] mb-2 block opacity-60">3. Checklist</label>
+                                <div className="grid grid-cols-1 gap-2.5">
                                     {checklist.map((item, idx) => (
-                                        <label key={item.id} className="flex items-center gap-5 p-4.5 bg-black/30 rounded-[24px] border border-white/5 cursor-pointer hover:bg-white/[0.04] transition-all group/check">
-                                            <div className={`w-7 h-7 rounded-xl flex items-center justify-center border-2 transition-all ${item.checked ? 'bg-primary border-primary text-white' : 'border-white/10 group-hover/check:border-primary/40'}`}>
-                                                {item.checked && <span className="material-symbols-outlined text-[18px]">check_circle</span>}
+                                        <label key={item.id} className="flex items-center gap-3 p-3.5 md:p-4.5 bg-black/30 rounded-xl md:rounded-[24px] border border-white/5 cursor-pointer hover:bg-white/[0.04] transition-all group/check shrink-0">
+                                            <div className={`w-6 h-6 md:w-7 md:h-7 rounded-lg md:rounded-xl flex items-center justify-center border-2 transition-all shrink-0 ${item.checked ? 'bg-primary border-primary text-white' : 'border-white/10 group-hover/check:border-primary/40'}`}>
+                                                {item.checked && <span className="material-symbols-outlined text-sm md:text-[18px]">check_circle</span>}
                                                 <input type="checkbox" className="hidden" checked={item.checked} onChange={e => { const nc = [...checklist]; nc[idx].checked = e.target.checked; setChecklist(nc); }} />
                                             </div>
-                                            <span className={`text-[11px] font-black uppercase tracking-widest ${item.checked ? 'text-white' : 'text-slate-600'}`}>{item.label}</span>
+                                            <span className={`text-[9px] md:text-[11px] font-black uppercase tracking-widest ${item.checked ? 'text-white' : 'text-slate-600'}`}>{item.label}</span>
                                         </label>
                                     ))}
                                 </div>
@@ -459,62 +459,64 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                         </div>
 
                         {/* Items Section */}
-                        <section className="space-y-8">
-                            <div className="flex justify-between items-center">
-                                <h4 className="text-[12px] font-black uppercase text-white tracking-[0.2em]">2. Itens e Cotações Competidoras</h4>
-                                <div className="flex gap-3">
-                                    <button onClick={() => setShowImportModal(true)} className="h-12 px-6 rounded-xl bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20 hover:bg-emerald-500 hover:text-white transition-all">Planilha</button>
-                                    <button onClick={handleAddItem} className="h-12 px-6 rounded-xl bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/20 hover:bg-primary hover:text-white transition-all">Adicionar Item</button>
+                        <section className="space-y-6 md:space-y-8">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <h4 className="text-[10px] md:text-[12px] font-black uppercase text-white tracking-widest md:tracking-[0.2em]">2. Itens e Cotações</h4>
+                                <div className="flex gap-2 w-full md:w-auto">
+                                    <button onClick={() => setShowImportModal(true)} className="flex-1 md:flex-none h-10 md:h-12 px-4 md:px-6 rounded-xl bg-emerald-500/10 text-emerald-500 text-[8px] md:text-[10px] font-black uppercase tracking-widest border border-emerald-500/20 hover:bg-emerald-500 hover:text-white transition-all">Planilha</button>
+                                    <button onClick={handleAddItem} className="flex-1 md:flex-none h-10 md:h-12 px-4 md:px-6 rounded-xl bg-primary/10 text-primary text-[8px] md:text-[10px] font-black uppercase tracking-widest border border-primary/20 hover:bg-primary hover:text-white transition-all">Novo Item</button>
                                 </div>
                             </div>
 
-                            <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                            <div className="space-y-4 md:space-y-6 max-h-[500px] md:max-h-[600px] overflow-y-auto pr-1 md:pr-2 custom-scrollbar">
                                 {items.map((item, idx) => (
-                                    <div key={idx} className="bg-white/[0.01] border border-white/5 p-8 rounded-[32px] space-y-6 relative overflow-hidden group/item">
-                                        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
-                                            <div className="md:col-span-11 grid grid-cols-1 md:grid-cols-12 gap-4">
+                                    <div key={idx} className="bg-white/[0.01] border border-white/5 p-4 md:p-8 rounded-2xl md:rounded-[32px] space-y-4 md:space-y-6 relative overflow-hidden group/item">
+                                        <div className="flex flex-col md:grid md:grid-cols-12 gap-4 md:gap-6 items-end">
+                                            <div className="w-full md:col-span-11 grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4">
                                                 <div className="md:col-span-6">
-                                                    <label htmlFor={`desc_${idx}`} className="text-[9px] font-black text-slate-500 uppercase mb-2 block tracking-widest opacity-60">Descrição</label>
+                                                    <label htmlFor={`desc_${idx}`} className="text-[8px] md:text-[9px] font-black text-slate-500 uppercase mb-1.5 block tracking-widest opacity-60">Descrição</label>
                                                     <input id={`desc_${idx}`} value={item.description} onChange={e => {
                                                         const it = [...items]; it[idx].description = e.target.value; setItems(it);
                                                         const cq = [...competitorQuotes]; cq.forEach(q => q.items[idx].description = e.target.value); setCompetitorQuotes(cq);
-                                                    }} className="w-full bg-black/40 border border-white/10 rounded-xl h-11 px-4 text-[11px] text-white focus:border-primary/50 transition-all" />
+                                                    }} className="w-full bg-black/40 border border-white/10 rounded-lg md:rounded-xl h-10 md:h-11 px-3 md:px-4 text-[10px] md:text-[11px] text-white focus:border-primary/50 transition-all outline-none" />
                                                 </div>
-                                                <div className="md:col-span-2">
-                                                    <label htmlFor={`qty_${idx}`} className="text-[9px] font-black text-slate-500 uppercase mb-2 block tracking-widest opacity-60 text-center">Qtd</label>
-                                                    <input id={`qty_${idx}`} type="number" value={item.quantity} onChange={e => {
-                                                        const it = [...items]; it[idx].quantity = Number(e.target.value); setItems(it);
-                                                        const cq = [...competitorQuotes]; cq.forEach(q => q.items[idx].quantity = Number(e.target.value)); setCompetitorQuotes(cq);
-                                                    }} className="w-full bg-black/40 border border-white/10 rounded-xl h-11 text-center text-[11px] text-white" />
-                                                </div>
-                                                <div className="md:col-span-2">
-                                                    <label htmlFor={`unit_${idx}`} className="text-[9px] font-black text-slate-500 uppercase mb-2 block tracking-widest opacity-60 text-center">Unid</label>
-                                                    <input id={`unit_${idx}`} value={item.unit} onChange={e => {
-                                                        const it = [...items]; it[idx].unit = e.target.value; setItems(it);
-                                                        const cq = [...competitorQuotes]; cq.forEach(q => q.items[idx].unit = e.target.value); setCompetitorQuotes(cq);
-                                                    }} className="w-full bg-black/40 border border-white/10 rounded-xl h-11 text-center text-[11px] text-white uppercase" />
-                                                </div>
-                                                <div className="md:col-span-2">
-                                                    <label htmlFor={`win_price_${idx}`} className="text-[9px] font-black text-primary uppercase mb-2 block tracking-widest">Preço R$</label>
-                                                    <input id={`win_price_${idx}`} type="number" step="any" value={item.winner_unit_price} onChange={e => { const it = [...items]; it[idx].winner_unit_price = Number(e.target.value); setItems(it); }} className="w-full bg-primary/10 border border-primary/20 rounded-xl h-11 px-3 text-[11px] text-primary font-black" />
+                                                <div className="grid grid-cols-3 gap-3 md:col-span-6">
+                                                    <div className="col-span-1">
+                                                        <label htmlFor={`qty_${idx}`} className="text-[8px] md:text-[9px] font-black text-slate-500 uppercase mb-1.5 block tracking-widest opacity-60 text-center">Qtd</label>
+                                                        <input id={`qty_${idx}`} type="number" value={item.quantity} onChange={e => {
+                                                            const it = [...items]; it[idx].quantity = Number(e.target.value); setItems(it);
+                                                            const cq = [...competitorQuotes]; cq.forEach(q => q.items[idx].quantity = Number(e.target.value)); setCompetitorQuotes(cq);
+                                                        }} className="w-full bg-black/40 border border-white/10 rounded-lg md:rounded-xl h-10 md:h-11 text-center text-[10px] md:text-[11px] text-white outline-none" />
+                                                    </div>
+                                                    <div className="col-span-1">
+                                                        <label htmlFor={`unit_${idx}`} className="text-[8px] md:text-[9px] font-black text-slate-500 uppercase mb-1.5 block tracking-widest opacity-60 text-center">Unid</label>
+                                                        <input id={`unit_${idx}`} value={item.unit} onChange={e => {
+                                                            const it = [...items]; it[idx].unit = e.target.value; setItems(it);
+                                                            const cq = [...competitorQuotes]; cq.forEach(q => q.items[idx].unit = e.target.value); setCompetitorQuotes(cq);
+                                                        }} className="w-full bg-black/40 border border-white/10 rounded-lg md:rounded-xl h-10 md:h-11 text-center text-[10px] md:text-[11px] text-white uppercase outline-none" />
+                                                    </div>
+                                                    <div className="col-span-1">
+                                                        <label htmlFor={`win_price_${idx}`} className="text-[8px] md:text-[9px] font-black text-primary uppercase mb-1.5 block tracking-widest text-center">Preço R$</label>
+                                                        <input id={`win_price_${idx}`} type="number" step="any" value={item.winner_unit_price} onChange={e => { const it = [...items]; it[idx].winner_unit_price = Number(e.target.value); setItems(it); }} className="w-full bg-primary/10 border border-primary/20 rounded-lg md:rounded-xl h-10 md:h-11 px-3 text-center text-[10px] md:text-[11px] text-primary font-black outline-none" />
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className="md:col-span-1 flex justify-end">
-                                                <button onClick={() => handleRemoveItem(idx)} className="w-11 h-11 flex items-center justify-center rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all"><span className="material-symbols-outlined text-[20px]">delete</span></button>
+                                            <div className="w-full md:col-span-1 flex justify-end">
+                                                <button onClick={() => handleRemoveItem(idx)} className="h-10 w-full md:w-11 md:h-11 flex items-center justify-center rounded-lg md:rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all"><span className="material-symbols-outlined text-[18px] md:text-[20px]">delete</span><span className="md:hidden text-[10px] font-bold ml-2">Remover Item</span></button>
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-white/5">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 pt-4 md:pt-6 border-t border-white/5">
                                             {competitorQuotes.map((q, qIdx) => (
-                                                <div key={qIdx} className="bg-black/30 p-5 rounded-2xl border border-white/5 space-y-4 relative group/quote">
-                                                    <div className="absolute -top-3 left-4 px-3 py-1 bg-amber-500 text-amber-950 rounded-full text-[8px] font-black uppercase">Concorrente {qIdx + 1}</div>
-                                                    <button onClick={() => setShowSupplierModal({ open: true, quoteIdx: qIdx })} className="w-full bg-black/40 p-4 rounded-xl border border-white/5 flex justify-between items-center hover:border-amber-500/40 transition-all">
-                                                        <span className={`text-[11px] uppercase truncate ${q.supplier_name ? 'text-white font-bold' : 'text-slate-600 italic'}`}>{q.supplier_name || 'Vincular Fornecedor...'}</span>
-                                                        <span className="material-symbols-outlined text-amber-500 text-sm">search</span>
+                                                <div key={qIdx} className="bg-black/30 p-3 md:p-5 rounded-xl md:rounded-2xl border border-white/5 space-y-3 md:space-y-4 relative group/quote">
+                                                    <div className="absolute -top-2.5 left-4 px-2 py-0.5 bg-amber-500 text-amber-950 rounded-full text-[7px] md:text-[8px] font-black uppercase">Concorrente {qIdx + 1}</div>
+                                                    <button onClick={() => setShowSupplierModal({ open: true, quoteIdx: qIdx })} className="w-full bg-black/40 p-3 rounded-lg md:rounded-xl border border-white/5 flex justify-between items-center hover:border-amber-500/40 transition-all outline-none">
+                                                        <span className={`text-[10px] md:text-[11px] uppercase truncate font-bold text-left ${q.supplier_name ? 'text-white' : 'text-slate-600 italic'}`}>{q.supplier_name || 'Vincular...'}</span>
+                                                        <span className="material-symbols-outlined text-amber-500 text-xs md:text-sm shrink-0 ml-2">search</span>
                                                     </button>
                                                     <div className="relative">
-                                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-500/30 font-black text-[10px]">R$</span>
-                                                        <input aria-label={`Preço Unitário Concorrente ${qIdx + 1}`} type="number" step="any" value={q.items[idx].unit_price} onChange={e => { const cq = [...competitorQuotes]; cq[qIdx].items[idx].unit_price = Number(e.target.value); setCompetitorQuotes(cq); }} className="w-full bg-black/40 border border-white/10 rounded-xl h-11 pl-10 pr-4 text-[13px] text-amber-500 font-black focus:border-amber-500/50 outline-none transition-all" />
+                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-500/30 font-black text-[9px]">R$</span>
+                                                        <input aria-label={`Preço Unitário Concorrente ${qIdx + 1}`} type="number" step="any" value={q.items[idx].unit_price} onChange={e => { const cq = [...competitorQuotes]; cq[qIdx].items[idx].unit_price = Number(e.target.value); setCompetitorQuotes(cq); }} className="w-full bg-black/40 border border-white/10 rounded-lg md:rounded-xl h-10 pl-8 pr-3 text-[12px] md:text-[13px] text-amber-500 font-black focus:border-amber-500/50 outline-none transition-all" />
                                                     </div>
                                                 </div>
                                             ))}
@@ -526,14 +528,14 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                     </div>
 
                     {/* Attachments */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                        <section className="bg-white/[0.02] p-8 rounded-[36px] border border-white/5 shadow-2xl space-y-8">
-                            <h4 className="text-[12px] font-black uppercase text-white tracking-[0.2em] flex items-center gap-3"><span className="material-symbols-outlined text-primary">cloud_upload</span> 4. Anexos Técnicos</h4>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="flex flex-col lg:grid lg:grid-cols-2 gap-6 md:gap-10 pb-20 md:pb-0">
+                        <section className="bg-white/[0.02] p-5 md:p-8 rounded-2xl md:rounded-[36px] border border-white/5 shadow-2xl space-y-6 md:space-y-8">
+                            <h4 className="text-[10px] md:text-[12px] font-black uppercase text-white tracking-widest md:tracking-[0.2em] flex items-center gap-3"><span className="material-symbols-outlined text-primary text-lg">cloud_upload</span> 4. Anexos Técnicos</h4>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 md:gap-3">
                                 {ACCOUNTABILITY_DOC_CATEGORIES.map(cat => (
-                                    <label key={cat} className="flex flex-col items-center justify-center p-3 h-24 bg-black/40 border border-white/5 rounded-2xl text-[8px] font-black text-slate-500 uppercase tracking-tight text-center cursor-pointer hover:bg-primary hover:text-white transition-all gap-2 group/up">
-                                        <span className="material-symbols-outlined text-lg opacity-40 group-hover/up:opacity-100 group-hover/up:scale-110 transition-all">upload</span>
-                                        <span className="line-clamp-2">{cat}</span>
+                                    <label key={cat} className="flex flex-col items-center justify-center p-2 md:p-3 h-20 md:h-24 bg-black/40 border border-white/5 rounded-xl md:rounded-2xl text-[7px] md:text-[8px] font-black text-slate-500 uppercase tracking-tight text-center cursor-pointer hover:bg-primary hover:text-white transition-all gap-1.5 md:gap-2 group/up">
+                                        <span className="material-symbols-outlined text-base md:text-lg opacity-40 group-hover/up:opacity-100 group-hover/up:scale-110 transition-all">upload</span>
+                                        <span className="line-clamp-2 leading-tight">{cat}</span>
                                         <input type="file" className="hidden" disabled={isUploadingDoc} onChange={async (e) => {
                                             const file = e.target.files?.[0];
                                             if (!file) return;

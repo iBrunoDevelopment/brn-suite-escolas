@@ -63,7 +63,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
 
     const ENTRY_CATEGORIES = ['Repasse / Crédito', 'Rendimento de Aplicação', 'Reembolso / Estorno', 'Doação', 'Outros'];
     const EXIT_CATEGORIES = ['Compra de Produtos', 'Contratação de Serviços', 'Tarifa Bancária', 'Impostos / Tributos', 'Devolução de Recurso (FNDE/Estado)', 'Outros'];
-    const ATTACHMENT_CATEGORIES = ['Nota Fiscal', 'Comprovante', 'Extrato Bancário', 'Certidão Municipal', 'Certidão Estadual', 'Certidão Federal', 'FGTS', 'Trabalhista', 'Outros'];
+    const ATTACHMENT_CATEGORIES = ['Nota Fiscal', 'Espelho da Nota', 'Comprovante', 'Extrato Bancário', 'CNPJ', 'Certidões', 'Certidão Municipal', 'Certidão Estadual', 'Certidão Federal', 'FGTS', 'Trabalhista', 'Outros'];
 
     // Derived states
     const isSimplified = category === 'Tarifa Bancária' || category === 'Rendimento de Aplicação';
@@ -546,12 +546,20 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                                     <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
                                         <span className="text-[10px] uppercase text-primary font-black">Financeiros</span>
                                         <div className="flex gap-2">
-                                            {ATTACHMENT_CATEGORIES.slice(0, 3).map(cat => (
-                                                <label key={cat} className="cursor-pointer bg-primary/10 text-primary px-2 py-1 rounded text-[9px] font-bold border border-primary/20 hover:bg-primary/20">
-                                                    + {cat.split(' ')[0]}
-                                                    <input type="file" className="hidden" onChange={e => handleFileUpload(e, cat)} />
-                                                </label>
-                                            ))}
+                                            {(() => {
+                                                const isExtratoAllowed = ['Tarifa Bancária', 'Devolução de Recurso (FNDE/Estado)', 'Repasse / Crédito', 'Rendimento de Aplicação'].includes(category);
+                                                const buttons = ['Nota Fiscal', 'Espelho da Nota', 'Comprovante', 'Extrato Bancário', 'CNPJ', 'Certidões'].filter(cat => {
+                                                    if (cat === 'Extrato Bancário') return isExtratoAllowed;
+                                                    return true;
+                                                });
+
+                                                return buttons.map(cat => (
+                                                    <label key={cat} className="cursor-pointer bg-primary/10 text-primary px-2 py-1 rounded text-[9px] font-bold border border-primary/20 hover:bg-primary/20 shrink-0">
+                                                        + {cat === 'CNPJ' ? 'CNPJ' : cat === 'Espelho da Nota' ? 'Espelho' : cat.split(' ')[0]}
+                                                        <input type="file" className="hidden" onChange={e => handleFileUpload(e, cat)} />
+                                                    </label>
+                                                ));
+                                            })()}
                                         </div>
                                     </div>
                                     <div className="space-y-2">

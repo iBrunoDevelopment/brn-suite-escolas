@@ -234,7 +234,7 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                         className="bg-surface-dark border border-surface-border rounded-xl px-4 py-2 text-xs text-white outline-none"
                     >
                         <option value="">Todas</option>
-                        {['Nota Fiscal', 'Comprovante', 'Certidão', 'Outros'].map(c => <option key={c} value={c}>{c}</option>)}
+                        {['Nota Fiscal', 'Espelho da Nota', 'Comprovante', 'Extrato Bancário', 'CNPJ', 'Certidões', 'Certidão Municipal', 'Certidão Estadual', 'Certidão Federal', 'Outros'].map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                 </div>
                 <div className="flex flex-col gap-1">

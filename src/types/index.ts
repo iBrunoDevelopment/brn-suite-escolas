@@ -49,7 +49,7 @@ export interface Attachment {
     url: string;
     type: string;
     size?: number;
-    category?: 'Nota Fiscal' | 'Comprovante' | 'Certidão Municipal' | 'Certidão Estadual' | 'Certidão Federal' | 'FGTS' | 'Trabalhista' | 'Outros';
+    category?: 'Nota Fiscal' | 'Espelho da Nota' | 'Comprovante' | 'Extrato Bancário' | 'CNPJ' | 'Certidões' | 'Certidão Municipal' | 'Certidão Estadual' | 'Certidão Federal' | 'FGTS' | 'Trabalhista' | 'Outros';
 }
 
 export interface Supplier {
