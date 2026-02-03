@@ -553,7 +553,9 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                                             if (!file) return;
                                             setIsUploadingDoc(true);
                                             try {
-                                                const path = `accountability/${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+                                                const fileExt = file.name.split('.').pop();
+                                                const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+                                                const path = `accountability/${Date.now()}_${safeName}`;
                                                 const { error: uploadError } = await supabase.storage.from('documents').upload(path, file);
                                                 if (uploadError) throw uploadError;
                                                 const { data: publicUrlData } = supabase.storage.from('documents').getPublicUrl(path);
