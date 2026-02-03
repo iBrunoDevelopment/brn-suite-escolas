@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { TransactionStatus, TransactionNature, User, UserRole } from '../../types';
 import { useToast } from '../../context/ToastContext';
+import { compressImage } from '../../lib/imageUtils';
 
 interface SplitItem {
     id: string; rubricId: string; rubricName: string; nature: TransactionNature; value: number; description: string;
@@ -182,11 +183,14 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
 
         setIsUploading(true);
         try {
+            // Compress if it's an image
+            const processedFile = file.type.startsWith('image/') ? await compressImage(file) : file;
+
             const fileExt = file.name.split('.').pop();
             const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
             const filePath = `entries/${fileName}`;
 
-            const { error: uploadError } = await supabase.storage.from('attachments').upload(filePath, file);
+            const { error: uploadError } = await supabase.storage.from('attachments').upload(filePath, processedFile);
             if (uploadError) throw uploadError;
 
             const { data: { publicUrl } } = supabase.storage.from('attachments').getPublicUrl(filePath);

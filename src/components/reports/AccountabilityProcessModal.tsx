@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { User, FinancialEntry, AccountabilityProcess, AccountabilityItem, AccountabilityQuoteItem, Supplier, UserRole } from '../../types';
 import { formatCurrency } from '../../lib/printUtils';
 import { useToast } from '../../context/ToastContext';
+import { compressImage } from '../../lib/imageUtils';
 
 interface AccountabilityProcessModalProps {
     isOpen: boolean;
@@ -553,10 +554,11 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                                             if (!file) return;
                                             setIsUploadingDoc(true);
                                             try {
+                                                const processedFile = file.type.startsWith('image/') ? await compressImage(file) : file;
                                                 const fileExt = file.name.split('.').pop();
                                                 const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
                                                 const path = `accountability/${Date.now()}_${safeName}`;
-                                                const { error: uploadError } = await supabase.storage.from('documents').upload(path, file);
+                                                const { error: uploadError } = await supabase.storage.from('documents').upload(path, processedFile);
                                                 if (uploadError) throw uploadError;
                                                 const { data: publicUrlData } = supabase.storage.from('documents').getPublicUrl(path);
                                                 setProcessAttachments([...processAttachments, { id: Math.random().toString(), name: file.name, url: publicUrlData.publicUrl, category: cat }]);
