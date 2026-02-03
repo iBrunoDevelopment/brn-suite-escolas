@@ -14,6 +14,7 @@ import StatusSection from '../components/settings/StatusSection';
 import SupportContactsSection from '../components/settings/SupportContactsSection';
 import WebsitePlansSection from '../components/settings/WebsitePlansSection';
 import AssetsSection from '../components/settings/AssetsSection';
+import BillingSection from '../components/settings/BillingSection';
 
 const Settings: React.FC<{ user: User }> = ({ user }) => {
   const settings = useSettings(user);
@@ -32,7 +33,8 @@ const Settings: React.FC<{ user: User }> = ({ user }) => {
     { id: 'suppliers', label: 'Fornecedores', icon: 'local_shipping', roles: ['Administrador', 'Operador'] },
     { id: 'assets', label: 'Arquivos & Modelos', icon: 'folder_open', roles: ['Administrador', 'Operador'] },
     { id: 'contacts', label: 'Contatos de Suporte', icon: 'contact_support', roles: ['Administrador'] },
-    { id: 'website', label: 'Web Site / Planos', icon: 'public', roles: ['Administrador'] }
+    { id: 'website', label: 'Web Site / Planos', icon: 'public', roles: ['Administrador'] },
+    { id: 'billing', label: 'Faturamento BRN', icon: 'receipt_long', roles: ['Administrador'] }
   ].filter((tab: any) => tab.roles.length === 0 || tab.roles.includes(user.role));
 
   useEffect(() => {
@@ -213,6 +215,15 @@ const Settings: React.FC<{ user: User }> = ({ user }) => {
                 loadingAssets={settings.loadingAssets}
                 isUploadingTemplate={settings.isUploadingTemplate}
                 onUpload={settings.handleTemplateUpload}
+              />
+            )}
+
+            {activeTab === 'billing' && (
+              <BillingSection
+                billingRecords={settings.billingRecords}
+                loading={settings.loadingBilling}
+                onUpdateStatus={settings.handleUpdateBilling}
+                onGenerate={settings.handleGenerateBilling}
               />
             )}
           </div>

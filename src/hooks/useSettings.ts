@@ -109,6 +109,11 @@ export const useSettings = (user: User) => {
     });
     const { data: paymentMethods = [], isLoading: loadingPayments } = useQuery({ queryKey: ['payment_methods'], queryFn: async () => (await supabase.from('payment_methods').select('*').order('name')).data || [] });
     const { data: periods = [], isLoading: loadingPeriods } = useQuery({ queryKey: ['periods'], queryFn: async () => (await supabase.from('periods').select('*').order('name', { ascending: false })).data || [] });
+    const { data: billingRecords = [], isLoading: loadingBilling } = useQuery({
+        queryKey: ['platform_billing'],
+        queryFn: async () => (await supabase.from('platform_billing').select('*, schools(name, plan_id, custom_price, discount_value)').order('reference_month', { ascending: false })).data || [],
+        enabled: user.role === 'Administrador'
+    });
 
     const { data: systemSettings = { contacts: { email: '', phone: '', whatsapp: '', instagram: '', website: '' }, plans: DEFAULT_PLANS, templateUrl: '' } } = useQuery({
         queryKey: ['system_settings'],
@@ -220,6 +225,52 @@ export const useSettings = (user: User) => {
         onError: (err: any) => addToast(err.message, 'error')
     });
 
+    const updateBillingStatusMut = useMutation({
+        mutationFn: async ({ id, status, payment_date, payment_method, amount }: { id: string, status: string, payment_date?: string, payment_method?: string, amount?: number }) => {
+            const payload: any = { status, updated_at: new Date().toISOString() };
+            if (payment_date) payload.payment_date = payment_date;
+            if (payment_method) payload.payment_method = payment_method;
+            if (amount !== undefined) payload.amount = amount;
+
+            const { error } = await supabase.from('platform_billing').update(payload).eq('id', id);
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['platform_billing'] });
+            addToast('Registro de faturamento atualizado!', 'success');
+        }
+    });
+
+    const generateBillingMut = useMutation({
+        mutationFn: async (month: string) => {
+            const { data: schoolsWithPlan } = await supabase.from('schools').select('id, plan_id, custom_price, discount_value').not('plan_id', 'is', null);
+            if (!schoolsWithPlan || schoolsWithPlan.length === 0) return;
+
+            const records = schoolsWithPlan.map(s => {
+                const plan = localPlans.find(p => p.id === s.plan_id);
+                const basePriceStr = s.custom_price || (plan?.price_value || '0');
+                const basePrice = parseFloat(basePriceStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+                const discount = s.discount_value || 0;
+                const finalAmount = Math.max(0, basePrice - discount);
+
+                return {
+                    school_id: s.id,
+                    reference_month: month,
+                    amount: finalAmount,
+                    status: 'Pendente'
+                };
+            });
+
+            const { error } = await supabase.from('platform_billing').upsert(records, { onConflict: 'school_id, reference_month' });
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['platform_billing'] });
+            addToast('Cobranças geradas com sucesso!', 'success');
+        },
+        onError: (err: any) => addToast('Erro ao gerar cobranças: ' + err.message, 'error')
+    });
+
     // --- HANDLERS ---
     const handleSaveRubric = () => {
         if (!newRubric.name || !newRubric.program_id) return addToast('Preencha os campos obrigatórios', 'warning');
@@ -319,8 +370,11 @@ export const useSettings = (user: User) => {
         updatingPassword: false,
         supportContacts: localContacts, setSupportContacts: setLocalContacts, loadingContacts: false, savingContacts: upsertSettingMut.isPending,
         plans: localPlans, setPlans: setLocalPlans, loadingPlans: false, savingPlans: upsertSettingMut.isPending,
+        billingRecords, loadingBilling,
+        handleUpdateBilling: updateBillingStatusMut.mutate,
+        handleGenerateBilling: generateBillingMut.mutate,
         templateUrl: systemSettings.templateUrl, loadingAssets: false, isUploadingTemplate: false,
-        loading: loadingRubrics || loadingSuppliers || loadingBanks || loadingPayments || loadingPeriods,
+        loading: loadingRubrics || loadingSuppliers || loadingBanks || loadingPayments || loadingPeriods || loadingBilling,
         fetchAuxOptions: () => { }, // Compatibility
         fetchRubricData: () => { },
         fetchSupplierData: () => { },

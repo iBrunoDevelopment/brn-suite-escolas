@@ -255,3 +255,18 @@ export interface ContractSignature {
     ip_address?: string;
     status: string;
 }
+
+export interface PlatformBilling {
+    id: string;
+    school_id: string;
+    reference_month: string;
+    amount: number;
+    status: 'Pendente' | 'Pago' | 'Cancelado' | 'Atrasado';
+    payment_method?: string;
+    payment_date?: string;
+    notes?: string;
+    created_at: string;
+    updated_at: string;
+    school?: School;
+}
+
