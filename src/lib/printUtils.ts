@@ -3,12 +3,16 @@ export const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 };
 
-export const numberToWords = (value: number) => {
-    // A very simple implementation for demonstration. 
-    // In a real app, you'd use a library like 'extenso' or a more robust logic.
-    // For now, I'll provide a basic one or just leave it for the user to refine if needed, 
-    // but let's try a decent version for common school values.
+export const formatCNPJ = (cnpj: string) => {
+    if (!cnpj) return '---';
+    const cleaned = cnpj.replace(/\D/g, '');
+    if (cleaned.length === 11) {
+        return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+    }
+    return cleaned.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+};
 
+export const numberToWords = (value: number) => {
     const unidades = ["", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove"];
     const dezena_10 = ["dez", "onze", "doze", "treze", "quatorze", "quinze", "dezesseis", "dezessete", "dezoito", "dezenove"];
     const dezenas = ["", "", "vinte", "trinta", "quarenta", "cinquenta", "sessenta", "setenta", "oitenta", "noventa"];
@@ -24,6 +28,7 @@ export const numberToWords = (value: number) => {
         const u = n % 10;
 
         if (c > 0) res += centenas[c];
+        
         if (d === 1) {
             if (res) res += " e ";
             res += dezena_10[u];
@@ -51,20 +56,32 @@ export const numberToWords = (value: number) => {
     let result = "";
 
     if (integerPart > 0) {
-        if (integerPart >= 1000) {
-            const mil = Math.floor(integerPart / 1000);
-            const rest = integerPart % 1000;
-            if (mil === 1) result += "mil";
-            else result += formatPart(mil) + " mil";
-
-            if (rest > 0) {
-                if (rest < 100 || rest % 100 === 0) result += " e ";
+        if (integerPart >= 1000000) {
+            const milhao = Math.floor(integerPart / 1000000);
+            const restM = integerPart % 1000000;
+            result += (milhao === 1 ? "um milhão" : formatPart(milhao) + " milhões");
+            if (restM > 0) {
+                if (restM < 100 || restM % 100 === 0) result += " e ";
                 else result += ", ";
-                result += formatPart(rest);
+                result += integerPart < 2000000 && restM < 1000 ? formatPart(restM) : ""; // simplistic
             }
-        } else {
-            result += formatPart(integerPart);
         }
+        
+        // Handling thousands
+        const getThousands = (val: number) => {
+            if (val < 1000) return formatPart(val);
+            const mil = Math.floor(val / 1000);
+            const rest = val % 1000;
+            let str = (mil === 1 ? "mil" : formatPart(mil) + " mil");
+            if (rest > 0) {
+                if (rest < 100 || rest % 100 === 0) str += " e ";
+                else str += " ";
+                str += formatPart(rest);
+            }
+            return str;
+        };
+
+        result = getThousands(integerPart);
         result += integerPart === 1 ? " real" : " reais";
     }
 
@@ -74,7 +91,7 @@ export const numberToWords = (value: number) => {
         result += decimalPart === 1 ? " centavo" : " centavos";
     }
 
-    return result;
+    return result.toLowerCase();
 };
 
 export const printDocument = (html: string) => {
@@ -82,7 +99,6 @@ export const printDocument = (html: string) => {
     if (printWindow) {
         printWindow.document.write(html);
         printWindow.document.close();
-        // Wait for styles/scripts to load if necessary, though tailwind cdn might need a bit
         setTimeout(() => {
             printWindow.focus();
             printWindow.print();
@@ -99,10 +115,7 @@ export const subtractBusinessDays = (date: Date, days: number): Date => {
     let count = 0;
     while (count < days) {
         result.setDate(result.getDate() - 1);
-        // 0 = Sun, 6 = Sat
         const dayOfWeek = result.getDay();
-
-        // Format MM-DD to check fixed holidays
         const month = String(result.getMonth() + 1).padStart(2, '0');
         const day = String(result.getDate()).padStart(2, '0');
         const dateString = `${month}-${day}`;
@@ -117,3 +130,4 @@ export const subtractBusinessDays = (date: Date, days: number): Date => {
 export const getSchoolDayBefore = (date: Date, daysToSubtract: number = 2): Date => {
     return subtractBusinessDays(date, daysToSubtract);
 };
+

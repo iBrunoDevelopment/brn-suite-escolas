@@ -74,7 +74,7 @@ export const useReports = (user: User, filters: ReportsFilters) => {
                     *, 
                     financial_entries!inner(*, schools(*), programs(name), suppliers(*), payment_methods(name)),
                     accountability_items(*),
-                    accountability_quotes(*, accountability_quote_items(*))
+                    accountability_quotes(*, suppliers(*), accountability_quote_items(*))
                 `)
                 .order('created_at', { ascending: false });
 

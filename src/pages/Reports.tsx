@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { User, AccountabilityProcess, UserRole } from '../types';
 import { printDocument } from '../lib/printUtils';
-import { generateAtaHTML, generateConsolidacaoHTML, generateOrdemHTML } from '../lib/documentTemplates';
+import { generateAtaHTML, generateConsolidacaoHTML, generateOrdemHTML, generateReciboHTML, generateCotacaoHTML } from '../lib/documentTemplates';
 import { supabase } from '../lib/supabaseClient';
 import { usePermissions, useAccessibleSchools } from '../hooks/usePermissions';
 import { useReports } from '../hooks/useReports';
@@ -55,6 +55,18 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
         break;
       case 'consolidacao':
         html = generateConsolidacaoHTML(process);
+        break;
+      case 'recibo':
+        html = generateReciboHTML(process);
+        break;
+      case 'cotacao1':
+        html = generateCotacaoHTML(process, 0);
+        break;
+      case 'cotacao2':
+        html = generateCotacaoHTML(process, 1);
+        break;
+      case 'cotacao3':
+        html = generateCotacaoHTML(process, 2);
         break;
       default:
         return;
