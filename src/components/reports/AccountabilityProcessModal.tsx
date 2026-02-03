@@ -627,6 +627,8 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                                                                 <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{label}</label>
                                                                 <input
                                                                     type={type}
+                                                                    aria-label={label}
+                                                                    placeholder={label}
                                                                     value={checks[id] || ''}
                                                                     onChange={e => {
                                                                         const updated = processAttachments.map(a => {
