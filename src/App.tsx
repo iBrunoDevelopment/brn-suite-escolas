@@ -19,6 +19,7 @@ import GEEPage from './pages/GEE';
 import ProgramsGuide from './pages/ProgramsGuide';
 import LandingPage from './pages/LandingPage';
 import Contract from './pages/Contract';
+import ValidateReport from './pages/ValidateReport';
 
 const App: React.FC = () => {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -150,6 +151,10 @@ const App: React.FC = () => {
         setCurrentUser(null);
         setNeedsSignature(false);
     };
+
+    if (window.location.pathname === '/validate') {
+        return <ValidateReport />;
+    }
 
     if (loading) {
         return <div className="h-screen w-full flex items-center justify-center bg-[#0f172a] text-white">
