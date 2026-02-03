@@ -19,6 +19,21 @@ const BillingSection: React.FC<BillingSectionProps> = ({
 
     const filteredRecords = billingRecords.filter(r => r.reference_month === selectedMonth);
 
+    const months = [
+        { value: '01', label: 'Janeiro' }, { value: '02', label: 'Fevereiro' }, { value: '03', label: 'Março' },
+        { value: '04', label: 'Abril' }, { value: '05', label: 'Maio' }, { value: '06', label: 'Junho' },
+        { value: '07', label: 'Julho' }, { value: '08', label: 'Agosto' }, { value: '09', label: 'Setembro' },
+        { value: '10', label: 'Outubro' }, { value: '11', label: 'Novembro' }, { value: '12', label: 'Dezembro' }
+    ];
+
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
+
+    const [selYear, selMonth] = selectedMonth.split('-');
+
+    const updateMonth = (m: string) => setSelectedMonth(`${selYear}-${m}-01`);
+    const updateYear = (y: string) => setSelectedMonth(`${y}-${selMonth}-01`);
+
     const handleMarkAsPaid = (record: PlatformBilling) => {
         if (!confirm(`Confirmar pagamento de ${formatCurrency(record.amount)} para ${record.school?.name}?`)) return;
         onUpdateStatus({
@@ -56,14 +71,25 @@ const BillingSection: React.FC<BillingSectionProps> = ({
             {/* Filters and Actions */}
             <div className="bg-[#111a22] p-6 rounded-2xl border border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
                 <div className="flex flex-col gap-1.5 w-full md:w-auto">
-                    <label htmlFor="ref_month" className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Mês de Referência</label>
-                    <input
-                        id="ref_month"
-                        type="month"
-                        value={selectedMonth.substring(0, 7)}
-                        onChange={(e) => setSelectedMonth(`${e.target.value}-01`)}
-                        className="bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-primary transition-all"
-                    />
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Período de Referência</label>
+                    <div className="flex gap-2">
+                        <select
+                            title="Selecione o Mês"
+                            value={selMonth}
+                            onChange={(e) => updateMonth(e.target.value)}
+                            className="bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-primary transition-all cursor-pointer appearance-none text-center font-bold"
+                        >
+                            {months.map(m => <option key={m.value} value={m.value} className="bg-[#1e293b]">{m.label}</option>)}
+                        </select>
+                        <select
+                            title="Selecione o Ano"
+                            value={selYear}
+                            onChange={(e) => updateYear(e.target.value)}
+                            className="bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-primary transition-all cursor-pointer appearance-none text-center font-bold"
+                        >
+                            {years.map(y => <option key={y} value={y} className="bg-[#1e293b]">{y}</option>)}
+                        </select>
+                    </div>
                 </div>
 
                 <button
