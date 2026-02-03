@@ -110,9 +110,22 @@ export const useSettings = (user: User) => {
     const { data: paymentMethods = [], isLoading: loadingPayments } = useQuery({ queryKey: ['payment_methods'], queryFn: async () => (await supabase.from('payment_methods').select('*').order('name')).data || [] });
     const { data: periods = [], isLoading: loadingPeriods } = useQuery({ queryKey: ['periods'], queryFn: async () => (await supabase.from('periods').select('*').order('name', { ascending: false })).data || [] });
     const { data: billingRecords = [], isLoading: loadingBilling } = useQuery({
-        queryKey: ['platform_billing'],
-        queryFn: async () => (await supabase.from('platform_billing').select('*, schools(name, plan_id, custom_price, discount_value)').order('reference_month', { ascending: false })).data || [],
-        enabled: user.role === 'Administrador'
+        queryKey: ['platform_billing', user.schoolId],
+        queryFn: async () => {
+            let query = supabase.from('platform_billing').select('*, schools(name, plan_id, custom_price, discount_value)').order('reference_month', { ascending: false });
+
+            // If not admin/operator, filter by assigned school
+            if (user.role !== 'Administrador' && user.role !== 'Operador') {
+                if (user.schoolId) {
+                    query = query.eq('school_id', user.schoolId);
+                } else {
+                    return [];
+                }
+            }
+
+            return (await query).data || [];
+        },
+        enabled: ['Administrador', 'Operador', 'Diretor', 'Cliente'].includes(user.role)
     });
 
     const { data: systemSettings = { contacts: { email: '', phone: '', whatsapp: '', instagram: '', website: '' }, plans: DEFAULT_PLANS, templateUrl: '' } } = useQuery({

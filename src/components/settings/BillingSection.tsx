@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { PlatformBilling, School } from '../../types';
+import { PlatformBilling, School, User } from '../../types';
 import { formatCurrency } from '../../lib/printUtils';
 
 interface BillingSectionProps {
@@ -9,11 +9,13 @@ interface BillingSectionProps {
     onUpdateStatus: (data: { id: string, status: string, payment_date?: string, payment_method?: string, paid_amount?: number, description?: string, amount?: number }) => void;
     onGenerate: (month: string) => void;
     onCreate: (data: { school_id: string, reference_month: string, amount: number, description: string, status: string }) => void;
+    currentUser: User;
 }
 
 const BillingSection: React.FC<BillingSectionProps> = ({
-    billingRecords, schools, loading, onUpdateStatus, onGenerate, onCreate
+    billingRecords, schools, loading, onUpdateStatus, onGenerate, onCreate, currentUser
 }) => {
+    const isAdmin = currentUser.role === 'Administrador' || currentUser.role === 'Operador';
     // Basic Filters State
     const [showFilters, setShowFilters] = useState(false);
     const [periodStart, setPeriodStart] = useState(() => {
@@ -91,13 +93,27 @@ const BillingSection: React.FC<BillingSectionProps> = ({
         }, { total: 0, received: 0, pending: 0 });
     }, [filteredRecords]);
 
-    // Late calculation (global, ignores period filter to show alerts)
+    // Late calculation (ignores period filter to show accumulated debt, but respects school/search filters)
     const totalLateAmount = useMemo(() => {
         const currentYearMonth = new Date().toISOString().slice(0, 7);
         return billingRecords
-            .filter(r => r.status === 'Pendente' && r.reference_month < `${currentYearMonth}-01`)
+            .filter(r => {
+                // 1. School Filter
+                if (filterSchoolId && r.school_id !== filterSchoolId) return false;
+
+                // 2. Search Filter
+                if (filterSearch) {
+                    const searchLower = filterSearch.toLowerCase();
+                    const schoolName = r.schools?.name?.toLowerCase() || '';
+                    const desc = r.description?.toLowerCase() || '';
+                    if (!schoolName.includes(searchLower) && !desc.includes(searchLower)) return false;
+                }
+
+                // 3. Must be pending and past due month
+                return r.status === 'Pendente' && r.reference_month < `${currentYearMonth}-01`;
+            })
             .reduce((acc, curr) => acc + (Number(curr.amount) - (Number(curr.paid_amount) || 0)), 0);
-    }, [billingRecords]);
+    }, [billingRecords, filterSchoolId, filterSearch]);
 
     // ----------------------------------------------------------------------
     // HANDLERS
@@ -303,21 +319,25 @@ const BillingSection: React.FC<BillingSectionProps> = ({
                 </button>
 
                 <div className="flex flex-wrap gap-2 w-full md:w-auto">
-                    <button
-                        onClick={() => setCreateModalOpen(true)}
-                        className="flex-1 md:flex-none px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all border border-white/5"
-                    >
-                        <span className="material-symbols-outlined text-[16px]">add_circle</span>
-                        Novo Extra
-                    </button>
-                    <button
-                        onClick={() => onGenerate(periodEnd + '-01')}
-                        className="flex-1 md:flex-none px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/20 rounded-lg font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
-                        title="Gera cobranças para o mês final selecionado"
-                    >
-                        <span className="material-symbols-outlined text-[16px]">sync</span>
-                        Gerar (Fim)
-                    </button>
+                    {isAdmin && (
+                        <>
+                            <button
+                                onClick={() => setCreateModalOpen(true)}
+                                className="flex-1 md:flex-none px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all border border-white/5"
+                            >
+                                <span className="material-symbols-outlined text-[16px]">add_circle</span>
+                                Novo Extra
+                            </button>
+                            <button
+                                onClick={() => onGenerate(periodEnd + '-01')}
+                                className="flex-1 md:flex-none px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/20 rounded-lg font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
+                                title="Gera cobranças para o mês final selecionado"
+                            >
+                                <span className="material-symbols-outlined text-[16px]">sync</span>
+                                Gerar (Fim)
+                            </button>
+                        </>
+                    )}
                     <button
                         onClick={handlePrintReport}
                         className="flex-1 md:flex-none px-6 py-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-lg font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
@@ -374,18 +394,21 @@ const BillingSection: React.FC<BillingSectionProps> = ({
                         </div>
 
                         {/* School Filter */}
-                        <div className="col-span-2 md:col-span-1">
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 block">Escola</label>
-                            <select
-                                title="Filtrar por Escola"
-                                value={filterSchoolId}
-                                onChange={e => setFilterSchoolId(e.target.value)}
-                                className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-primary appearance-none"
-                            >
-                                <option value="">Todas as Escolas</option>
-                                {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </select>
-                        </div>
+                        {/* School Filter - Only for Admin */}
+                        {isAdmin && (
+                            <div className="col-span-2 md:col-span-1">
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 block">Escola</label>
+                                <select
+                                    title="Filtrar por Escola"
+                                    value={filterSchoolId}
+                                    onChange={e => setFilterSchoolId(e.target.value)}
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-primary appearance-none"
+                                >
+                                    <option value="">Todas as Escolas</option>
+                                    {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                </select>
+                            </div>
+                        )}
 
                         {/* Search Text */}
                         <div className="col-span-2 md:col-span-1">
@@ -440,7 +463,7 @@ const BillingSection: React.FC<BillingSectionProps> = ({
                                             <button
                                                 onClick={() => openEditModal(record)}
                                                 title="Editar Detalhes"
-                                                className="w-6 h-6 flex items-center justify-center rounded-full text-slate-600 hover:bg-white/10 hover:text-white transition-all opacity-50 group-hover:opacity-100"
+                                                className={`w-6 h-6 flex items-center justify-center rounded-full text-slate-600 hover:bg-white/10 hover:text-white transition-all opacity-50 group-hover:opacity-100 ${!isAdmin ? 'hidden' : ''}`}
                                             >
                                                 <span className="material-symbols-outlined text-[14px]">edit</span>
                                             </button>
@@ -477,9 +500,13 @@ const BillingSection: React.FC<BillingSectionProps> = ({
                                         <div className="flex flex-col w-full md:w-auto gap-2">
                                             <button
                                                 onClick={() => openPaymentModal(record)}
-                                                className="h-10 w-full md:w-[180px] flex items-center justify-center bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-emerald-600/20 active:scale-95 whitespace-nowrap"
+                                                disabled={!isAdmin}
+                                                className={`h-10 w-full md:w-[180px] flex items-center justify-center rounded-lg font-bold text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95 whitespace-nowrap ${isAdmin
+                                                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20'
+                                                    : 'bg-slate-700 text-slate-400 cursor-not-allowed shadow-none'
+                                                    }`}
                                             >
-                                                Informar Pagamento
+                                                {isAdmin ? 'Informar Pagamento' : 'Aguardando Pagamento'}
                                             </button>
                                             {paid > 0 && (
                                                 <span className="text-[10px] text-amber-500 font-bold text-center md:text-right w-full">Restam: {formatCurrency(remaining)}</span>
@@ -497,8 +524,9 @@ const BillingSection: React.FC<BillingSectionProps> = ({
                                             </div>
                                             <button
                                                 onClick={() => openPaymentModal(record)}
+                                                disabled={!isAdmin}
                                                 title="Editar Pagamento"
-                                                className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-colors flex-shrink-0"
+                                                className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors flex-shrink-0 ${isAdmin ? 'bg-white/5 hover:bg-white/10 text-white/50 hover:text-white' : 'hidden'}`}
                                             >
                                                 <span className="material-symbols-outlined text-xs">edit</span>
                                             </button>

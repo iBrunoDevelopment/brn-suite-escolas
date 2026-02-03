@@ -34,7 +34,7 @@ const Settings: React.FC<{ user: User }> = ({ user }) => {
     { id: 'assets', label: 'Arquivos & Modelos', icon: 'folder_open', roles: ['Administrador', 'Operador'] },
     { id: 'contacts', label: 'Contatos de Suporte', icon: 'contact_support', roles: ['Administrador'] },
     { id: 'website', label: 'Web Site / Planos', icon: 'public', roles: ['Administrador'] },
-    { id: 'billing', label: 'Faturamento BRN', icon: 'receipt_long', roles: ['Administrador'] }
+    { id: 'billing', label: 'Faturamento BRN', icon: 'receipt_long', roles: ['Administrador', 'Diretor', 'Cliente'] }
   ].filter((tab: any) => tab.roles.length === 0 || tab.roles.includes(user.role));
 
   useEffect(() => {
@@ -226,6 +226,7 @@ const Settings: React.FC<{ user: User }> = ({ user }) => {
                 onUpdateStatus={settings.handleUpdateBilling}
                 onGenerate={settings.handleGenerateBilling}
                 onCreate={settings.handleCreateBilling}
+                currentUser={user}
               />
             )}
           </div>
