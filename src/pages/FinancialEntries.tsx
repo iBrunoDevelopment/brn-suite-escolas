@@ -241,7 +241,6 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                         setShowFilters={setShowFilters}
                         auxData={auxData}
                         onPrintReport={() => setShowReportOptions(true)}
-                        onExportCSV={() => setShowReportOptions(true)}
                     />
 
                     <FinancialTable

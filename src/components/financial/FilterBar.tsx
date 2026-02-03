@@ -16,7 +16,6 @@ interface FilterBarProps {
         periods: any[];
     };
     onPrintReport: () => void;
-    onExportCSV: () => void;
 }
 
 const FilterBar: React.FC<FilterBarProps> = ({
@@ -27,8 +26,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
     quickFilter,
     setQuickFilter,
     auxData,
-    onPrintReport,
-    onExportCSV
+    onPrintReport
 }) => {
     const clearFilters = () => {
         setFilters({
@@ -172,10 +170,12 @@ const FilterBar: React.FC<FilterBarProps> = ({
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Pesquisar por Descrição</label>
                         <input type="text" aria-label="Pesquisar por Descrição" value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })} className="w-full bg-[#1c2936] text-white text-xs h-10 px-4 rounded-xl border border-white/10 outline-none focus:border-primary" placeholder="Digite algo para buscar..." />
                     </div>
-                    <div className="md:col-span-1 lg:col-span-2 grid grid-cols-3 gap-2">
+                    <div className="md:col-span-1 lg:col-span-2 grid grid-cols-2 gap-2">
                         <button onClick={clearFilters} className="bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-tighter h-10 rounded-xl hover:bg-white/10 transition-colors">Limpar</button>
-                        <button onClick={onPrintReport} className="bg-blue-600 border border-blue-500 text-white text-[10px] font-black uppercase tracking-tighter h-10 rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-1">Relatório</button>
-                        <button onClick={onExportCSV} className="bg-emerald-600 border border-emerald-500 text-white text-[10px] font-black uppercase tracking-tighter h-10 rounded-xl hover:bg-emerald-700 transition-colors">CSV</button>
+                        <button onClick={onPrintReport} className="bg-blue-600 border border-blue-500 text-white text-[10px] font-black uppercase tracking-tighter h-10 rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+                            <span className="material-symbols-outlined text-sm">print</span>
+                            Relatório
+                        </button>
                     </div>
                 </div>
             )}
