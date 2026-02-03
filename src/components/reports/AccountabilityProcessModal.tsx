@@ -57,12 +57,24 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
     const [showSupplierModal, setShowSupplierModal] = useState<{ open: boolean, quoteIdx: number }>({ open: false, quoteIdx: -1 });
     const [showEntryModal, setShowEntryModal] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
+    const [checkingDocId, setCheckingDocId] = useState<string | null>(null);
     const [supplierSearch, setSupplierSearch] = useState('');
     const [entrySearch, setEntrySearch] = useState('');
     const [importText, setImportText] = useState('');
     const { addToast } = useToast();
 
-    const ACCOUNTABILITY_DOC_CATEGORIES = ['Ata de Assembleia', 'Pesquisa de Preços', 'Certidão de Proponente', 'Nota Fiscal', 'Espelho da Nota', 'Certidão de Regularidade', 'Ordem de Compra', 'Recibo / Quitação', 'Outros'];
+    const ACCOUNTABILITY_DOC_CATEGORIES = [
+        'Ata de Assembleia',
+        'Consolidação',
+        'Ordem de Compra / Serviço',
+        'Pesquisa de Preços (Cotações)',
+        'Certidão de Regularidade',
+        'Certidão de Proponente',
+        'Nota Fiscal',
+        'Recibo / Quitação',
+        'Comprovante de Pagamento',
+        'Outros'
+    ];
 
     useEffect(() => {
         if (isOpen) {
@@ -553,18 +565,127 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                             </div>
                             <div className="space-y-3">
                                 {processAttachments.map(att => (
-                                    <div key={att.id} className="flex items-center justify-between p-4 bg-primary/5 rounded-2xl border border-primary/10 group/itematt">
-                                        <div className="flex items-center gap-4 truncate">
-                                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary transition-transform shrink-0"><span className="material-symbols-outlined">attachment</span></div>
-                                            <div className="truncate">
-                                                <span className="text-[11px] text-white font-black block truncate">{att.name}</span>
-                                                <span className="text-[8px] text-primary font-black uppercase opacity-60">{att.category}</span>
+                                    <div key={att.id} className="flex flex-col gap-3 p-4 bg-primary/5 rounded-2xl border border-primary/10 group/itematt">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-4 truncate">
+                                                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary transition-transform shrink-0"><span className="material-symbols-outlined">attachment</span></div>
+                                                <div className="truncate">
+                                                    <span className="text-[11px] text-white font-black block truncate">{att.name}</span>
+                                                    <span className="text-[8px] text-primary font-black uppercase opacity-60">{att.category}</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => setCheckingDocId(checkingDocId === att.id ? null : att.id)}
+                                                    className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all ${att.audit_done ? 'bg-green-500 text-white' : 'bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-white'}`}
+                                                    title="Realizar Conferência de Auditoria"
+                                                >
+                                                    <span className="material-symbols-outlined text-[18px]">{att.audit_done ? 'verified' : 'fact_check'}</span>
+                                                </button>
+                                                <a href={att.url} target="_blank" className="w-9 h-9 flex items-center justify-center bg-black/40 hover:bg-primary text-slate-500 hover:text-white rounded-xl transition-all"><span className="material-symbols-outlined text-[18px]">visibility</span></a>
+                                                <button onClick={() => setProcessAttachments(processAttachments.filter(a => a.id !== att.id))} className="w-9 h-9 flex items-center justify-center bg-black/40 hover:bg-red-500 text-slate-500 hover:text-white rounded-xl transition-all"><span className="material-symbols-outlined text-[18px]">delete</span></button>
                                             </div>
                                         </div>
-                                        <div className="flex gap-2">
-                                            <a href={att.url} target="_blank" className="w-9 h-9 flex items-center justify-center bg-black/40 hover:bg-primary text-slate-500 hover:text-white rounded-xl transition-all"><span className="material-symbols-outlined text-[18px]">visibility</span></a>
-                                            <button onClick={() => setProcessAttachments(processAttachments.filter(a => a.id !== att.id))} className="w-9 h-9 flex items-center justify-center bg-black/40 hover:bg-red-500 text-slate-500 hover:text-white rounded-xl transition-all"><span className="material-symbols-outlined text-[18px]">delete</span></button>
-                                        </div>
+
+                                        {/* Audit Checklist Drawer */}
+                                        {checkingDocId === att.id && (
+                                            <div className="mt-2 p-4 bg-black/40 rounded-xl border border-white/5 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Conferência de Auditoria: {att.category}</span>
+                                                </div>
+                                                <div className="grid grid-cols-1 gap-3">
+                                                    {(() => {
+                                                        const cat = att.category;
+                                                        const checks = att.checks || {};
+
+                                                        const renderCheck = (id: string, label: string) => (
+                                                            <label key={id} className="flex items-center gap-3 cursor-pointer group/chk">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    className="hidden"
+                                                                    checked={!!checks[id]}
+                                                                    onChange={e => {
+                                                                        const updated = processAttachments.map(a => {
+                                                                            if (a.id === att.id) {
+                                                                                const newChecks = { ...checks, [id]: e.target.checked };
+                                                                                return { ...a, checks: newChecks, audit_done: Object.values(newChecks).some(v => v === true) };
+                                                                            }
+                                                                            return a;
+                                                                        });
+                                                                        setProcessAttachments(updated);
+                                                                    }}
+                                                                />
+                                                                <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${checks[id] ? 'bg-primary border-primary text-white' : 'border-white/20 group-hover/chk:border-primary/50'}`}>
+                                                                    {checks[id] && <span className="material-symbols-outlined text-xs">check</span>}
+                                                                </div>
+                                                                <span className="text-[10px] font-bold text-slate-300 uppercase leading-none">{label}</span>
+                                                            </label>
+                                                        );
+
+                                                        const renderInput = (id: string, label: string, type: string) => (
+                                                            <div key={id} className="flex flex-col gap-1.5">
+                                                                <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{label}</label>
+                                                                <input
+                                                                    type={type}
+                                                                    value={checks[id] || ''}
+                                                                    onChange={e => {
+                                                                        const updated = processAttachments.map(a => {
+                                                                            if (a.id === att.id) {
+                                                                                return { ...a, checks: { ...checks, [id]: e.target.value } };
+                                                                            }
+                                                                            return a;
+                                                                        });
+                                                                        setProcessAttachments(updated);
+                                                                    }}
+                                                                    className="bg-black/40 border border-white/10 rounded-lg h-8 px-3 text-[10px] text-white outline-none focus:border-primary/50"
+                                                                />
+                                                            </div>
+                                                        );
+
+                                                        const fields = [];
+                                                        if (cat === 'Ata de Assembleia') {
+                                                            fields.push(renderCheck('ata_complete', 'ATA: Assinatura de no mín. 6 conselheiros (inc. Secretário e Diretor)'));
+                                                        } else if (cat === 'Consolidação') {
+                                                            fields.push(renderCheck('president', 'CONSOLIDAÇÃO: Assinatura do presidente (diretor)'));
+                                                        } else if (cat === 'Ordem de Compra / Serviço') {
+                                                            fields.push(renderCheck('president', 'ORDEM DE COMPRA/SERVIÇO: Assinatura do presidente (diretor)'));
+                                                        } else if (cat === 'Pesquisa de Preços (Cotações)') {
+                                                            fields.push(renderCheck('supplier_sig_stamp', 'COTAÇÕES: Assinatura e carimbo do fornecedor'));
+                                                        } else if (cat === 'Certidão de Regularidade' || cat === 'Certidão de Proponente') {
+                                                            fields.push(renderCheck('president_sig', 'CERTIDÕES: Assinatura do presidente (diretor)'));
+                                                            fields.push(renderInput('president_matr', 'Matrícula do Diretor', 'text'));
+                                                        } else if (cat === 'Recibo / Quitação') {
+                                                            fields.push(renderCheck('recibo_check', 'RECIBO: Assinatura e carimbo do fornecedor'));
+                                                        } else if (cat === 'Comprovante de Pagamento') {
+                                                            fields.push(renderCheck('counselor_confere', 'CONFERE COM O ORIGINAL: Assinatura 1º ou 2º Conselheiro'));
+                                                            fields.push(renderInput('stamp_date', 'Data do Carimbo', 'date'));
+                                                        } else if (cat === 'Nota Fiscal') {
+                                                            fields.push(renderCheck('atesto_recebimento', 'ATESTO RECEBIMENTO: Assinatura e Matrícula 1º e 2º Conselheiros'));
+                                                            fields.push(renderCheck('atesto_quitacao', 'ATESTO QUITAÇÃO: Assinatura Fornecedor'));
+                                                            fields.push(renderCheck('resource_id', 'IDENTIFICAÇÃO RECURSO: Carimbo com recurso pago'));
+                                                            fields.push(renderInput('stamps_date', 'Data nos Carimbos', 'date'));
+                                                        } else {
+                                                            fields.push(<p key="na" className="text-[9px] text-slate-500 italic">Nenhum requisito específico para esta categoria.</p>);
+                                                        }
+
+                                                        return fields;
+                                                    })()}
+                                                </div>
+                                                <button
+                                                    onClick={() => {
+                                                        const updated = processAttachments.map(a => {
+                                                            if (a.id === att.id) return { ...a, audit_done: true };
+                                                            return a;
+                                                        });
+                                                        setProcessAttachments(updated);
+                                                        setCheckingDocId(null);
+                                                    }}
+                                                    className="w-full py-2 bg-primary/20 text-primary rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-primary hover:text-white transition-all"
+                                                >
+                                                    Finalizar Conferência
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
