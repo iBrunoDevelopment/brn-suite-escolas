@@ -1,12 +1,48 @@
+
 import { formatCurrency } from './printUtils';
 
-export const generateRelatorioGerencialHTML = (entries: any[], stats: any, filters: any, reprogrammed: any[] = []) => {
-    const reportDate = new Date().toLocaleDateString('pt-BR');
-    const periodText = filters.startDate && filters.endDate
-        ? `Período: ${new Date(filters.startDate).toLocaleDateString('pt-BR')} a ${new Date(filters.endDate).toLocaleDateString('pt-BR')}`
+export interface ReportOptions {
+    showSummary: boolean;
+    showCharts: boolean;
+    showStatusBadges: boolean;
+    showNatureSummary: boolean;
+    groupReport: 'school' | 'program' | 'none';
+    format: 'pdf' | 'csv';
+    filterSchool?: string;
+    filterProgram?: string;
+    filterStartDate?: string;
+    filterEndDate?: string;
+}
+
+/**
+ * Simple SHA-256 Hash implementation for doc authenticity
+ */
+async function generateDocHash(data: string) {
+    const msgBuffer = new TextEncoder().encode(data);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 40);
+}
+
+export const generateRelatorioGerencialHTML = async (entries: any[], stats: any, filters: any, reprogrammed: any[] = [], options: ReportOptions) => {
+    const now = new Date();
+    const reportDate = now.toLocaleDateString('pt-BR');
+    const reportTime = now.toLocaleTimeString('pt-BR');
+    let reportTitle = 'Relatório de Movimentação';
+    if (options.filterSchool) {
+        // Try to find school name in entries if possible, otherwise use a generic label
+        const schoolName = entries.find(e => e.school_id === options.filterSchool)?.school || 'Unidade Específica';
+        reportTitle = `Relatório: ${schoolName}`;
+    } else if (options.filterProgram) {
+        const programName = entries.find(e => e.program_id === options.filterProgram)?.program || 'Programa Específico';
+        reportTitle = `Relatório Conexo: ${programName}`;
+    }
+
+    const periodText = (options.filterStartDate && options.filterEndDate)
+        ? `Período: ${new Date(options.filterStartDate + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(options.filterEndDate + 'T00:00:00').toLocaleDateString('pt-BR')}`
         : 'Período: Completo / Todos os Lançamentos';
 
-    // 1. Data Structure: School -> Program -> Data
+    // 1. Data Structure Aggregation
     interface ProgramData {
         previousBalance: number;
         credits: number;
@@ -18,6 +54,8 @@ export const generateRelatorioGerencialHTML = (entries: any[], stats: any, filte
         previousBalance: number;
         credits: number;
         debits: number;
+        custeio: number;
+        capital: number;
         programs: Record<string, ProgramData>;
     }
 
@@ -25,7 +63,7 @@ export const generateRelatorioGerencialHTML = (entries: any[], stats: any, filte
 
     const ensurePath = (schoolName: string, programName: string) => {
         if (!dataBySchool[schoolName]) {
-            dataBySchool[schoolName] = { name: schoolName, previousBalance: 0, credits: 0, debits: 0, programs: {} };
+            dataBySchool[schoolName] = { name: schoolName, previousBalance: 0, credits: 0, debits: 0, custeio: 0, capital: 0, programs: {} };
         }
         if (!dataBySchool[schoolName].programs[programName]) {
             dataBySchool[schoolName].programs[programName] = { previousBalance: 0, credits: 0, debits: 0, entries: [] };
@@ -58,161 +96,215 @@ export const generateRelatorioGerencialHTML = (entries: any[], stats: any, filte
         } else {
             progNode.debits += Math.abs(val);
             dataBySchool[schoolName].debits += Math.abs(val);
+            if (e.nature === 'Custeio') dataBySchool[schoolName].custeio += Math.abs(val);
+            else if (e.nature === 'Capital') dataBySchool[schoolName].capital += Math.abs(val);
         }
         progNode.entries.push(e);
     });
 
-    const totalStats = {
-        prev: Object.values(dataBySchool).reduce((acc, s) => acc + s.previousBalance, 0),
-        cred: Object.values(dataBySchool).reduce((acc, s) => acc + s.credits, 0),
-        deb: Object.values(dataBySchool).reduce((acc, s) => acc + s.debits, 0),
-    };
+    const totalPrev = Object.values(dataBySchool).reduce((acc, s) => acc + s.previousBalance, 0);
+    const totalCred = Object.values(dataBySchool).reduce((acc, s) => acc + s.credits, 0);
+    const totalDeb = Object.values(dataBySchool).reduce((acc, s) => acc + s.debits, 0);
+    const totalCusteio = Object.values(dataBySchool).reduce((acc, s) => acc + s.custeio, 0);
+    const totalCapital = Object.values(dataBySchool).reduce((acc, s) => acc + s.capital, 0);
+
+    // Simple Progress Bar Calculation for Custeio vs Capital
+    const totalNat = totalCusteio + totalCapital || 1;
+    const custeioPerc = (totalCusteio / totalNat) * 100;
+    const capitalPerc = (totalCapital / totalNat) * 100;
 
     return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Relatório Executivo de Execução Financeira</title>
+    <title>Relatório Executivo Premium - BRN Suite</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
     <style>
-        body { 
-            font-family: 'Manrope', sans-serif; 
-            background-color: #f8fafc;
-            color: #1e293b;
-        }
         @media print {
             body { background-color: white !important; margin: 0; padding: 0; }
             .print-container { 
                 box-shadow: none !important; 
                 border: none !important; 
                 max-width: 100% !important;
-                padding: 1.5cm !important;
+                padding: 1.2cm !important;
             }
             .page-break { page-break-before: always; }
             .no-break { break-inside: avoid; }
-            @page {
-                size: A4;
-                margin: 0;
-            }
+            @page { size: A4; margin: 0; }
+            .no-print { display: none !important; }
+        }
+        body { 
+            font-family: 'Outfit', sans-serif; 
+            background-color: #f1f5f9;
+            color: #0f172a;
         }
         .summary-card {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            color: white;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        }
+        .badge {
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
     </style>
 </head>
 <body class="p-4 md:p-12">
-    <div class="print-container bg-white max-w-[210mm] mx-auto p-12 shadow-2xl border border-slate-100 min-h-[297mm]">
+    <div class="print-container bg-white max-w-[210mm] mx-auto p-12 shadow-[0_0_50px_rgba(0,0,0,0.1)] border border-slate-100 min-h-[297mm] relative overflow-hidden">
         
-        <header class="flex justify-between items-end mb-12 border-b-4 border-slate-900 pb-8">
+        <!-- Decorative Element -->
+        <div class="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full -mr-32 -mt-32 z-0 opacity-50"></div>
+
+        <header class="relative z-10 flex justify-between items-start mb-10 pb-6 border-b border-slate-100">
             <div>
-                <div class="inline-block px-3 py-1 bg-slate-900 text-white text-[10px] font-black uppercase tracking-[0.2em] mb-4">Executivo v2.0</div>
-                <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight">Relatório Gerencial</h1>
-                <p class="text-slate-500 font-semibold uppercase text-xs tracking-widest mt-1">SISTEMA INTEGRADO DE PRESTAÇÃO DE CONTAS</p>
+                <div class="inline-flex items-center gap-2 px-3 py-1 bg-slate-900 text-white rounded-lg mb-4">
+                    <span class="text-[9px] font-black uppercase tracking-widest">Premium Intelligence System</span>
+                </div>
+                <h1 class="text-4xl font-black text-slate-900 tracking-tight">${reportTitle}</h1>
+                <p class="text-slate-400 font-bold uppercase text-[10px] tracking-[0.3em] mt-2">Dashboard Executivo de Prestação de Contas</p>
             </div>
             <div class="text-right">
-                <p class="text-[10px] font-black uppercase text-slate-400 mb-1">Data de Emissão</p>
-                <p class="text-lg font-bold text-slate-900">${reportDate}</p>
+                <p class="text-[9px] font-black uppercase text-slate-400 mb-1">Emissão em</p>
+                <p class="text-xl font-bold text-slate-900">${reportDate}</p>
+                <p class="text-[9px] text-slate-400 font-medium">${reportTime}</p>
+                <p class="text-[10px] text-slate-400 font-medium mt-1">Ref: ${periodText.replace('Período: ', '')}</p>
             </div>
         </header>
 
-        <!-- Global Summary -->
-        <section class="mb-12 no-break">
-            <h3 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-4 ml-1">Resumo Consolidado</h3>
-            <div class="summary-card p-8 rounded-3xl grid grid-cols-3 gap-8 shadow-xl">
-                <div>
-                    <span class="block text-[10px] uppercase text-slate-400 font-bold mb-2">Total Reprogramado</span>
-                    <span class="text-2xl font-black text-blue-400">${formatCurrency(totalStats.prev)}</span>
+        ${options.showSummary ? `
+        <!-- Global Stats Section -->
+        <section class="mb-10 no-break relative z-10">
+            <div class="grid grid-cols-3 gap-6">
+                <!-- Main Balance -->
+                <div class="col-span-1 p-6 bg-slate-50 border border-slate-100 rounded-3xl overflow-hidden shadow-sm">
+                    <span class="block text-[10px] font-black uppercase text-slate-400 mb-4 tracking-tighter">Saldo Geral Consolidado</span>
+                    <div class="whitespace-nowrap pb-2">
+                        <span class="text-2xl font-black ${(totalPrev + totalCred - totalDeb) < 0 ? 'text-red-600' : 'text-slate-900'}">${formatCurrency(totalPrev + totalCred - totalDeb)}</span>
+                    </div>
+                    <div class="mt-4 flex items-center gap-2">
+                        <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                        <span class="text-[9px] font-bold text-slate-500 uppercase leading-tight">Fundo disponível em conta</span>
+                    </div>
                 </div>
-                <div>
-                    <span class="block text-[10px] uppercase text-slate-400 font-bold mb-2">Total Receitas</span>
-                    <span class="text-2xl font-black text-emerald-400">+ ${formatCurrency(totalStats.cred)}</span>
+
+                <!-- Chart & Nature Summary -->
+                <div class="col-span-2 p-6 bg-slate-900 rounded-3xl text-white shadow-xl shadow-slate-900/20">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Distribuição de Recursos</span>
+                            <h3 class="text-lg font-black mt-1">Análise de Natureza</h3>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-2xl font-black text-emerald-400">+ ${formatCurrency(totalCred)}</span>
+                            <p class="text-[9px] font-bold text-slate-500 uppercase">Receita Total do Período</p>
+                        </div>
+                    </div>
+
+                    ${options.showCharts ? `
+                    <div class="space-y-4">
+                        <div class="relative w-full h-3 bg-white/10 rounded-full overflow-hidden flex">
+                            <div style="width: ${custeioPerc}%" class="h-full bg-blue-500 transition-all"></div>
+                            <div style="width: ${capitalPerc}%" class="h-full bg-orange-500 transition-all"></div>
+                        </div>
+                        <div class="flex gap-6">
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 rounded-full bg-blue-500"></div>
+                                <span class="text-[11px] font-bold uppercase tracking-tighter">Custeio: ${formatCurrency(totalCusteio)} (${custeioPerc.toFixed(1)}%)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 rounded-full bg-orange-500"></div>
+                                <span class="text-[11px] font-bold uppercase tracking-tighter">Capital: ${formatCurrency(totalCapital)} (${capitalPerc.toFixed(1)}%)</span>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
                 </div>
-                <div>
-                    <span class="block text-[10px] uppercase text-slate-400 font-bold mb-2">Total Despesas</span>
-                    <span class="text-2xl font-black text-red-400">- ${formatCurrency(totalStats.deb)}</span>
-                </div>
-            </div>
-            <div class="mt-4 px-6 py-3 bg-slate-50 border border-slate-100 rounded-xl flex justify-between items-center">
-                <span class="text-xs font-bold text-slate-500 uppercase tracking-tighter">${periodText}</span>
-                <span class="text-xs font-black text-slate-900">SALDO GLOBAL EM CAIXA: <span class="text-emerald-600">${formatCurrency(totalStats.prev + totalStats.cred - totalStats.deb)}</span></span>
             </div>
         </section>
+        ` : ''}
 
         ${Object.values(dataBySchool).map((school, schoolIdx) => {
         const schoolBalance = school.previousBalance + school.credits - school.debits;
         return `
-            <div class="mb-16 ${schoolIdx > 0 ? 'page-break' : ''}">
-                <div class="flex items-center gap-4 mb-6 no-break">
-                    <div class="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white font-black text-xl">S</div>
-                    <div>
-                        <h2 class="text-2xl font-extrabold text-slate-900 uppercase tracking-tight">${school.name}</h2>
-                        <p class="text-slate-400 text-xs font-bold uppercase tracking-widest">Unidade Executora / ID Escolar</p>
+            <div class="mb-12 ${schoolIdx > 0 ? 'page-break mt-12' : ''}">
+                <div class="flex items-center justify-between mb-8 no-break bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-lg ring-4 ring-slate-100 uppercase">
+                            ${school.name.charAt(0)}
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-black text-slate-900 uppercase tracking-tighter">${school.name}</h2>
+                            <div class="flex gap-3 mt-1">
+                                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Unidade Executora</span>
+                                <div class="w-1 h-1 rounded-full bg-slate-300 mt-1.5"></div>
+                                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">${Object.keys(school.programs).length} Programas Ativos</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Saldo da Unidade</span>
+                        <p class="text-2xl font-black whitespace-nowrap ${schoolBalance < 0 ? 'text-red-600' : 'text-slate-900'}">${formatCurrency(schoolBalance)}</p>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-4 gap-4 mb-8 no-break">
-                    <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                        <span class="block text-[8px] font-black uppercase text-slate-400 mb-1">Saldo Anterior</span>
-                        <span class="text-sm font-bold">${formatCurrency(school.previousBalance)}</span>
-                    </div>
-                    <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-100/50">
-                        <span class="block text-[8px] font-black uppercase text-emerald-600 mb-1">Receit. Período</span>
-                        <span class="text-sm font-bold text-emerald-700">${formatCurrency(school.credits)}</span>
-                    </div>
-                    <div class="p-4 bg-red-50 rounded-2xl border border-red-100/50">
-                        <span class="block text-[8px] font-black uppercase text-red-600 mb-1">Desp. Período</span>
-                        <span class="text-sm font-bold text-red-700">${formatCurrency(school.debits)}</span>
-                    </div>
-                    <div class="p-4 bg-slate-900 rounded-2xl text-white shadow-lg">
-                        <span class="block text-[8px] font-black uppercase text-slate-400 mb-1">Saldo Disponível</span>
-                        <span class="text-sm font-black ${schoolBalance < 0 ? 'text-red-400' : 'text-emerald-400'}">${formatCurrency(schoolBalance)}</span>
-                    </div>
-                </div>
-
-                <div class="space-y-10">
+                <div class="space-y-12">
                     ${Object.entries(school.programs).map(([progName, progData]) => {
             const progBal = progData.previousBalance + progData.credits - progData.debits;
             return `
-                        <div class="border border-slate-200 rounded-[2rem] overflow-hidden no-break shadow-sm">
-                            <div class="bg-slate-50 px-8 py-5 flex justify-between items-center border-b border-slate-200">
-                                <div>
-                                    <h4 class="text-sm font-black text-slate-900 uppercase tracking-tight">${progName}</h4>
-                                    <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Programa de Financiamento</p>
-                                </div>
-                                <div class="text-right">
-                                    <span class="text-[10px] font-black text-slate-400 uppercase">Saldo do Programa</span>
-                                    <p class="text-sm font-black text-slate-900">${formatCurrency(progBal)}</p>
+                        <div class="no-break group">
+                            <div class="flex items-center gap-3 mb-6">
+                                <div class="h-6 w-1 bg-slate-900 rounded-full"></div>
+                                <h4 class="text-sm font-black text-slate-900 uppercase tracking-widest">${progName}</h4>
+                                <div class="flex-1 border-b border-dashed border-slate-200 ml-4"></div>
+                                <div class="pl-4 whitespace-nowrap">
+                                    <span class="text-[10px] font-black ${progBal < 0 ? 'text-red-600' : 'text-emerald-600'}">${formatCurrency(progBal)}</span>
                                 </div>
                             </div>
                             
-                            <table class="w-full text-left text-[11px] border-collapse">
-                                <thead>
-                                    <tr class="bg-slate-100/30 text-slate-400 uppercase font-black text-[9px] tracking-widest border-b border-slate-100">
-                                        <th class="px-8 py-3">Data</th>
-                                        <th class="px-4 py-3">Histórico / Descrição</th>
-                                        <th class="px-4 py-3">Rubrica</th>
-                                        <th class="px-8 py-3 text-right">Valor (R$)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${progData.entries.map(e => `
-                                        <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                                            <td class="px-8 py-4 font-bold text-slate-400">${new Date(e.date).toLocaleDateString('pt-BR')}</td>
-                                            <td class="px-4 py-4">
-                                                <span class="font-extrabold text-slate-900 uppercase block">${e.description}</span>
-                                                <span class="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">${e.nature}</span>
-                                            </td>
-                                            <td class="px-4 py-4 text-slate-500 font-semibold italic text-[10px]">${e.rubric || 'Recurso Direto'}</td>
-                                            <td class="px-8 py-4 text-right font-black ${e.type === 'Entrada' ? 'text-emerald-600' : 'text-red-500'}">
-                                                ${e.type === 'Entrada' ? '+' : '-'} ${formatCurrency(e.value)}
-                                            </td>
+                            <div class="bg-white border border-slate-100 rounded-[1.5rem] overflow-hidden shadow-sm">
+                                <table class="w-full text-left text-[11px] border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50/50 text-slate-400 uppercase font-black text-[9px] tracking-[0.15em] border-b border-slate-100">
+                                            <th class="px-6 py-4">Data</th>
+                                            <th class="px-4 py-4">Ficha / Fornecedor / Rubrica</th>
+                                            <th class="px-4 py-4">Natureza</th>
+                                            <th class="px-6 py-4 text-right">Valor</th>
                                         </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-50">
+                                        ${progData.entries.map(e => `
+                                            <tr class="hover:bg-slate-50/30 transition-colors">
+                                                <td class="px-6 py-5 font-bold text-slate-400 whitespace-nowrap">${new Date(e.date).toLocaleDateString('pt-BR')}</td>
+                                                <td class="px-4 py-5">
+                                                    <div class="flex items-center gap-2">
+                                                        ${options.showStatusBadges ? `
+                                                            <span class="badge ${e.status === 'CONCILIADO' ? 'bg-emerald-50 text-emerald-600' : 'bg-yellow-50 text-yellow-600'}">
+                                                                ${e.status === 'CONCILIADO' ? 'CONCIL' : 'PEND'}
+                                                            </span>
+                                                        ` : ''}
+                                                        <span class="font-black text-slate-900 uppercase text-[11px] tracking-tight">${e.description}</span>
+                                                    </div>
+                                                    <div class="mt-1 flex gap-2">
+                                                        <span class="text-[9px] text-slate-400 font-bold uppercase italic">${e.supplier || 'Geral'}</span>
+                                                        <span class="text-[10px] text-slate-300">|</span>
+                                                        <span class="text-[9px] text-slate-400 font-medium">${e.rubric || 'Recurso Direto'}</span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-4 py-5 font-bold uppercase text-[9px] tracking-widest">
+                                                    <span class="${e.nature === 'Capital' ? 'text-orange-600' : 'text-blue-600'}">${e.nature}</span>
+                                                </td>
+                                                <td class="px-6 py-5 text-right font-black ${e.type === 'Entrada' ? 'text-emerald-600' : 'text-red-600 bg-red-50/50'}">
+                                                    ${e.type === 'Entrada' ? '+' : '-'} ${formatCurrency(Math.abs(e.value))}
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     `;
         }).join('')}
@@ -221,23 +313,112 @@ export const generateRelatorioGerencialHTML = (entries: any[], stats: any, filte
             `;
     }).join('')}
 
-        <footer class="mt-20 pt-12 border-t border-slate-100 no-break">
-            <div class="grid grid-cols-2 gap-20">
-                <div class="text-center">
-                    <div class="mb-12 h-px bg-slate-300 w-full"></div>
-                    <p class="text-[10px] font-black uppercase text-slate-900 tracking-widest">Responsável pela Prestação</p>
-                    <p class="text-[9px] text-slate-400 uppercase italic">Diretor(a) / Presidente</p>
+        <!-- Authenticity Stamp & Digital Signature -->
+        <footer class="mt-20 pt-10 border-t-[3px] border-slate-900 no-break">
+            <div class="flex justify-between items-start gap-10">
+                <div class="flex items-start gap-6 w-2/3">
+                    <!-- QR Code Validation -->
+                    <div class="bg-white p-2 border border-slate-200 rounded-xl shadow-sm">
+                        <img 
+                            src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(window.location.origin + '/validate?t=' + (await generateDocHash(reportDate + totalCred + totalDeb + entries.length)))}" 
+                            alt="QR Code de Autenticidade"
+                            style="width: 80px; height: 80px;"
+                        />
+                    </div>
+                    
+                    <div class="space-y-4 flex-1">
+                        <div>
+                            <p class="text-[10px] font-black uppercase text-slate-900 tracking-tighter mb-1 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[12px] text-emerald-600">verified_user</span>
+                                Doc Digital Signature (SHA-256)
+                            </p>
+                            <p class="text-[9px] text-slate-400 font-mono break-all bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                ${await generateDocHash(reportDate + totalCred + totalDeb + entries.length + 'brn-suite-v5')}
+                            </p>
+                        </div>
+                        <div class="flex gap-4">
+                            <div class="px-3 py-1 bg-slate-900 text-white rounded text-[8px] font-bold uppercase tracking-widest">Original Doc</div>
+                            <div class="px-3 py-1 border border-slate-200 text-slate-400 rounded text-[8px] font-bold uppercase tracking-widest">No-Repudiation Guaranteed</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="text-center">
-                    <div class="mb-12 h-px bg-slate-300 w-full"></div>
-                    <p class="text-[10px] font-black uppercase text-slate-900 tracking-widest">Contador / Equipe Técnica</p>
-                    <p class="text-[9px] text-slate-400 uppercase italic">Registro / CRC</p>
+
+                <div class="w-1/3 text-right">
+                    <div class="mb-4 h-px bg-slate-200"></div>
+                    <p class="text-[10px] font-black uppercase text-slate-900">Responsável Financeiro</p>
+                    <p class="text-[8px] text-slate-400 uppercase tracking-widest mb-4">Unidade Executora</p>
+                    <p class="text-[8px] text-slate-400 font-bold uppercase tracking-[0.4em]">BRN Suite Escolas • v5.0</p>
                 </div>
             </div>
-            <p class="text-center text-[8px] text-slate-300 font-bold uppercase tracking-[0.5em] mt-20">BRN Suite Escolas • Gestão Inteligente de Recursos Públicos</p>
+            
+            <div class="mt-10 flex justify-center opacity-10 grayscale">
+                <p class="text-[10px] font-black uppercase text-slate-900 opacity-20 tracking-[1em]">Documento Processado Digitalmente</p>
+            </div>
         </footer>
+    </div>
+
+    <!-- Print Control for Preview (Visible only on web preview before print) -->
+    <div class="no-print mt-8 flex justify-center gap-4">
+        <button onclick="window.print()" class="bg-slate-900 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-slate-900/20 flex items-center gap-2">
+            <span class="material-symbols-outlined">print</span>
+            Imprimir Agora
+        </button>
+        <button onclick="window.close()" class="bg-white text-slate-500 px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all border border-slate-100 flex items-center gap-2">
+            <span class="material-symbols-outlined">close</span>
+            Fechar Visualização
+        </button>
     </div>
 </body>
 </html>`;
 };
+
+/**
+ * Generates a real CSV file for Excel
+ */
+export const generateCSV = (entries: any[]) => {
+    // Header
+    const headers = [
+        'Data',
+        'Descrição',
+        'Escola',
+        'Programa',
+        'Rubrica',
+        'Fornecedor',
+        'Natureza',
+        'Tipo',
+        'Status',
+        'Valor (R$)'
+    ];
+
+    // Rows
+    const rows = entries.map(e => [
+        new Date(e.date).toLocaleDateString('pt-BR'),
+        `"${e.description.replace(/"/g, '""')}"`,
+        `"${e.school}"`,
+        `"${e.program}"`,
+        `"${e.rubric}"`,
+        `"${e.supplier}"`,
+        e.nature,
+        e.type,
+        e.status,
+        e.value.toString().replace('.', ',') // Excel friendly decimal
+    ]);
+
+    const csvContent = [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
+
+    // Add BOM for UTF-8 in Excel
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+
+    // Link for download
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `lancamentos_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
 

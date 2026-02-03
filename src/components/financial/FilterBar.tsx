@@ -13,6 +13,7 @@ interface FilterBarProps {
         programs: any[];
         rubrics: any[];
         suppliers: any[];
+        periods: any[];
     };
     onPrintReport: () => void;
     onExportCSV: () => void;
@@ -120,6 +121,28 @@ const FilterBar: React.FC<FilterBarProps> = ({
                             {auxData.rubrics
                                 .filter(r => !filters.program || r.program_id === filters.program)
                                 .map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                        </select>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Período</label>
+                        <select
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (!val) return;
+                                const year = parseInt(val.match(/\d{4}/)?.[0] || new Date().getFullYear().toString());
+                                if (val.includes('1º') || val.includes('.1')) {
+                                    setFilters({ ...filters, startDate: `${year}-01-01`, endDate: `${year}-06-30` });
+                                } else if (val.includes('2º') || val.includes('.2')) {
+                                    setFilters({ ...filters, startDate: `${year}-07-01`, endDate: `${year}-12-31` });
+                                } else {
+                                    setFilters({ ...filters, startDate: `${year}-01-01`, endDate: `${year}-12-31` });
+                                }
+                            }}
+                            aria-label="Selecionar Período Pré-definido"
+                            className="bg-[#1c2936] text-white text-xs h-10 px-3 rounded-xl border border-white/10 outline-none focus:border-primary"
+                        >
+                            <option value="">Personalizado...</option>
+                            {auxData.periods.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                         </select>
                     </div>
                     <div className="flex flex-col gap-2">

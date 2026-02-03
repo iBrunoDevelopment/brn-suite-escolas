@@ -10,6 +10,8 @@ import FinancialTable from '../components/financial/FinancialTable';
 import { useFinancialEntries, FinancialEntryExtended } from '../hooks/useFinancialEntries';
 import ReprogrammedBalancesModal from '../components/financial/ReprogrammedBalancesModal';
 import EntryFormModal from '../components/financial/EntryFormModal';
+import ReportOptionsModal from '../components/reports/ReportOptionsModal';
+import { generateCSV, ReportOptions } from '../lib/reportUtils';
 import { useToast } from '../context/ToastContext';
 
 const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
@@ -40,6 +42,7 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
     const [showForm, setShowForm] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     const [showReprogrammedModal, setShowReprogrammedModal] = useState(false);
+    const [showReportOptions, setShowReportOptions] = useState(false);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [isExporting, setIsExporting] = useState(false);
 
@@ -97,14 +100,81 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
         }
     };
 
-    const handleExport = async () => {
+    const handleExport = async (options: ReportOptions) => {
+        setShowReportOptions(false);
         setIsExporting(true);
         try {
-            const html = generateRelatorioGerencialHTML(entries, stats, filters);
+            let exportEntries = entries;
+            let exportReprogrammed = reprogrammedBalances;
+
+            const filtersChanged =
+                options.filterSchool !== filters.school ||
+                options.filterProgram !== filters.program ||
+                options.filterStartDate !== filters.startDate ||
+                options.filterEndDate !== filters.endDate;
+
+            if (filtersChanged) {
+                // Fetch specific data for report to avoid affecting main list UI
+                let query = supabase
+                    .from('financial_entries')
+                    .select('*, schools(name), programs(name), rubrics(name), suppliers(name)')
+                    .order('date', { ascending: true });
+
+                if (options.filterSchool) query = query.eq('school_id', options.filterSchool);
+                if (options.filterProgram) query = query.eq('program_id', options.filterProgram);
+                if (options.filterStartDate) query = query.gte('date', options.filterStartDate);
+                if (options.filterEndDate) query = query.lte('date', options.filterEndDate);
+
+                const { data, error } = await query;
+                if (error) throw error;
+
+                // Format for consistency
+                exportEntries = (data || []).map(e => ({
+                    ...e,
+                    school: e.schools?.name,
+                    program: e.programs?.name,
+                    rubric: e.rubrics?.name,
+                    supplier: e.suppliers?.name
+                }));
+            }
+
+            // Always filter reprogrammed balances to match report scope
+            exportReprogrammed = reprogrammedBalances.filter((r: any) => {
+                const schoolMatch = !options.filterSchool || r.school_id === options.filterSchool;
+                const programMatch = !options.filterProgram || r.program_id === options.filterProgram;
+                return schoolMatch && programMatch;
+            });
+
+            // Recalculate stats for the report specifically
+            const exportStats = {
+                income: 0,
+                expense: 0,
+                balance: 0,
+                reprogrammed: exportReprogrammed.reduce((acc, r: any) => acc + Number(r.value || 0), 0)
+            };
+
+            exportEntries.forEach(e => {
+                const val = Math.abs(e.value);
+                if (e.type === 'Entrada') exportStats.income += val;
+                else exportStats.expense += val;
+            });
+            exportStats.balance = exportStats.income - exportStats.expense;
+
+            if (options.format === 'csv') {
+                generateCSV(exportEntries);
+                addToast('Planilha Excel gerada com sucesso!', 'success');
+                return;
+            }
+
+            const html = await generateRelatorioGerencialHTML(exportEntries, exportStats, filters, exportReprogrammed, options);
             const win = window.open('', '_blank');
-            win?.document.write(html);
-            win?.document.close();
-            win?.print();
+            if (win) {
+                win.document.write(html);
+                win.document.close();
+            }
+        } catch (err) {
+            console.error('Export Error:', err);
+            addToast('Erro ao gerar relatório', 'error');
         } finally {
             setIsExporting(false);
         }
@@ -119,7 +189,7 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
             addToast(`${ids.length} lançamentos conciliados`, 'success');
         }
         setSelectedIds([]);
-        refresh({ ...filters, quick: quickFilter });
+        refresh();
     };
 
     return (
@@ -170,8 +240,8 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                         showFilters={showFilters}
                         setShowFilters={setShowFilters}
                         auxData={auxData}
-                        onPrintReport={handleExport}
-                        onExportCSV={handleExport}
+                        onPrintReport={() => setShowReportOptions(true)}
+                        onExportCSV={() => setShowReportOptions(true)}
                     />
 
                     <FinancialTable
@@ -216,7 +286,7 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                 editingBatchId={editingBatchId}
                 auxData={auxData}
                 accessibleSchools={accessibleSchools}
-                onSave={() => refresh({ ...filters, quick: quickFilter })}
+                onSave={() => refresh()}
             />
 
             <ReprogrammedBalancesModal
@@ -227,6 +297,17 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                 accessibleSchools={accessibleSchools}
                 programs={programs}
                 periods={periods}
+            />
+            <ReportOptionsModal
+                isOpen={showReportOptions}
+                onClose={() => setShowReportOptions(false)}
+                onGenerate={handleExport}
+                auxData={{
+                    schools: auxData.schools,
+                    programs: auxData.programs,
+                    periods: auxData.periods
+                }}
+                currentFilters={filters}
             />
         </div>
     );

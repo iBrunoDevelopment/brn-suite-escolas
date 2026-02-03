@@ -119,3 +119,21 @@
         scrollbar-width: none;
     }
 }
+
+/* Forçar tema escuro e remover setas padrão nos selects do navegador */
+select {
+    color-scheme: dark;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: none !important;
+}
+
+select::-ms-expand {
+    display: none;
+}
+
+select option {
+    background-color: #1c2936;
+    color: white;
+}
