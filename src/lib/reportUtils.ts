@@ -293,6 +293,18 @@ export const generateRelatorioGerencialHTML = async (entries: any[], stats: any,
                                                         <span class="text-[10px] text-slate-300">|</span>
                                                         <span class="text-[9px] text-slate-400 font-medium">${e.rubric || 'Recurso Direto'}</span>
                                                     </div>
+                                                    ${e.attachments && e.attachments.length > 0 ? `
+                                                    <div class="mt-2 flex flex-wrap gap-1.5">
+                                                        ${e.attachments.map((a: any) => `
+                                                            <a href="${a.url}" target="_blank" class="no-underline">
+                                                                <span style="font-size: 8px; font-weight: 800; text-transform: uppercase; background: #f1f5f9; color: #475569; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0; display: inline-flex; align-items: center; gap: 3px;">
+                                                                    <svg viewBox="0 0 24 24" width="8" height="8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                                                                    ${a.category || 'DOC'}
+                                                                </span>
+                                                            </a>
+                                                        `).join('')}
+                                                    </div>
+                                                    ` : ''}
                                                 </td>
                                                 <td class="px-4 py-5 font-bold uppercase text-[9px] tracking-widest">
                                                     <span class="${e.nature === 'Capital' ? 'text-orange-600' : 'text-blue-600'}">${e.nature}</span>

@@ -84,7 +84,12 @@ const FinancialTable: React.FC<FinancialTableProps> = ({
                                             {new Date(entry.date).toLocaleDateString('pt-BR')}
                                         </span>
                                     </div>
-                                    <h4 className="text-sm text-white font-bold leading-tight mt-1 line-clamp-2">{entry.description}</h4>
+                                    <h4 className="text-sm text-white font-bold leading-tight mt-1 line-clamp-2 flex items-center gap-2">
+                                        {entry.description}
+                                        {entry.attachments && entry.attachments.length > 0 && (
+                                            <span className="material-symbols-outlined text-[16px] text-primary shrink-0">attachment</span>
+                                        )}
+                                    </h4>
                                 </div>
                                 <div className="flex flex-col items-end gap-1.5 shrink-0">
                                     <div className={`text-base font-black tracking-tight ${entry.type === 'Entrada' ? 'text-green-400' : 'text-red-400'}`}>
@@ -192,7 +197,12 @@ const FinancialTable: React.FC<FinancialTableProps> = ({
                                     </td>
                                     <td className="p-5">
                                         <div className="flex flex-col gap-0.5">
-                                            <span className="text-sm text-white font-bold line-clamp-1">{entry.description}</span>
+                                            <span className="text-sm text-white font-bold line-clamp-1 flex items-center gap-2">
+                                                {entry.description}
+                                                {entry.attachments && entry.attachments.length > 0 && (
+                                                    <span className="material-symbols-outlined text-[16px] text-primary shrink-0" title={`${entry.attachments.length} anexo(s)`}>attachment</span>
+                                                )}
+                                            </span>
                                             <div className="flex items-center gap-2">
                                                 <span className="text-[10px] text-slate-500 font-medium flex items-center gap-1">
                                                     <span className="material-symbols-outlined text-[12px]">store</span>

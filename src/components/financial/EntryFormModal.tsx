@@ -531,76 +531,110 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                         </div>
 
                         {/* Attachments Section */}
-                        <div className="border-t border-white/5 pt-8 mt-4">
+                        <div className="border-t border-white/5 pt-8 mt-4 bg-white/[0.01] -mx-4 md:-mx-8 px-4 md:px-8 pb-8">
                             <div className="flex items-center justify-between mb-6">
-                                <div className="flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-primary">folder_open</span>
-                                    <h4 className="text-white font-bold">Documentos</h4>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                                        <span className="material-symbols-outlined">description</span>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-white font-bold">Documentação do Lançamento</h4>
+                                        <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black">{attachLabel}</p>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
-                                    <span className="text-[9px] font-black text-primary uppercase tracking-wider">{attachLabel}</span>
-                                </div>
+                                {isUploading && (
+                                    <div className="flex items-center gap-2 text-primary animate-pulse">
+                                        <span className="material-symbols-outlined text-sm animate-spin">sync</span>
+                                        <span className="text-[10px] font-bold uppercase">Enviando...</span>
+                                    </div>
+                                )}
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-4">
-                                    <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
-                                        <span className="text-[10px] uppercase text-primary font-black">Financeiros</span>
-                                        <div className="flex gap-2">
-                                            {(() => {
-                                                const isExtratoAllowed = ['Tarifa Bancária', 'Devolução de Recurso (FNDE/Estado)', 'Repasse / Crédito', 'Rendimento de Aplicação'].includes(category);
-                                                const buttons = ['Nota Fiscal', 'Espelho da Nota', 'Comprovante', 'Extrato Bancário', 'CNPJ', 'Certidões'].filter(cat => {
-                                                    if (cat === 'Extrato Bancário') return isExtratoAllowed;
-                                                    return true;
-                                                });
 
-                                                return buttons.map(cat => (
-                                                    <label key={cat} className="cursor-pointer bg-primary/10 text-primary px-2 py-1 rounded text-[9px] font-bold border border-primary/20 hover:bg-primary/20 shrink-0">
-                                                        + {cat === 'CNPJ' ? 'CNPJ' : cat === 'Espelho da Nota' ? 'Espelho' : cat.split(' ')[0]}
-                                                        <input type="file" className="hidden" onChange={e => handleFileUpload(e, cat)} />
-                                                    </label>
-                                                ));
-                                            })()}
-                                        </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="flex flex-col gap-4">
+                                    <div className="flex flex-wrap gap-2">
+                                        {(() => {
+                                            const isExtratoAllowed = ['Tarifa Bancária', 'Devolução de Recurso (FNDE/Estado)', 'Repasse / Crédito', 'Rendimento de Aplicação'].includes(category);
+                                            const cats = [
+                                                { label: 'Nota Fiscal', icon: 'receipt_long' },
+                                                { label: 'Comprovante', icon: 'payments' },
+                                                { label: 'Espelho da Nota', icon: 'content_copy' },
+                                                { label: 'Extrato Bancário', icon: 'account_balance', restricted: !isExtratoAllowed },
+                                                { label: 'Certidões', icon: 'verified' }
+                                            ].filter(c => !c.restricted);
+
+                                            return cats.map(c => (
+                                                <label key={c.label} className="cursor-pointer group flex flex-col items-center justify-center w-[calc(33.33%-8px)] aspect-square bg-white/5 border border-white/10 rounded-2xl hover:border-primary/50 hover:bg-primary/5 transition-all text-center p-2">
+                                                    <span className="material-symbols-outlined text-slate-500 group-hover:text-primary transition-colors mb-1">{c.icon}</span>
+                                                    <span className="text-[8px] font-black text-slate-400 group-hover:text-white uppercase leading-tight">{c.label}</span>
+                                                    <input type="file" className="hidden" onChange={e => handleFileUpload(e, c.label)} disabled={isUploading} />
+                                                </label>
+                                            ));
+                                        })()}
                                     </div>
-                                    <div className="space-y-2">
+
+                                    <div className="space-y-2 mt-2">
+                                        <h5 className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3">Arquivos Anexados ({attachments.length})</h5>
                                         {attachments.map(att => (
-                                            <div key={att.id} className="flex items-center justify-between p-3 bg-black/20 rounded-xl border border-white/5 group">
+                                            <div key={att.id} className="flex items-center justify-between p-3 bg-black/40 rounded-2xl border border-white/5 group hover:border-primary/30 transition-all">
                                                 <div className="flex items-center gap-3">
-                                                    <span className="material-symbols-outlined text-slate-500 text-sm">attachment</span>
-                                                    <div>
-                                                        <p className="text-xs text-white truncate max-w-[150px]">{att.name}</p>
-                                                        <p className="text-[9px] text-slate-500 uppercase">{att.category}</p>
+                                                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                                                        <span className="material-symbols-outlined text-slate-500 text-base">attachment</span>
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs text-white font-bold truncate max-w-[150px]">{att.name}</p>
+                                                        <p className="text-[9px] text-primary font-black uppercase tracking-tighter">{att.category}</p>
                                                     </div>
                                                 </div>
-                                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                                    <a href={att.url} target="_blank" className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white"><span className="material-symbols-outlined text-sm">visibility</span></a>
-                                                    <button onClick={() => removeAttachment(att.id)} className="p-1.5 hover:bg-red-500/10 rounded-lg text-slate-400 hover:text-red-500"><span className="material-symbols-outlined text-sm">delete</span></button>
+                                                <div className="flex gap-1">
+                                                    <a href={att.url} target="_blank" className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-xl text-slate-400 hover:text-white transition-all"><span className="material-symbols-outlined text-base">visibility</span></a>
+                                                    <button onClick={() => removeAttachment(att.id)} className="w-8 h-8 flex items-center justify-center hover:bg-red-500/10 rounded-xl text-slate-400 hover:text-red-500 transition-all"><span className="material-symbols-outlined text-base">delete</span></button>
                                                 </div>
                                             </div>
                                         ))}
-                                        {attachments.length === 0 && <p className="text-[10px] text-slate-600 italic text-center py-4">Nenhum documento.</p>}
+                                        {attachments.length === 0 && (
+                                            <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-white/[0.02] rounded-3xl">
+                                                <span className="material-symbols-outlined text-3xl text-slate-700 mb-2">cloud_upload</span>
+                                                <p className="text-[10px] text-slate-600 font-bold uppercase">Nenhum documento anexado ainda</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-                                <div className="space-y-4 font-black">
-                                    <div className="flex justify-between items-center bg-indigo-500/5 p-3 rounded-xl border border-indigo-500/10 uppercase">
-                                        <span className="text-[10px] text-indigo-400">Técnicos (RT)</span>
-                                    </div>
-                                    <div className="space-y-1">
-                                        {technicalProcess?.attachments?.map((att: any) => (
-                                            <div key={att.id} className="flex items-center justify-between p-3 bg-indigo-500/5 rounded-xl border border-indigo-500/10 hover:border-indigo-500/30 transition-all group">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="material-symbols-outlined text-indigo-500/50 text-sm">verified_user</span>
-                                                    <div>
-                                                        <p className="text-xs text-indigo-200 truncate max-w-[150px]">{att.name}</p>
-                                                        <p className="text-[9px] text-indigo-500/70 uppercase">{att.category || 'Documento Técnico'}</p>
-                                                    </div>
-                                                </div>
-                                                <a href={att.url} target="_blank" className="p-2 hover:bg-indigo-500/10 rounded-lg text-indigo-400 hover:text-white transition-all">
-                                                    <span className="material-symbols-outlined text-sm">open_in_new</span>
-                                                </a>
+
+                                <div className="flex flex-col gap-4">
+                                    <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-3xl p-6 h-full">
+                                        <div className="flex items-center gap-3 mb-6">
+                                            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                                                <span className="material-symbols-outlined text-xl">verified_user</span>
                                             </div>
-                                        ))}
-                                        {!technicalProcess && <p className="text-[10px] text-slate-600 italic text-center py-4">Sem processo técnico.</p>}
+                                            <div>
+                                                <h4 className="text-white font-bold text-sm">Vínculo Técnico (RT)</h4>
+                                                <p className="text-[9px] text-indigo-400/70 font-black uppercase tracking-widest">Processo de Prestação</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            {technicalProcess?.attachments?.map((att: any) => (
+                                                <div key={att.id} className="flex items-center justify-between p-3 bg-indigo-950/40 rounded-2xl border border-indigo-500/10 hover:border-indigo-500/40 transition-all group">
+                                                    <div className="flex items-center gap-3 min-w-0">
+                                                        <span className="material-symbols-outlined text-indigo-500/50 text-base">file_present</span>
+                                                        <div className="min-w-0">
+                                                            <p className="text-[11px] text-indigo-100 font-bold truncate">{att.name}</p>
+                                                            <p className="text-[8px] text-indigo-400 font-black uppercase tracking-tighter">{att.category || 'Documento Técnico'}</p>
+                                                        </div>
+                                                    </div>
+                                                    <a href={att.url} target="_blank" className="w-8 h-8 flex items-center justify-center hover:bg-indigo-500/20 rounded-xl text-indigo-400 hover:text-white transition-all">
+                                                        <span className="material-symbols-outlined text-base">open_in_new</span>
+                                                    </a>
+                                                </div>
+                                            ))}
+                                            {!technicalProcess && (
+                                                <div className="flex flex-col items-center justify-center py-10 text-center">
+                                                    <span className="material-symbols-outlined text-3xl text-indigo-900 mb-2">inventory_2</span>
+                                                    <p className="text-[10px] text-indigo-400/40 font-bold uppercase leading-relaxed">Aguardando vinculação de<br />processo técnico pela GEE</p>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
