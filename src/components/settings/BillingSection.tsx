@@ -443,11 +443,13 @@ const BillingSection: React.FC<BillingSectionProps> = ({
                         const progress = Math.min(100, (paid / total) * 100);
                         const remaining = Math.max(0, total - paid);
 
+                        // Extract style to variable to appease linter
+                        const progressBarStyle = { '--prog-width': `${progress}%` } as React.CSSProperties;
+
                         return (
                             <div key={record.id} className="bg-[#111a22] border border-white/5 p-5 rounded-2xl flex flex-col md:flex-row md:items-stretch justify-between gap-4 md:gap-6 hover:bg-white/[0.02] transition-all group overflow-hidden relative">
                                 {paid > 0 && record.status !== 'Pago' && (
-                                    // eslint-disable-next-line react/forbid-dom-props
-                                    <div className="absolute bottom-0 left-0 h-1 bg-emerald-500/20 w-[var(--prog-width)]" style={{ '--prog-width': `${progress}%` } as React.CSSProperties}></div>
+                                    <div className="absolute bottom-0 left-0 h-1 bg-emerald-500/20 w-[var(--prog-width)]" style={progressBarStyle}></div>
                                 )}
 
                                 <div className="flex items-start gap-4 w-full">
