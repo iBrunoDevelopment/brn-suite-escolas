@@ -221,9 +221,11 @@ const Settings: React.FC<{ user: User }> = ({ user }) => {
             {activeTab === 'billing' && (
               <BillingSection
                 billingRecords={settings.billingRecords}
+                schools={settings.schools}
                 loading={settings.loadingBilling}
                 onUpdateStatus={settings.handleUpdateBilling}
                 onGenerate={settings.handleGenerateBilling}
+                onCreate={settings.handleCreateBilling}
               />
             )}
           </div>

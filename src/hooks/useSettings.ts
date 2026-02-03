@@ -226,11 +226,13 @@ export const useSettings = (user: User) => {
     });
 
     const updateBillingStatusMut = useMutation({
-        mutationFn: async ({ id, status, payment_date, payment_method, amount }: { id: string, status: string, payment_date?: string, payment_method?: string, amount?: number }) => {
+        mutationFn: async ({ id, status, payment_date, payment_method, amount, paid_amount, description }: { id: string, status: string, payment_date?: string, payment_method?: string, amount?: number, paid_amount?: number, description?: string }) => {
             const payload: any = { status, updated_at: new Date().toISOString() };
             if (payment_date) payload.payment_date = payment_date;
             if (payment_method) payload.payment_method = payment_method;
             if (amount !== undefined) payload.amount = amount;
+            if (paid_amount !== undefined) payload.paid_amount = paid_amount;
+            if (description !== undefined) payload.description = description;
 
             const { error } = await supabase.from('platform_billing').update(payload).eq('id', id);
             if (error) throw error;
@@ -238,30 +240,69 @@ export const useSettings = (user: User) => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['platform_billing'] });
             addToast('Registro de faturamento atualizado!', 'success');
-        }
+        },
+        onError: (err: any) => addToast('Erro ao atualizar faturamento: ' + err.message, 'error')
+    });
+
+    const createBillingRecordMut = useMutation({
+        mutationFn: async (payload: { school_id: string, reference_month: string, amount: number, description: string, status: string }) => {
+            const { error } = await supabase.from('platform_billing').insert({ ...payload, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['platform_billing'] });
+            addToast('Cobrança adicional criada!', 'success');
+        },
+        onError: (err: any) => addToast('Erro ao criar cobrança: ' + err.message, 'error')
     });
 
     const generateBillingMut = useMutation({
         mutationFn: async (month: string) => {
+            // 1. Get Schools with Plans
             const { data: schoolsWithPlan } = await supabase.from('schools').select('id, plan_id, custom_price, discount_value').not('plan_id', 'is', null);
             if (!schoolsWithPlan || schoolsWithPlan.length === 0) return;
 
-            const records = schoolsWithPlan.map(s => {
-                const plan = localPlans.find(p => p.id === s.plan_id);
-                const basePriceStr = s.custom_price || (plan?.price_value || '0');
-                const basePrice = parseFloat(basePriceStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-                const discount = s.discount_value || 0;
-                const finalAmount = Math.max(0, basePrice - discount);
+            // 2. Get EXISTING billing records for this month (Manual Conflict Check)
+            const { data: existingRecords } = await supabase
+                .from('platform_billing')
+                .select('school_id')
+                .eq('reference_month', month)
+                // Assuming standard monthly fee has either default description 'Mensalidade' or NULL
+                // But generally, to avoid ANY duplicate monthly fee, checking school_id + month for specifically 'Mensalidade' logic if needed,
+                // OR checking if ANY record exists might be too aggressive (prevents extras).
+                // Let's assume we want to prevent duplicate "Mensalidade".
+                .ilike('description', 'Mensalidade');
 
-                return {
-                    school_id: s.id,
-                    reference_month: month,
-                    amount: finalAmount,
-                    status: 'Pendente'
-                };
-            });
+            const existingSchoolIds = new Set(existingRecords?.map(r => r.school_id) || []);
 
-            const { error } = await supabase.from('platform_billing').upsert(records, { onConflict: 'school_id, reference_month' });
+            // 3. Filter Schools that DON'T have a 'Mensalidade' yet
+            const recordsToInsert = schoolsWithPlan
+                .filter(s => !existingSchoolIds.has(s.id))
+                .map(s => {
+                    const plan = localPlans.find(p => p.id === s.plan_id);
+                    const basePriceStr = s.custom_price || (plan?.price_value || '0');
+                    const basePrice = parseFloat(basePriceStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+                    const discount = s.discount_value || 0;
+                    const finalAmount = Math.max(0, basePrice - discount);
+
+                    return {
+                        school_id: s.id,
+                        reference_month: month,
+                        amount: finalAmount,
+                        description: 'Mensalidade', // Explicitly set description
+                        status: 'Pendente',
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    };
+                });
+
+            if (recordsToInsert.length === 0) {
+                // If everyone already has it, just return (or maybe throw a friendly 'Already generated'?)
+                return;
+            }
+
+            // 4. Simple Insert
+            const { error } = await supabase.from('platform_billing').insert(recordsToInsert);
             if (error) throw error;
         },
         onSuccess: () => {
@@ -372,6 +413,7 @@ export const useSettings = (user: User) => {
         plans: localPlans, setPlans: setLocalPlans, loadingPlans: false, savingPlans: upsertSettingMut.isPending,
         billingRecords, loadingBilling,
         handleUpdateBilling: updateBillingStatusMut.mutate,
+        handleCreateBilling: createBillingRecordMut.mutate,
         handleGenerateBilling: generateBillingMut.mutate,
         templateUrl: systemSettings.templateUrl, loadingAssets: false, isUploadingTemplate: false,
         loading: loadingRubrics || loadingSuppliers || loadingBanks || loadingPayments || loadingPeriods || loadingBilling,

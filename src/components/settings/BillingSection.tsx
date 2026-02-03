@@ -1,105 +1,408 @@
-import React, { useState } from 'react';
-import { PlatformBilling } from '../../types';
+import React, { useState, useMemo } from 'react';
+import { PlatformBilling, School } from '../../types';
 import { formatCurrency } from '../../lib/printUtils';
 
 interface BillingSectionProps {
     billingRecords: PlatformBilling[];
+    schools: School[];
     loading: boolean;
-    onUpdateStatus: (data: { id: string, status: string, payment_date?: string, payment_method?: string }) => void;
+    onUpdateStatus: (data: { id: string, status: string, payment_date?: string, payment_method?: string, paid_amount?: number, description?: string, amount?: number }) => void;
     onGenerate: (month: string) => void;
+    onCreate: (data: { school_id: string, reference_month: string, amount: number, description: string, status: string }) => void;
 }
 
 const BillingSection: React.FC<BillingSectionProps> = ({
-    billingRecords, loading, onUpdateStatus, onGenerate
+    billingRecords, schools, loading, onUpdateStatus, onGenerate, onCreate
 }) => {
-    const [selectedMonth, setSelectedMonth] = useState(() => {
+    // Basic Filters State
+    const [showFilters, setShowFilters] = useState(false);
+    const [periodStart, setPeriodStart] = useState(() => {
         const d = new Date();
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    });
+    const [periodEnd, setPeriodEnd] = useState(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     });
 
-    const filteredRecords = billingRecords.filter(r => r.reference_month === selectedMonth);
+    // Filter toggles
+    const [filterSchoolId, setFilterSchoolId] = useState('');
+    const [filterSearch, setFilterSearch] = useState('');
+    const [filterStatus, setFilterStatus] = useState('');
 
-    const months = [
-        { value: '01', label: 'Janeiro' }, { value: '02', label: 'Fevereiro' }, { value: '03', label: 'Março' },
-        { value: '04', label: 'Abril' }, { value: '05', label: 'Maio' }, { value: '06', label: 'Junho' },
-        { value: '07', label: 'Julho' }, { value: '08', label: 'Agosto' }, { value: '09', label: 'Setembro' },
-        { value: '10', label: 'Outubro' }, { value: '11', label: 'Novembro' }, { value: '12', label: 'Dezembro' }
-    ];
+    // Modals
+    const [paymentModal, setPaymentModal] = useState<{ open: boolean, record: PlatformBilling | null }>({ open: false, record: null });
+    const [amountToPay, setAmountToPay] = useState('');
+    const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+    const [paymentMethod, setPaymentMethod] = useState('Pix');
 
-    const currentYear = new Date().getFullYear();
-    const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
+    const [editModal, setEditModal] = useState<{ open: boolean, record: PlatformBilling | null }>({ open: false, record: null });
+    const [editDescription, setEditDescription] = useState('');
+    const [editAmount, setEditAmount] = useState('');
 
-    const [selYear, selMonth] = selectedMonth.split('-');
+    const [createModalOpen, setCreateModalOpen] = useState(false);
+    const [newItem, setNewItem] = useState({
+        school_id: '',
+        amount: '',
+        description: '',
+        reference_month: ''
+    });
 
-    const updateMonth = (m: string) => setSelectedMonth(`${selYear}-${m}-01`);
-    const updateYear = (y: string) => setSelectedMonth(`${y}-${selMonth}-01`);
+    // ----------------------------------------------------------------------
+    // FILTER LOGIC
+    // ----------------------------------------------------------------------
+    const filteredRecords = useMemo(() => {
+        return billingRecords.filter(r => {
+            // 1. Period Filter (YYYY-MM string comparison works)
+            const month = r.reference_month.slice(0, 7); // ensure format
+            if (month < periodStart || month > periodEnd) return false;
 
-    const handleMarkAsPaid = (record: PlatformBilling) => {
-        if (!confirm(`Confirmar pagamento de ${formatCurrency(record.amount)} para ${record.school?.name}?`)) return;
-        onUpdateStatus({
-            id: record.id,
-            status: 'Pago',
-            payment_date: new Date().toISOString(),
-            payment_method: 'Manual'
+            // 2. School Filter
+            if (filterSchoolId && r.school_id !== filterSchoolId) return false;
+
+            // 3. Status Filter
+            if (filterStatus && r.status !== filterStatus) return false;
+
+            // 4. Search Filter (School Name or Description)
+            if (filterSearch) {
+                const searchLower = filterSearch.toLowerCase();
+                const schoolName = r.schools?.name?.toLowerCase() || '';
+                const desc = r.description?.toLowerCase() || '';
+                if (!schoolName.includes(searchLower) && !desc.includes(searchLower)) return false;
+            }
+
+            return true;
         });
+    }, [billingRecords, periodStart, periodEnd, filterSchoolId, filterStatus, filterSearch]);
+
+    // ----------------------------------------------------------------------
+    // STATS CALCULATION
+    // ----------------------------------------------------------------------
+    const stats = useMemo(() => {
+        return filteredRecords.reduce((acc, curr) => {
+            const total = Number(curr.amount) || 0;
+            const paid = Number(curr.paid_amount) || (curr.status === 'Pago' ? total : 0);
+            const remaining = Math.max(0, total - paid);
+
+            acc.total += total;
+            acc.received += paid;
+            acc.pending += remaining;
+            return acc;
+        }, { total: 0, received: 0, pending: 0 });
+    }, [filteredRecords]);
+
+    // Late calculation (global, ignores period filter to show alerts)
+    const totalLateAmount = useMemo(() => {
+        const currentYearMonth = new Date().toISOString().slice(0, 7);
+        return billingRecords
+            .filter(r => r.status === 'Pendente' && r.reference_month < `${currentYearMonth}-01`)
+            .reduce((acc, curr) => acc + (Number(curr.amount) - (Number(curr.paid_amount) || 0)), 0);
+    }, [billingRecords]);
+
+    // ----------------------------------------------------------------------
+    // HANDLERS
+    // ----------------------------------------------------------------------
+
+    const handleQuickPeriod = (value: string) => {
+        const year = new Date().getFullYear();
+        if (value === 'curr_year') {
+            setPeriodStart(`${year}-01`);
+            setPeriodEnd(`${year}-12`);
+        } else if (value === 'curr_sem1') {
+            setPeriodStart(`${year}-01`);
+            setPeriodEnd(`${year}-06`);
+        } else if (value === 'curr_sem2') {
+            setPeriodStart(`${year}-07`);
+            setPeriodEnd(`${year}-12`);
+        } else if (value === 'prev_year') {
+            setPeriodStart(`${year - 1}-01`);
+            setPeriodEnd(`${year - 1}-12`);
+        } else if (value === 'next_year') {
+            setPeriodStart(`${year + 1}-01`);
+            setPeriodEnd(`${year + 1}-12`);
+        } else if (value === 'prev_sem1') {
+            setPeriodStart(`${year - 1}-01`);
+            setPeriodEnd(`${year - 1}-06`);
+        } else if (value === 'prev_sem2') {
+            setPeriodStart(`${year - 1}-07`);
+            setPeriodEnd(`${year - 1}-12`);
+        }
+    };
+
+    const openPaymentModal = (record: PlatformBilling) => {
+        const remaining = Number(record.amount) - (Number(record.paid_amount) || 0);
+        setPaymentModal({ open: true, record });
+        setAmountToPay(remaining.toFixed(2));
+    };
+
+    const openEditModal = (record: PlatformBilling) => {
+        setEditModal({ open: true, record });
+        setEditDescription(record.description || 'Mensalidade');
+        setEditAmount(record.amount.toString());
+    };
+
+    const handleConfirmPayment = () => {
+        if (!paymentModal.record) return;
+        const payVal = parseFloat(amountToPay);
+        if (isNaN(payVal) || payVal <= 0) return alert('Valor inválido');
+
+        const currentPaid = Number(paymentModal.record.paid_amount) || 0;
+        const total = Number(paymentModal.record.amount);
+        const newPaidTotal = currentPaid + payVal;
+        const isPaidInFull = newPaidTotal >= (total - 0.01);
+
+        onUpdateStatus({
+            id: paymentModal.record.id,
+            status: isPaidInFull ? 'Pago' : 'Pendente',
+            payment_date: new Date(paymentDate).toISOString(),
+            payment_method: paymentMethod,
+            paid_amount: newPaidTotal
+        });
+        setPaymentModal({ open: false, record: null });
+    };
+
+    const handleConfirmEdit = () => {
+        if (!editModal.record) return;
+        const val = parseFloat(editAmount);
+        if (isNaN(val) || val < 0) return alert('Valor inválido');
+
+        onUpdateStatus({
+            id: editModal.record.id,
+            status: editModal.record.status,
+            description: editDescription,
+            amount: val
+        });
+        setEditModal({ open: false, record: null });
+    };
+
+    const handleCreateService = () => {
+        if (!newItem.school_id || !newItem.amount || !newItem.description || !newItem.reference_month) {
+            return alert('Preencha todos os campos');
+        }
+        onCreate({
+            school_id: newItem.school_id,
+            amount: parseFloat(newItem.amount),
+            description: newItem.description,
+            reference_month: `${newItem.reference_month}-01`,
+            status: 'Pendente'
+        });
+        setCreateModalOpen(false);
+        setNewItem({ school_id: '', amount: '', description: '', reference_month: '' });
+    };
+
+    const handlePrintReport = () => {
+        const printContent = `
+            <html>
+                <head>
+                    <title>Relatório Financeiro</title>
+                    <style>
+                        body { font-family: sans-serif; padding: 20px; }
+                        h1 { color: #333; }
+                        .stats { display: flex; gap: 20px; margin-bottom: 20px; }
+                        .card { border: 1px solid #ddd; padding: 10px 20px; border-radius: 8px; background: #f9f9f9; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+                        th { background-color: #f2f2f2; }
+                        .total-row { font-weight: bold; background-color: #eee; }
+                        .status-pago { color: green; font-weight: bold; }
+                        .status-pendente { color: orange; font-weight: bold; }
+                        .status-atrasado { color: red; font-weight: bold; }
+                    </style>
+                </head>
+                <body>
+                    <h1>Relatório Financeiro</h1>
+                    <p>Período: ${periodStart} a ${periodEnd}</p>
+                    
+                    <div class="stats">
+                        <div class="card"><strong>Total Gerado:</strong> ${formatCurrency(stats.total)}</div>
+                        <div class="card"><strong>Recebido:</strong> ${formatCurrency(stats.received)}</div>
+                        <div class="card"><strong>Pendente:</strong> ${formatCurrency(stats.pending)}</div>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Mês Ref.</th>
+                                <th>Escola</th>
+                                <th>Descrição</th>
+                                <th>Status</th>
+                                <th>Valor Total</th>
+                                <th>Pago</th>
+                                <th>Restante</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${filteredRecords.map(r => {
+            const paid = Number(r.paid_amount) || (r.status === 'Pago' ? Number(r.amount) : 0);
+            const remaining = Math.max(0, Number(r.amount) - paid);
+            return `
+                                    <tr>
+                                        <td>${r.reference_month.slice(0, 7)}</td>
+                                        <td>${r.schools?.name || '-'}</td>
+                                        <td>${r.description || 'Mensalidade'}</td>
+                                        <td class="status-${r.status.toLowerCase()}">${r.status}</td>
+                                        <td>${formatCurrency(r.amount)}</td>
+                                        <td>${formatCurrency(paid)}</td>
+                                        <td>${formatCurrency(remaining)}</td>
+                                    </tr>
+                                `;
+        }).join('')}
+                        </tbody>
+                        <tfoot>
+                            <tr class="total-row">
+                                <td colspan="4">TOTAIS</td>
+                                <td>${formatCurrency(stats.total)}</td>
+                                <td>${formatCurrency(stats.received)}</td>
+                                <td>${formatCurrency(stats.pending)}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </body>
+            </html>
+        `;
+
+        const win = window.open('', '', 'width=900,height=600');
+        if (win) {
+            win.document.write(printContent);
+            win.document.close();
+            win.focus();
+            win.print();
+        }
     };
 
     return (
         <div className="flex flex-col gap-8 animate-in fade-in duration-500">
             {/* Header / Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-[#111a22] p-6 rounded-2xl border border-white/5 flex flex-col gap-1">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total no Mês</span>
-                    <span className="text-2xl font-black text-white">
-                        {formatCurrency(filteredRecords.reduce((acc, current) => acc + (Number(current.amount) || 0), 0))}
-                    </span>
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total no Período</span>
+                    <span className="text-2xl font-black text-white">{formatCurrency(stats.total)}</span>
                 </div>
                 <div className="bg-emerald-500/5 p-6 rounded-2xl border border-emerald-500/10 flex flex-col gap-1">
                     <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Recebido</span>
-                    <span className="text-2xl font-black text-emerald-500">
-                        {formatCurrency(filteredRecords.filter(r => r.status === 'Pago').reduce((acc, current) => acc + (Number(current.amount) || 0), 0))}
-                    </span>
+                    <span className="text-2xl font-black text-emerald-500">{formatCurrency(stats.received)}</span>
                 </div>
                 <div className="bg-amber-500/5 p-6 rounded-2xl border border-amber-500/10 flex flex-col gap-1">
                     <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Pendente</span>
-                    <span className="text-2xl font-black text-amber-500">
-                        {formatCurrency(filteredRecords.filter(r => r.status === 'Pendente').reduce((acc, current) => acc + (Number(current.amount) || 0), 0))}
-                    </span>
+                    <span className="text-2xl font-black text-amber-500">{formatCurrency(stats.pending)}</span>
+                </div>
+                <div className="bg-red-500/5 p-6 rounded-2xl border border-red-500/10 flex flex-col gap-1">
+                    <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Em Atraso (Geral)</span>
+                    <span className="text-2xl font-black text-red-500">{formatCurrency(totalLateAmount)}</span>
                 </div>
             </div>
 
-            {/* Filters and Actions */}
-            <div className="bg-[#111a22] p-6 rounded-2xl border border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
-                <div className="flex flex-col gap-1.5 w-full md:w-auto">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Período de Referência</label>
-                    <div className="flex gap-2">
-                        <select
-                            title="Selecione o Mês"
-                            value={selMonth}
-                            onChange={(e) => updateMonth(e.target.value)}
-                            className="bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-primary transition-all cursor-pointer appearance-none text-center font-bold"
-                        >
-                            {months.map(m => <option key={m.value} value={m.value} className="bg-[#1e293b]">{m.label}</option>)}
-                        </select>
-                        <select
-                            title="Selecione o Ano"
-                            value={selYear}
-                            onChange={(e) => updateYear(e.target.value)}
-                            className="bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-primary transition-all cursor-pointer appearance-none text-center font-bold"
-                        >
-                            {years.map(y => <option key={y} value={y} className="bg-[#1e293b]">{y}</option>)}
-                        </select>
-                    </div>
-                </div>
-
+            {/* Toolbar: Actions & Filter Toggle */}
+            <div className="flex flex-col md:flex-row justify-between gap-4">
                 <button
-                    onClick={() => onGenerate(selectedMonth)}
-                    className="w-full md:w-auto px-8 py-3 bg-primary hover:bg-primary-hover text-white rounded-xl font-bold text-sm shadow-xl shadow-primary/20 transition-all flex items-center justify-center gap-2 active:scale-95"
+                    onClick={() => setShowFilters(!showFilters)}
+                    className={`px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest flex items-center gap-2 transition-all border ${showFilters ? 'bg-primary text-white border-primary' : 'bg-[#111a22] text-slate-400 border-white/5 hover:text-white hover:bg-white/5'}`}
                 >
-                    <span className="material-symbols-outlined">sync</span>
-                    Gerar Cobranças do Mês
+                    <span className="material-symbols-outlined text-[18px]">filter_list</span>
+                    {showFilters ? 'Ocultar Filtros' : 'Filtros Avançados'}
                 </button>
+
+                <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                    <button
+                        onClick={() => setCreateModalOpen(true)}
+                        className="flex-1 md:flex-none px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all border border-white/5"
+                    >
+                        <span className="material-symbols-outlined text-[16px]">add_circle</span>
+                        Novo Extra
+                    </button>
+                    <button
+                        onClick={() => onGenerate(periodEnd + '-01')}
+                        className="flex-1 md:flex-none px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/20 rounded-lg font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
+                        title="Gera cobranças para o mês final selecionado"
+                    >
+                        <span className="material-symbols-outlined text-[16px]">sync</span>
+                        Gerar (Fim)
+                    </button>
+                    <button
+                        onClick={handlePrintReport}
+                        className="flex-1 md:flex-none px-6 py-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-lg font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">print</span>
+                        Imprimir
+                    </button>
+                </div>
             </div>
+
+            {/* Expansible Filters Bar */}
+            {showFilters && (
+                <div className="bg-[#111a22] p-4 md:p-6 rounded-2xl border border-white/5 flex flex-col gap-4 animate-in slide-in-from-top-4 duration-300">
+
+                    {/* QUICK PERIOD SELECTOR */}
+                    <div className="w-full">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Período Rápido</label>
+                        <div className="flex gap-2 flex-wrap">
+                            <button onClick={() => handleQuickPeriod('prev_sem1')} className="px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] font-bold text-slate-400 hover:text-white uppercase tracking-wide border border-white/10 transition-all active:scale-95">1º Sem {new Date().getFullYear() - 1}</button>
+                            <button onClick={() => handleQuickPeriod('prev_sem2')} className="px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] font-bold text-slate-400 hover:text-white uppercase tracking-wide border border-white/10 transition-all active:scale-95">2º Sem {new Date().getFullYear() - 1}</button>
+                            <button onClick={() => handleQuickPeriod('prev_year')} className="px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] font-bold text-slate-400 hover:text-white uppercase tracking-wide border border-white/10 transition-all active:scale-95">Ano {new Date().getFullYear() - 1}</button>
+
+                            <div className="w-[1px] h-8 bg-white/10 mx-2 hidden md:block"></div>
+
+                            <button onClick={() => handleQuickPeriod('curr_sem1')} className="px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] font-bold text-slate-300 hover:text-white uppercase tracking-wide border border-white/10 transition-all active:scale-95">1º Sem {new Date().getFullYear()}</button>
+                            <button onClick={() => handleQuickPeriod('curr_sem2')} className="px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] font-bold text-slate-300 hover:text-white uppercase tracking-wide border border-white/10 transition-all active:scale-95">2º Sem {new Date().getFullYear()}</button>
+                            <button onClick={() => handleQuickPeriod('curr_year')} className="px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] font-bold text-slate-300 hover:text-white uppercase tracking-wide border border-white/10 transition-all active:scale-95">Ano {new Date().getFullYear()}</button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end border-t border-white/5 pt-4">
+                        {/* Start Date */}
+                        <div>
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 block">Início</label>
+                            <input
+                                title="Data Inicial"
+                                type="date"
+                                value={`${periodStart}-01`}
+                                onChange={e => setPeriodStart(e.target.value.slice(0, 7))}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-primary"
+                            />
+                        </div>
+
+                        {/* End Date */}
+                        <div>
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 block">Fim</label>
+                            <input
+                                title="Data Final"
+                                type="date"
+                                value={`${periodEnd}-01`}
+                                onChange={e => setPeriodEnd(e.target.value.slice(0, 7))}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-primary"
+                            />
+                        </div>
+
+                        {/* School Filter */}
+                        <div className="col-span-2 md:col-span-1">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 block">Escola</label>
+                            <select
+                                title="Filtrar por Escola"
+                                value={filterSchoolId}
+                                onChange={e => setFilterSchoolId(e.target.value)}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-primary appearance-none"
+                            >
+                                <option value="">Todas as Escolas</option>
+                                {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </select>
+                        </div>
+
+                        {/* Search Text */}
+                        <div className="col-span-2 md:col-span-1">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 block">Pesquisar</label>
+                            <input
+                                title="Pesquisar por escola ou descrição"
+                                type="text"
+                                placeholder="Nome ou descrição..."
+                                value={filterSearch}
+                                onChange={e => setFilterSearch(e.target.value)}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-primary"
+                            />
+                        </div>
+                    </div>
+
+                </div>
+            )}
 
             {/* List */}
             <div className="grid grid-cols-1 gap-3">
@@ -107,59 +410,321 @@ const BillingSection: React.FC<BillingSectionProps> = ({
                     <div className="text-center py-20 text-slate-500 italic">Carregando registros...</div>
                 ) : filteredRecords.length === 0 ? (
                     <div className="bg-black/20 border border-dashed border-white/5 rounded-3xl p-20 text-center text-slate-500 italic">
-                        <span className="material-symbols-outlined text-5xl mb-4 opacity-10">payments</span>
-                        <p>Nenhuma cobrança gerada para este mês.</p>
-                        <p className="text-xs mt-2">Clique no botão acima para sincronizar com as escolas ativas.</p>
+                        <span className="material-symbols-outlined text-5xl mb-4 opacity-10">filter_list_off</span>
+                        <p>Nenhum registro encontrado com os filtros atuais.</p>
                     </div>
                 ) : (
-                    filteredRecords.map((record) => (
-                        <div key={record.id} className="bg-[#111a22] border border-white/5 p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-6 hover:bg-white/[0.02] transition-all group">
-                            <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${record.status === 'Pago' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>
-                                    <span className="material-symbols-outlined text-[24px]">
-                                        {record.status === 'Pago' ? 'check_circle' : 'hourglass_empty'}
-                                    </span>
-                                </div>
-                                <div>
-                                    <h4 className="font-black text-white text-sm uppercase tracking-tight">{record.school?.name}</h4>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <span className="text-[10px] font-bold text-slate-500 uppercase">{record.school?.plan_id || 'Plano não definido'}</span>
-                                        <span className="w-1 h-1 rounded-full bg-slate-700"></span>
-                                        <span className={`text-[10px] font-black uppercase ${record.status === 'Pago' ? 'text-emerald-500' : 'text-amber-500'}`}>
-                                            {record.status}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
+                    filteredRecords.map((record) => {
+                        const paid = Number(record.paid_amount) || 0;
+                        const total = Number(record.amount);
+                        const progress = Math.min(100, (paid / total) * 100);
+                        const remaining = Math.max(0, total - paid);
 
-                            <div className="flex items-center gap-8 justify-between md:justify-end">
-                                <div className="text-right">
-                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Valor</span>
-                                    <span className="text-lg font-black text-white">{formatCurrency(record.amount)}</span>
-                                </div>
-
-                                {record.status !== 'Pago' && (
-                                    <button
-                                        onClick={() => handleMarkAsPaid(record)}
-                                        className="h-10 px-6 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-emerald-600/20 active:scale-95"
-                                    >
-                                        Marcar como Pago
-                                    </button>
+                        return (
+                            <div key={record.id} className="bg-[#111a22] border border-white/5 p-5 rounded-2xl flex flex-col md:flex-row md:items-stretch justify-between gap-4 md:gap-6 hover:bg-white/[0.02] transition-all group overflow-hidden relative">
+                                {paid > 0 && record.status !== 'Pago' && (
+                                    // eslint-disable-next-line react/forbid-dom-props
+                                    <div className="absolute bottom-0 left-0 h-1 bg-emerald-500/20 w-[var(--prog-width)]" style={{ '--prog-width': `${progress}%` } as React.CSSProperties}></div>
                                 )}
 
-                                {record.status === 'Pago' && (
-                                    <div className="text-right hidden md:block">
-                                        <span className="text-[10px] font-black text-emerald-500/50 uppercase tracking-widest block italic">Pago em</span>
-                                        <span className="text-[10px] font-bold text-emerald-500 italic">
-                                            {record.payment_date ? new Date(record.payment_date).toLocaleDateString('pt-BR') : '-'}
+                                <div className="flex items-start gap-4 w-full">
+                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 mt-1 md:mt-0 ${record.status === 'Pago' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>
+                                        <span className="material-symbols-outlined text-[24px]">
+                                            {record.status === 'Pago' ? 'check_circle' : (paid > 0 ? 'timelapse' : 'hourglass_empty')}
                                         </span>
                                     </div>
-                                )}
+                                    <div className="flex-1 min-w-0 flex flex-col gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <h4 className="font-black text-white text-base md:text-lg uppercase tracking-tight break-words leading-tight">{record.schools?.name || 'Escola Desconhecida'}</h4>
+                                            {/* Botão de editar discreto */}
+                                            <button
+                                                onClick={() => openEditModal(record)}
+                                                title="Editar Detalhes"
+                                                className="w-6 h-6 flex items-center justify-center rounded-full text-slate-600 hover:bg-white/10 hover:text-white transition-all opacity-50 group-hover:opacity-100"
+                                            >
+                                                <span className="material-symbols-outlined text-[14px]">edit</span>
+                                            </button>
+                                        </div>
+
+                                        <p className="text-xs md:text-sm font-medium text-slate-400 leading-normal break-words max-w-full md:max-w-2xl">
+                                            {record.description || 'Mensalidade'}
+                                        </p>
+
+                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
+                                            <span className="text-[10px] font-bold text-slate-500 uppercase whitespace-nowrap bg-white/5 px-2 py-0.5 rounded md:bg-transparent md:px-0 md:py-0">{record.reference_month?.slice(0, 7)}</span>
+                                            <span className="hidden sm:inline w-1 h-1 rounded-full bg-slate-700"></span>
+                                            <span className="text-[10px] font-bold text-slate-500 uppercase whitespace-nowrap">{record.schools?.plan_id || 'Plano não definido'}</span>
+                                            <span className="hidden sm:inline w-1 h-1 rounded-full bg-slate-700"></span>
+                                            <span className={`text-[10px] font-black uppercase whitespace-nowrap ${record.status === 'Pago' ? 'text-emerald-500' : 'text-amber-500'}`}>
+                                                {record.status} {paid > 0 && record.status !== 'Pago' && ` (${progress.toFixed(0)}% Pago)`}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-8 w-full md:w-auto mt-2 md:mt-0 border-t border-white/5 pt-4 md:border-0 md:pt-0 shrink-0">
+                                    <div className="flex flex-row md:flex-col justify-between md:justify-end items-center md:items-end">
+                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest md:block">Valor Total</span>
+                                        <div className="text-right">
+                                            <span className="text-lg font-black text-white">{formatCurrency(total)}</span>
+                                            {paid > 0 && record.status !== 'Pago' && (
+                                                <span className="text-[10px] font-bold text-emerald-500 block">Pago: {formatCurrency(paid)}</span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {record.status !== 'Pago' && (
+                                        <div className="flex flex-col w-full md:w-auto gap-2">
+                                            <button
+                                                onClick={() => openPaymentModal(record)}
+                                                className="h-10 w-full md:w-[180px] flex items-center justify-center bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-emerald-600/20 active:scale-95 whitespace-nowrap"
+                                            >
+                                                Informar Pagamento
+                                            </button>
+                                            {paid > 0 && (
+                                                <span className="text-[10px] text-amber-500 font-bold text-center md:text-right w-full">Restam: {formatCurrency(remaining)}</span>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {record.status === 'Pago' && (
+                                        <div className="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto">
+                                            <div className="text-right">
+                                                <span className="text-[10px] font-black text-emerald-500/50 uppercase tracking-widest block italic">Pago em</span>
+                                                <span className="text-[10px] font-bold text-emerald-500 italic">
+                                                    {record.payment_date ? new Date(record.payment_date).toLocaleDateString('pt-BR') : '-'}
+                                                </span>
+                                            </div>
+                                            <button
+                                                onClick={() => openPaymentModal(record)}
+                                                title="Editar Pagamento"
+                                                className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-colors flex-shrink-0"
+                                            >
+                                                <span className="material-symbols-outlined text-xs">edit</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
             </div>
+
+            {/* Create Service Modal */}
+            {createModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200 overflow-y-auto">
+                    <div className="bg-[#111a22] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+                        <button
+                            onClick={() => setCreateModalOpen(false)}
+                            className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
+                        >
+                            <span className="material-symbols-outlined">close</span>
+                        </button>
+
+                        <h3 className="text-lg font-black text-white uppercase tracking-tight mb-6">Novo Serviço Extra</h3>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Escola</label>
+                                <select
+                                    title="Selecione a Escola"
+                                    value={newItem.school_id}
+                                    onChange={e => setNewItem({ ...newItem, school_id: e.target.value })}
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary transition-all appearance-none"
+                                >
+                                    <option value="">Selecione...</option>
+                                    {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Descrição</label>
+                                <input
+                                    type="text"
+                                    title="Descrição"
+                                    placeholder="Ex: Criação de Horário, Visita Técnica..."
+                                    value={newItem.description}
+                                    onChange={e => setNewItem({ ...newItem, description: e.target.value })}
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-bold outline-none focus:border-primary transition-all"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Mês de Cobrança</label>
+                                    <input
+                                        title="Mês de Cobrança"
+                                        type="date"
+                                        value={`${newItem.reference_month}-01`}
+                                        onChange={e => setNewItem({ ...newItem, reference_month: e.target.value.slice(0, 7) })}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary transition-all"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Valor (R$)</label>
+                                    <input
+                                        title="Valor do Serviço"
+                                        type="number"
+                                        placeholder="0.00"
+                                        value={newItem.amount}
+                                        onChange={e => setNewItem({ ...newItem, amount: e.target.value })}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-bold outline-none focus:border-emerald-500 transition-all"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-8 flex gap-3">
+                            <button
+                                onClick={() => setCreateModalOpen(false)}
+                                className="flex-1 h-12 rounded-xl font-bold text-xs uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleCreateService}
+                                className="flex-1 h-12 bg-primary hover:bg-primary-hover text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-primary/20 active:scale-95 transition-all"
+                            >
+                                Criar Cobrança
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Description/Amount Modal */}
+            {editModal.open && editModal.record && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200 overflow-y-auto">
+                    <div className="bg-[#111a22] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+                        <button
+                            onClick={() => setEditModal({ open: false, record: null })}
+                            className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
+                        >
+                            <span className="material-symbols-outlined">close</span>
+                        </button>
+
+                        <h3 className="text-lg font-black text-white uppercase tracking-tight mb-6">Editar Detalhes</h3>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Descrição</label>
+                                <textarea
+                                    title="Descrição"
+                                    rows={3}
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-medium outline-none focus:border-primary transition-all resize-none"
+                                    value={editDescription}
+                                    onChange={e => setEditDescription(e.target.value)}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Valor Total (R$)</label>
+                                <input
+                                    title="Valor Total"
+                                    type="number"
+                                    value={editAmount}
+                                    onChange={e => setEditAmount(e.target.value)}
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-bold outline-none focus:border-emerald-500 transition-all"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mt-8 flex gap-3">
+                            <button
+                                onClick={() => setEditModal({ open: false, record: null })}
+                                className="flex-1 h-12 rounded-xl font-bold text-xs uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleConfirmEdit}
+                                className="flex-1 h-12 bg-primary hover:bg-primary-hover text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-primary/20 active:scale-95 transition-all"
+                            >
+                                Salvar Alterações
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Payment Modal */}
+            {paymentModal.open && paymentModal.record && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200 overflow-y-auto">
+                    <div className="bg-[#111a22] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+                        <button
+                            onClick={() => setPaymentModal({ open: false, record: null })}
+                            className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
+                        >
+                            <span className="material-symbols-outlined">close</span>
+                        </button>
+
+                        <h3 className="text-lg font-black text-white uppercase tracking-tight mb-1">Registrar Pagamento</h3>
+                        <p className="text-sm text-slate-400 mb-6">{paymentModal.record.schools?.name}</p>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Valor a deduzir (R$)</label>
+                                <input
+                                    title="Valor a deduzir"
+                                    type="number"
+                                    value={amountToPay}
+                                    onChange={e => setAmountToPay(e.target.value)}
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-bold outline-none focus:border-emerald-500 transition-all"
+                                    placeholder="0.00"
+                                />
+                                <div className="flex justify-between mt-1 text-[10px] font-bold">
+                                    <span className="text-slate-500">Total: {formatCurrency(paymentModal.record.amount)}</span>
+                                    <span className="text-amber-500">Restante: {formatCurrency(Math.max(0, Number(paymentModal.record.amount) - (Number(paymentModal.record.paid_amount) || 0)))}</span>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Data</label>
+                                    <input
+                                        title="Data do Pagamento"
+                                        type="date"
+                                        value={paymentDate}
+                                        onChange={e => setPaymentDate(e.target.value)}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary transition-all"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Método</label>
+                                    <select
+                                        value={paymentMethod}
+                                        title="Método de Pagamento"
+                                        onChange={e => setPaymentMethod(e.target.value)}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary transition-all appearance-none"
+                                    >
+                                        <option value="Pix">Pix</option>
+                                        <option value="Boleto">Boleto</option>
+                                        <option value="Transferência">Transferência</option>
+                                        <option value="Cartão">Cartão</option>
+                                        <option value="Dinheiro">Dinheiro</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-8 flex gap-3">
+                            <button
+                                onClick={() => setPaymentModal({ open: false, record: null })}
+                                className="flex-1 h-12 rounded-xl font-bold text-xs uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleConfirmPayment}
+                                className="flex-1 h-12 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-emerald-600/20 active:scale-95 transition-all"
+                            >
+                                Confirmar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="p-4 bg-primary/5 border border-primary/10 rounded-2xl">
                 <div className="flex gap-3">

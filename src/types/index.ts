@@ -267,6 +267,8 @@ export interface PlatformBilling {
     notes?: string;
     created_at: string;
     updated_at: string;
-    school?: School;
+    schools?: School;
+    paid_amount?: number;
+    description?: string;
 }
 
