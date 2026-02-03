@@ -55,13 +55,15 @@ const Settings: React.FC<{ user: User }> = ({ user }) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Sidebar Mini */}
-        <div className="flex flex-col gap-2">
+        {/* Sidebar Mini - Improved Responsiveness for Mobile */}
+        <div className="flex flex-row md:flex-col gap-2 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0 scrollbar-hide">
           {configTabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${activeTab === tab.id ? 'bg-primary/10 text-white border-l-4 border-primary font-bold' : 'text-text-secondary hover:bg-surface-dark hover:text-white'
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left whitespace-nowrap min-w-fit md:min-w-0 ${activeTab === tab.id
+                ? 'bg-primary/10 text-white border-b-2 md:border-b-0 md:border-l-4 border-primary font-bold'
+                : 'text-text-secondary hover:bg-surface-dark hover:text-white'
                 }`}
             >
               <span className="material-symbols-outlined text-[20px]">{tab.icon}</span>
@@ -71,7 +73,7 @@ const Settings: React.FC<{ user: User }> = ({ user }) => {
         </div>
 
         {/* Content Area */}
-        <div className="md:col-span-3 flex flex-col gap-6 bg-surface-dark border border-surface-border rounded-xl p-8">
+        <div className="md:col-span-3 flex flex-col gap-6 bg-surface-dark border border-surface-border rounded-xl p-4 md:p-8">
           <div className="flex flex-col gap-6">
             {activeTab === 'profile' && (
               <ProfileSection
@@ -201,6 +203,7 @@ const Settings: React.FC<{ user: User }> = ({ user }) => {
                 onAddFeature={settings.handleAddFeature}
                 onRemoveFeature={settings.handleRemoveFeature}
                 onUpdateFeature={settings.handleUpdateFeature}
+                onAddPlan={settings.handleAddPlan}
               />
             )}
 

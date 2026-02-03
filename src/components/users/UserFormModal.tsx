@@ -3,6 +3,7 @@ import { UserRole, School } from '../../types';
 import { UserForm } from '../../hooks/useUsers';
 import { supabase } from '../../lib/supabaseClient';
 import { useToast } from '../../context/ToastContext';
+import { compressImage } from '../../lib/imageUtils';
 
 interface UserFormModalProps {
     editingUser: UserForm;
@@ -46,10 +47,11 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
         if (!file) return;
         try {
             setUploading(true);
+            const processedFile = file.type.startsWith('image/') ? await compressImage(file) : file;
             const fileExt = file.name.split('.').pop();
             const fileName = `${Math.random()}.${fileExt}`;
             const filePath = `avatars/${fileName}`;
-            const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
+            const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, processedFile);
             if (uploadError) throw uploadError;
             const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
             setEditingUser({ ...editingUser, avatar_url: publicUrl });

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useToast } from '../context/ToastContext';
+import { compressImage } from '../lib/imageUtils';
 import { User } from '../types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -283,8 +284,9 @@ export const useSettings = (user: User) => {
         if (!file) return;
         setIsUploadingStamp(true);
         try {
+            const processedFile = file.type.startsWith('image/') ? await compressImage(file) : file;
             const fileName = `stamps/${Date.now()}.${file.name.split('.').pop()}`;
-            await supabase.storage.from('attachments').upload(fileName, file);
+            await supabase.storage.from('attachments').upload(fileName, processedFile);
             const { data: { publicUrl } } = supabase.storage.from('attachments').getPublicUrl(fileName);
             setNewSupplier(prev => ({ ...prev, stamp_url: publicUrl }));
             addToast('Carimbo enviado com sucesso!', 'success');
@@ -342,6 +344,23 @@ export const useSettings = (user: User) => {
         updatePlanField: (i: number, f: string, v: any) => { const p = [...localPlans]; p[i] = { ...p[i], [f]: v }; setLocalPlans(p); },
         handleAddFeature: (pi: number) => { const p = [...localPlans]; if (!p[pi].features) p[pi].features = []; p[pi].features.push(""); setLocalPlans(p); },
         handleRemoveFeature: (pi: number, fi: number) => { const p = [...localPlans]; p[pi].features = p[pi].features.filter((_: any, i: number) => i !== fi); setLocalPlans(p); },
-        handleUpdateFeature: (pi: number, fi: number, v: string) => { const p = [...localPlans]; p[pi].features[fi] = v; setLocalPlans(p); }
+        handleUpdateFeature: (pi: number, fi: number, v: string) => { const p = [...localPlans]; p[pi].features[fi] = v; setLocalPlans(p); },
+        handleAddPlan: () => {
+            const newPlan = {
+                id: `custom_${Date.now()}`,
+                title: 'Novo Plano',
+                subtitle: 'Personalizado',
+                price_value: '0',
+                price_period: '/mês',
+                billing_info: '',
+                features: [],
+                details: '',
+                highlight: false,
+                highlight_text: '',
+                icon: 'auto_awesome',
+                order: localPlans.length + 1
+            };
+            setLocalPlans([...localPlans, newPlan]);
+        }
     };
 };

@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import { User, School, UserRole, ContractSignature } from '../types';
 import { usePermissions, useAccessibleSchools } from '../hooks/usePermissions';
 import { useToast } from '../context/ToastContext';
+import { compressImage } from '../lib/imageUtils';
 import Contract from './Contract';
 
 const Schools: React.FC<{ user: User }> = ({ user }) => {
@@ -53,7 +54,10 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
         image_url: '',
         gee: '',
         gee_id: '',
-        plan_id: ''
+        plan_id: '',
+        custom_price: '',
+        custom_title: '',
+        discount_value: 0
     });
 
     useEffect(() => {
@@ -178,7 +182,10 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
             image_url: school.image_url || '',
             gee: school.gee || '',
             gee_id: school.gee_id || '',
-            plan_id: school.plan_id || ''
+            plan_id: school.plan_id || '',
+            custom_price: school.custom_price || '',
+            custom_title: school.custom_title || '',
+            discount_value: school.discount_value || 0
         });
         setShowForm(true);
     };
@@ -250,12 +257,13 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
 
         setIsUploading(true);
         try {
+            const processedFile = file.type.startsWith('image/') ? await compressImage(file) : file;
             const fileExt = file.name.split('.').pop();
             const fileName = `logos/${Date.now()}.${fileExt}`;
 
             const { error: uploadError } = await supabase.storage
                 .from('attachments')
-                .upload(fileName, file);
+                .upload(fileName, processedFile);
 
             if (uploadError) throw uploadError;
 
@@ -288,7 +296,10 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
             image_url: '',
             gee: '',
             gee_id: '',
-            plan_id: ''
+            plan_id: '',
+            custom_price: '',
+            custom_title: '',
+            discount_value: 0
         });
     };
 
@@ -446,6 +457,7 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                                     </select>
                                     <p className="text-xs text-slate-500 mt-1">Vincule esta escola a uma Gerência Executiva para gestão de técnicos.</p>
                                 </div>
+
                                 <div className="md:col-span-2">
                                     <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Plano Contratado</label>
                                     <select
@@ -461,17 +473,44 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                                     </select>
                                     <p className="text-xs text-emerald-500/60 mt-1 font-medium">Os itens deste plano serão descritos automaticamente no contrato digital.</p>
                                 </div>
+
+                                {formData.plan_id && (
+                                    <div className="md:col-span-2 p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl space-y-4">
+                                        <div className="flex items-center gap-2 text-emerald-500 font-bold text-[10px] uppercase">
+                                            <span className="material-symbols-outlined text-sm">settings_suggest</span>
+                                            Personalizar para esta Escola
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label htmlFor="custom-title" className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Título Customizado (Opcional)</label>
+                                                <input id="custom-title" type="text" placeholder="Ex: Pacote Especial Escolas" value={formData.custom_title} onChange={e => setFormData({ ...formData, custom_title: e.target.value })} className="w-full bg-[#0f172a] border-slate-800 rounded-lg text-white p-2 text-sm outline-none focus:border-emerald-500/50" />
+                                            </div>
+                                            <div>
+                                                <label htmlFor="custom-price" className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Preço Customizado (Opcional)</label>
+                                                <input id="custom-price" type="text" placeholder="Ex: R$ 450" value={formData.custom_price} onChange={e => setFormData({ ...formData, custom_price: e.target.value })} className="w-full bg-[#0f172a] border-slate-800 rounded-lg text-white p-2 text-sm outline-none focus:border-emerald-500/50" />
+                                            </div>
+                                            <div className="md:col-span-2">
+                                                <label htmlFor="discount-value" className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Valor do Desconto Mensal (R$)</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500 font-bold text-xs">R$</span>
+                                                    <input id="discount-value" type="number" placeholder="0" value={formData.discount_value} onChange={e => setFormData({ ...formData, discount_value: Number(e.target.value) })} className="w-full bg-[#0f172a] border-slate-800 rounded-lg text-white p-2 pl-9 text-sm outline-none focus:border-emerald-500/50" />
+                                                </div>
+                                                <p className="text-[9px] text-slate-500 mt-1 italic">Este valor será subtraído do preço final exibido no contrato.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="md:col-span-2">
-                                    <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Conselho Escolar</label>
-                                    <input type="text" aria-label="Conselho Escolar" value={formData.conselho_escolar} onChange={e => setFormData({ ...formData, conselho_escolar: e.target.value.toUpperCase() })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" placeholder="Nome do conselho..." />
+                                    <label htmlFor="conselho-escolar" className="text-xs font-bold text-slate-400 uppercase mb-1 block">Conselho Escolar</label>
+                                    <input id="conselho-escolar" type="text" aria-label="Conselho Escolar" value={formData.conselho_escolar} onChange={e => setFormData({ ...formData, conselho_escolar: e.target.value.toUpperCase() })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" placeholder="Nome do conselho..." />
                                 </div>
                                 <div className="md:col-span-2">
-                                    <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Diretor(a)</label>
-                                    <input type="text" aria-label="Diretor(a)" placeholder="Nome completo do diretor" value={formData.director} onChange={e => setFormData({ ...formData, director: e.target.value.toUpperCase() })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" />
+                                    <label htmlFor="school-director" className="text-xs font-bold text-slate-400 uppercase mb-1 block">Diretor(a)</label>
+                                    <input id="school-director" type="text" aria-label="Diretor(a)" placeholder="Nome completo do diretor" value={formData.director} onChange={e => setFormData({ ...formData, director: e.target.value.toUpperCase() })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" title="Nome do Diretor" />
                                 </div>
                                 <div className="md:col-span-2">
-                                    <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Secretário(a) do Conselho</label>
-                                    <input type="text" aria-label="Secretário(a) do Conselho" placeholder="Nome do secretário" value={formData.secretary} onChange={e => setFormData({ ...formData, secretary: e.target.value.toUpperCase() })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" />
+                                    <label htmlFor="school-secretary" className="text-xs font-bold text-slate-400 uppercase mb-1 block">Secretário(a) do Conselho</label>
+                                    <input id="school-secretary" type="text" aria-label="Secretário(a) do Conselho" placeholder="Nome do secretário" value={formData.secretary} onChange={e => setFormData({ ...formData, secretary: e.target.value.toUpperCase() })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" title="Nome do Secretário" />
                                 </div>
                                 <div className="md:col-span-2">
                                     <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Logradouro / Endereço</label>
@@ -500,31 +539,34 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                         </div>
                     </div>
                 </div>
-            )}
+            )
+            }
 
             {/* Contract Viewer Modal */}
-            {viewingContract && (
-                <div className="fixed inset-0 z-[60] bg-[#0f172a] overflow-y-auto pt-16 md:pt-0">
-                    <div className="sticky top-0 z-[70] bg-[#1e293b] p-4 flex justify-between items-center sm:hidden border-b border-white/10">
-                        <h3 className="font-bold text-white uppercase text-xs">Visualizando Contrato</h3>
-                        <button onClick={() => setViewingContract(null)} className="text-white bg-white/10 p-2 rounded-lg"><span className="material-symbols-outlined">close</span></button>
-                    </div>
+            {
+                viewingContract && (
+                    <div className="fixed inset-0 z-[60] bg-[#0f172a] overflow-y-auto pt-16 md:pt-0">
+                        <div className="sticky top-0 z-[70] bg-[#1e293b] p-4 flex justify-between items-center sm:hidden border-b border-white/10">
+                            <h3 className="font-bold text-white uppercase text-xs">Visualizando Contrato</h3>
+                            <button onClick={() => setViewingContract(null)} className="text-white bg-white/10 p-2 rounded-lg"><span className="material-symbols-outlined">close</span></button>
+                        </div>
 
-                    <div className="relative">
-                        <button
-                            onClick={() => setViewingContract(null)}
-                            className="fixed top-6 right-10 z-[70] hidden sm:flex items-center gap-2 text-white bg-slate-800/80 hover:bg-slate-700 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 transition-all font-bold uppercase text-xs print:hidden"
-                        >
-                            <span className="material-symbols-outlined">close</span> Fechar
-                        </button>
+                        <div className="relative">
+                            <button
+                                onClick={() => setViewingContract(null)}
+                                className="fixed top-6 right-10 z-[70] hidden sm:flex items-center gap-2 text-white bg-slate-800/80 hover:bg-slate-700 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 transition-all font-bold uppercase text-xs print:hidden"
+                            >
+                                <span className="material-symbols-outlined">close</span> Fechar
+                            </button>
 
-                        <div className="max-w-5xl mx-auto py-8 px-4">
-                            <Contract user={viewingContract.directorUser} />
+                            <div className="max-w-5xl mx-auto py-8 px-4">
+                                <Contract user={viewingContract.directorUser} />
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 

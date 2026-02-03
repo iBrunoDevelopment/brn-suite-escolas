@@ -8,10 +8,11 @@ interface WebsitePlansSectionProps {
     onAddFeature: (planIndex: number) => void;
     onRemoveFeature: (planIndex: number, featureIndex: number) => void;
     onUpdateFeature: (planIndex: number, featureIndex: number, value: string) => void;
+    onAddPlan: () => void;
 }
 
 const WebsitePlansSection: React.FC<WebsitePlansSectionProps> = ({
-    plans, savingPlans, onSavePlans, updatePlanField, onAddFeature, onRemoveFeature, onUpdateFeature
+    plans, savingPlans, onSavePlans, updatePlanField, onAddFeature, onRemoveFeature, onUpdateFeature, onAddPlan
 }) => {
     return (
         <div className="flex flex-col gap-8 animate-in fade-in pb-10">
@@ -25,14 +26,23 @@ const WebsitePlansSection: React.FC<WebsitePlansSectionProps> = ({
                         <p className="text-slate-400 text-sm italic">Edite os planos e preços exibidos na página inicial.</p>
                     </div>
                 </div>
-                <button
-                    onClick={onSavePlans}
-                    disabled={savingPlans}
-                    className="bg-primary hover:bg-primary-hover text-white px-6 py-2 rounded-lg font-bold shadow-lg transition-all flex justify-center items-center gap-2"
-                >
-                    <span className="material-symbols-outlined text-lg">{savingPlans ? 'sync' : 'save'}</span>
-                    <span>{savingPlans ? 'Salvando...' : 'Salvar Alterações'}</span>
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={onAddPlan}
+                        className="bg-slate-700 hover:bg-slate-600 text-white px-6 py-2 rounded-lg font-bold shadow-lg transition-all flex justify-center items-center gap-2"
+                    >
+                        <span className="material-symbols-outlined text-lg">add</span>
+                        <span>Novo Plano</span>
+                    </button>
+                    <button
+                        onClick={onSavePlans}
+                        disabled={savingPlans}
+                        className="bg-primary hover:bg-primary-hover text-white px-6 py-2 rounded-lg font-bold shadow-lg transition-all flex justify-center items-center gap-2"
+                    >
+                        <span className="material-symbols-outlined text-lg">{savingPlans ? 'sync' : 'save'}</span>
+                        <span>{savingPlans ? 'Salvando...' : 'Salvar Alterações'}</span>
+                    </button>
+                </div>
             </div>
 
             <div className="space-y-8">

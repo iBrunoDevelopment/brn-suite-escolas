@@ -271,7 +271,7 @@ const ContractTerms: React.FC<{ user: User }> = ({ user }) => {
             // 1. Get school's plan_id
             const { data: school } = await supabase
                 .from('schools')
-                .select('plan_id')
+                .select('plan_id, custom_title, custom_price, discount_value')
                 .eq('id', user.schoolId)
                 .maybeSingle();
 
@@ -285,7 +285,14 @@ const ContractTerms: React.FC<{ user: User }> = ({ user }) => {
 
                 if (settings?.value) {
                     const matchedPlan = settings.value.find((p: any) => p.id === school.plan_id);
-                    if (matchedPlan) setPlan(matchedPlan);
+                    if (matchedPlan) {
+                        setPlan({
+                            ...matchedPlan,
+                            title: school.custom_title || matchedPlan.title,
+                            price_value: school.custom_price || matchedPlan.price_value,
+                            discount_value: school.discount_value || 0
+                        });
+                    }
                 }
             }
         };
@@ -320,7 +327,10 @@ const ContractTerms: React.FC<{ user: User }> = ({ user }) => {
                 <h3 className="text-white font-bold uppercase text-sm border-b border-white/10 pb-2 mb-3 mt-6 print:text-black print:border-slate-300">4. Obrigações da BRN GROUP</h3>
                 <div className="space-y-3">
                     <p>
-                        A empresa <strong>BRN GROUP</strong> obriga-se a cumprir com os itens descritos no plano <strong>{plan?.title || 'Contratado'}</strong>, garantindo:
+                        A empresa <strong>BRN GROUP</strong> obriga-se a cumprir com os itens descritos no plano <strong>{plan?.title || 'Contratado'}</strong>,
+                        pelo valor de <strong>{plan?.price_value || 'valor sob consulta'}</strong>{plan?.price_period || ''}
+                        {plan?.discount_value > 0 && <span> (com bonificação de R$ {plan.discount_value} aplicada mensalmente)</span>},
+                        garantindo:
                     </p>
                     {plan?.features ? (
                         <ul className="list-disc pl-5 space-y-1 text-slate-400 print:text-black">

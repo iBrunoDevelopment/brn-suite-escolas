@@ -131,6 +131,9 @@ export interface School {
     gee?: string; // Gerência Executiva de Educação
     gee_id?: string;
     plan_id?: string; // ID do plano contratado
+    custom_price?: string; // Preço personalizado para a escola
+    custom_title?: string; // Título personalizado do plano para a escola
+    discount_value?: number; // Valor do desconto em reais
 }
 
 export interface Program {

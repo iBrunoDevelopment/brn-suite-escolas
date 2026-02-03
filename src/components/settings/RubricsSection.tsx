@@ -181,10 +181,10 @@ const RubricsSection: React.FC<RubricsSectionProps> = ({
                                     </div>
 
                                     <div className="w-24 flex justify-end gap-2">
-                                        <button onClick={() => onEdit(r)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 text-slate-500 hover:text-primary transition-colors opacity-0 group-hover:opacity-100">
+                                        <button onClick={() => onEdit(r)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 text-slate-500 hover:text-primary transition-colors md:opacity-0 md:group-hover:opacity-100">
                                             <span className="material-symbols-outlined text-[18px]">edit</span>
                                         </button>
-                                        <button onClick={() => onDelete(r.id)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-500/10 text-slate-500 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                                        <button onClick={() => onDelete(r.id)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-500/10 text-slate-500 hover:text-red-500 transition-colors md:opacity-0 md:group-hover:opacity-100">
                                             <span className="material-symbols-outlined text-[18px]">delete</span>
                                         </button>
                                     </div>
