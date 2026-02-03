@@ -53,6 +53,16 @@ const Help: React.FC<{ user: User }> = ({ user }) => {
                 { label: 'Data da Nota', desc: 'Sempre registre a data de emissão da NF para bater com o documento físico.' },
                 { label: 'Uso de Rubricas', desc: 'Vincule cada gasto à sua rubrica correta para gerar a prestação automática.' }
             ]
+        },
+        {
+            title: 'Segurança e Autenticidade',
+            icon: 'verified_user',
+            color: 'text-emerald-500',
+            items: [
+                { label: 'Token de Assinatura (SHA-256)', desc: 'Cada relatório possui uma impressão digital única e irreversível baseada nos dados financeiros e na data de emissão. Se qualquer dado for alterado, o código torna-se inválido.' },
+                { label: 'Validação via QR Code', desc: 'Aponte a câmera do celular para o QR Code no rodapé do relatório para abrir o certificado de autenticidade original em nossos servidores.' },
+                { label: 'Identidade Única', desc: 'Cada PDF gerado é exclusivo. Mesmo relatórios iguais emitidos em momentos diferentes terão tokens distintos para evitar clonagem de documentos.' }
+            ]
         }
     ];
 
