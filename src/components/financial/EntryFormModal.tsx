@@ -162,6 +162,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                 setSingleRubricId(entry.rubric_id || '');
                 setSingleNature(entry.nature);
                 fetchEntryLogs(entry.id);
+
+                // Fetch technical process if exists
+                const { data: process } = await supabase.from('accountability_processes').select('*').eq('financial_entry_id', entry.id).maybeSingle();
+                if (process) setTechnicalProcess(process);
+                else setTechnicalProcess(null);
             }
         }
     };

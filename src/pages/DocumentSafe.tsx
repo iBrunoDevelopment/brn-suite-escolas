@@ -73,14 +73,32 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
 
             const { data: entries } = await query;
 
-            // Fetch checklists and processes
+            // Fetch processes with technical attachments
+            let procQuery = supabase.from('accountability_processes').select(`
+                id, financial_entry_id, school_id, attachments,
+                schools(name),
+                financial_entries(description, date, value, programs(name))
+            `).not('attachments', 'is', null);
+
+            if (user.role !== UserRole.ADMIN && user.role !== UserRole.OPERADOR) {
+                if (user.schoolId) procQuery = procQuery.eq('school_id', user.schoolId);
+                else if (user.assignedSchools?.length) procQuery = procQuery.in('school_id', user.assignedSchools);
+            }
+
+            const { data: procsWithAtts } = await procQuery;
+
+            // Fetch checklists
             const { data: checklists } = await supabase.from('document_checklists').select('*');
-            const { data: procs } = await supabase.from('accountability_processes').select('id, financial_entry_id, school_id');
+
+            // Map for quick process lookup
+            const { data: allProcs } = await supabase.from('accountability_processes').select('id, financial_entry_id');
 
             const allDocs: DocumentFile[] = [];
+
+            // Add documents from entries
             (entries as any[])?.forEach(entry => {
                 const attachments = Array.isArray(entry.attachments) ? entry.attachments : [];
-                const process = procs?.find(p => p.financial_entry_id === entry.id);
+                const process = allProcs?.find(p => p.financial_entry_id === entry.id);
 
                 attachments.forEach((att: any) => {
                     const checklist = checklists?.find(c => c.attachment_id === att.id);
@@ -97,8 +115,45 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                         school_name: entry.schools?.name || 'Escola não vinculada',
                         program_name: entry.programs?.name || 'Geral',
                         value: entry.value,
-                        process_id: process?.id || entry.id, // Se não for processo, usa o ID do lançamento
+                        process_id: process?.id || entry.id,
                         process_info: process?.id ? entry.description : `[Lançamento] ${entry.description}`,
+                        checklist: checklist ? {
+                            has_signature: checklist.has_signature,
+                            has_stamp: checklist.has_stamp,
+                            is_legible: checklist.is_legible,
+                            is_correct_value: checklist.is_correct_value,
+                            is_correct_date: checklist.is_correct_date,
+                            notes: checklist.notes || ''
+                        } : undefined
+                    });
+                });
+            });
+
+            // Add technical documents from processes
+            (procsWithAtts as any[])?.forEach(proc => {
+                const attachments = Array.isArray(proc.attachments) ? proc.attachments : [];
+                const entry = proc.financial_entries;
+
+                attachments.forEach((att: any) => {
+                    // Avoid duplicates if same ID exists (though usually they are in different tables)
+                    if (allDocs.some(d => d.id === att.id)) return;
+
+                    const checklist = checklists?.find(c => c.attachment_id === att.id);
+                    allDocs.push({
+                        id: att.id,
+                        name: att.name || 'Sem nome',
+                        url: att.url,
+                        type: att.type,
+                        category: att.category || 'Outros',
+                        entry_id: proc.financial_entry_id,
+                        entry_description: entry?.description || 'Processo Técnico',
+                        entry_date: entry?.date || new Date().toISOString(),
+                        school_id: proc.school_id,
+                        school_name: proc.schools?.name || 'Escola não vinculada',
+                        program_name: entry?.programs?.name || 'Geral',
+                        value: entry?.value || 0,
+                        process_id: proc.id,
+                        process_info: entry?.description || 'Processo Técnico',
                         checklist: checklist ? {
                             has_signature: checklist.has_signature,
                             has_stamp: checklist.has_stamp,
