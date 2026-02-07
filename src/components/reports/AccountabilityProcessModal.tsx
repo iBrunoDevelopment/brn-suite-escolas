@@ -62,6 +62,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
     const [supplierSearch, setSupplierSearch] = useState('');
     const [entrySearch, setEntrySearch] = useState('');
     const [importText, setImportText] = useState('');
+    const xmlInputRef = React.useRef<HTMLInputElement>(null);
     const { addToast } = useToast();
 
     const ACCOUNTABILITY_DOC_CATEGORIES = [
@@ -330,6 +331,131 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
         setImportText('');
     };
 
+    const handleXMLImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            const text = await file.text();
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(text, "text/xml");
+
+            let newItemsList: Partial<AccountabilityItem>[] = [];
+            let compPrices: { p1: number, p2: number }[] = [];
+
+            // 1. Detect Standard NF-e (Products)
+            const detElements = xmlDoc.getElementsByTagName('det');
+            if (detElements.length > 0) {
+                for (let i = 0; i < detElements.length; i++) {
+                    const det = detElements[i];
+                    const prod = det.getElementsByTagName('prod')[0];
+                    if (!prod) continue;
+
+                    const description = prod.getElementsByTagName('xProd')[0]?.textContent || '';
+                    const quantity = parseFloat(prod.getElementsByTagName('qCom')[0]?.textContent || '0');
+                    const unit = prod.getElementsByTagName('uCom')[0]?.textContent || 'un';
+                    const winnerPrice = parseFloat(prod.getElementsByTagName('vUnCom')[0]?.textContent || '0');
+
+                    newItemsList.push({ description, quantity, unit, winner_unit_price: winnerPrice });
+                    compPrices.push({
+                        p1: Number((winnerPrice * 1.016).toFixed(2)),
+                        p2: Number((winnerPrice * 1.0185).toFixed(2))
+                    });
+                }
+            }
+            // 2. Detect NFS-e (Services - National Standard)
+            else {
+                const xDescServ = xmlDoc.getElementsByTagName('xDescServ')[0]?.textContent;
+                const vServ = xmlDoc.getElementsByTagName('vServ')[0]?.textContent;
+
+                if (xDescServ) {
+                    const totalValue = parseFloat(vServ || '0');
+
+                    // Try to split items by '***' or other delimiters if present
+                    if (xDescServ.includes('***')) {
+                        const parts = xDescServ.split('***').map(p => p.trim()).filter(Boolean);
+
+                        parts.forEach(part => {
+                            // Regex to detect pattern: R$ 1.234,56: Description
+                            const priceRegex = /R\$\s*([\d\.,]+)[:\-\s]+(.*)/i;
+                            const match = part.match(priceRegex);
+
+                            if (match) {
+                                const priceStr = match[1].replace(/\./g, "").replace(",", ".");
+                                const price = parseFloat(priceStr);
+                                const desc = match[2].trim();
+
+                                newItemsList.push({
+                                    description: desc,
+                                    quantity: 1,
+                                    unit: 'un',
+                                    winner_unit_price: price
+                                });
+                                compPrices.push({
+                                    p1: Number((price * 1.016).toFixed(2)),
+                                    p2: Number((price * 1.0185).toFixed(2))
+                                });
+                            } else {
+                                // Fallback for parts that don't match the price regex
+                                newItemsList.push({
+                                    description: part,
+                                    quantity: 1,
+                                    unit: 'un',
+                                    winner_unit_price: 0
+                                });
+                                compPrices.push({ p1: 0, p2: 0 });
+                            }
+                        });
+                    } else {
+                        // Single service item
+                        newItemsList.push({
+                            description: xDescServ,
+                            quantity: 1,
+                            unit: 'un',
+                            winner_unit_price: totalValue
+                        });
+                        compPrices.push({
+                            p1: Number((totalValue * 1.016).toFixed(2)),
+                            p2: Number((totalValue * 1.0185).toFixed(2))
+                        });
+                    }
+                } else {
+                    return addToast('Arquivo XML não reconhecido como NF-e ou NFS-e válida.', 'error');
+                }
+            }
+
+            if (newItemsList.length === 0) {
+                return addToast('Nenhum item encontrado no XML.', 'warning');
+            }
+
+            setItems(prev => {
+                const current = (prev.length === 1 && !prev[0].description) ? [] : prev;
+                const updated = [...current, ...newItemsList];
+                setCompetitorQuotes(competitorQuotes.map((q, qIdx) => ({
+                    ...q,
+                    items: updated.map((mi, idx) => {
+                        if (idx < current.length) return q.items[idx];
+                        const prices = compPrices[idx - current.length];
+                        return {
+                            description: mi.description,
+                            quantity: mi.quantity,
+                            unit: mi.unit,
+                            unit_price: qIdx === 0 ? prices.p1 : prices.p2
+                        };
+                    })
+                })));
+                return updated;
+            });
+
+            addToast(`${newItemsList.length} itens importados com sucesso!`, 'success');
+        } catch (error) {
+            console.error('XML Import Error:', error);
+            addToast('Erro ao processar o XML da Nota Fiscal.', 'error');
+        } finally {
+            if (e.target) e.target.value = '';
+        }
+    };
+
     const downloadTemplate = () => {
         if (auxData.templateUrl) return window.open(auxData.templateUrl);
         const BOM = "\uFEFF";
@@ -476,6 +602,21 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                                 <h4 className="text-[10px] md:text-[12px] font-black uppercase text-white tracking-widest md:tracking-[0.2em]">2. Itens e Cotações</h4>
                                 <div className="flex gap-2 w-full md:w-auto">
+                                    <input
+                                        type="file"
+                                        accept=".xml"
+                                        ref={xmlInputRef}
+                                        className="hidden"
+                                        onChange={handleXMLImport}
+                                        aria-label="Selecionar arquivo XML de Nota Fiscal"
+                                        title="Selecionar arquivo XML de Nota Fiscal"
+                                    />
+                                    <button
+                                        onClick={() => xmlInputRef.current?.click()}
+                                        className="flex-1 md:flex-none h-10 md:h-12 px-4 md:px-6 rounded-xl bg-orange-500/10 text-orange-500 text-[8px] md:text-[10px] font-black uppercase tracking-widest border border-orange-500/20 hover:bg-orange-500 hover:text-white transition-all flex items-center gap-2"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">xml</span> Nota XML
+                                    </button>
                                     <button onClick={() => setShowImportModal(true)} className="flex-1 md:flex-none h-10 md:h-12 px-4 md:px-6 rounded-xl bg-emerald-500/10 text-emerald-500 text-[8px] md:text-[10px] font-black uppercase tracking-widest border border-emerald-500/20 hover:bg-emerald-500 hover:text-white transition-all">Planilha</button>
                                     <button onClick={handleAddItem} className="flex-1 md:flex-none h-10 md:h-12 px-4 md:px-6 rounded-xl bg-primary/10 text-primary text-[8px] md:text-[10px] font-black uppercase tracking-widest border border-primary/20 hover:bg-primary hover:text-white transition-all">Novo Item</button>
                                 </div>
@@ -549,21 +690,27 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                                     <label key={cat} className="flex flex-col items-center justify-center p-2 md:p-3 h-20 md:h-24 bg-black/40 border border-white/5 rounded-xl md:rounded-2xl text-[7px] md:text-[8px] font-black text-slate-500 uppercase tracking-tight text-center cursor-pointer hover:bg-primary hover:text-white transition-all gap-1.5 md:gap-2 group/up">
                                         <span className="material-symbols-outlined text-base md:text-lg opacity-40 group-hover/up:opacity-100 group-hover/up:scale-110 transition-all">upload</span>
                                         <span className="line-clamp-2 leading-tight">{cat}</span>
-                                        <input type="file" className="hidden" disabled={isUploadingDoc} onChange={async (e) => {
-                                            const file = e.target.files?.[0];
-                                            if (!file) return;
-                                            setIsUploadingDoc(true);
-                                            try {
-                                                const processedFile = file.type.startsWith('image/') ? await compressImage(file) : file;
-                                                const fileExt = file.name.split('.').pop();
-                                                const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-                                                const path = `accountability/${Date.now()}_${safeName}`;
-                                                const { error: uploadError } = await supabase.storage.from('documents').upload(path, processedFile);
-                                                if (uploadError) throw uploadError;
-                                                const { data: publicUrlData } = supabase.storage.from('documents').getPublicUrl(path);
-                                                setProcessAttachments([...processAttachments, { id: Math.random().toString(), name: file.name, url: publicUrlData.publicUrl, category: cat }]);
-                                            } catch (err: any) { addToast(err.message, 'error'); } finally { setIsUploadingDoc(false); }
-                                        }} />
+                                        <input
+                                            type="file"
+                                            className="hidden"
+                                            disabled={isUploadingDoc}
+                                            aria-label={`Upload de ${cat}`}
+                                            title={`Upload de ${cat}`}
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0];
+                                                if (!file) return;
+                                                setIsUploadingDoc(true);
+                                                try {
+                                                    const processedFile = file.type.startsWith('image/') ? await compressImage(file) : file;
+                                                    const fileExt = file.name.split('.').pop();
+                                                    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+                                                    const path = `accountability/${Date.now()}_${safeName}`;
+                                                    const { error: uploadError } = await supabase.storage.from('documents').upload(path, processedFile);
+                                                    if (uploadError) throw uploadError;
+                                                    const { data: publicUrlData } = supabase.storage.from('documents').getPublicUrl(path);
+                                                    setProcessAttachments([...processAttachments, { id: Math.random().toString(), name: file.name, url: publicUrlData.publicUrl, category: cat }]);
+                                                } catch (err: any) { addToast(err.message, 'error'); } finally { setIsUploadingDoc(false); }
+                                            }} />
                                     </label>
                                 ))}
                             </div>

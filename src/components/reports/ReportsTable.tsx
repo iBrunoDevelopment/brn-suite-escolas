@@ -22,8 +22,8 @@ const ReportsTable: React.FC<ReportsTableProps> = ({ processes, onEdit, onDelete
                 const entry = (process as any).financial_entry || (process as any).financial_entries;
                 const schoolName = entry?.schools?.name || 'Escola não informada';
                 return (
-                    <div key={process.id} className="bg-surface-dark border border-surface-border rounded-2xl p-4 md:p-6 hover:border-primary/40 transition-all flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 group">
-                        <div className="flex items-start md:items-center gap-4 w-full lg:w-auto">
+                    <div key={process.id} className="bg-surface-dark border border-surface-border rounded-2xl p-4 md:p-6 hover:border-primary/40 transition-all flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 group overflow-hidden">
+                        <div className="flex items-start md:items-center gap-4 w-full lg:flex-1 min-w-0">
                             <div className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center ${process.status === 'Concluído' ? 'bg-green-500/10 text-green-400' : 'bg-primary/10 text-primary'}`}>
                                 <span className="material-symbols-outlined text-3xl font-light">
                                     {process.status === 'Concluído' ? 'check_circle' : 'pending'}
@@ -55,15 +55,15 @@ const ReportsTable: React.FC<ReportsTableProps> = ({ processes, onEdit, onDelete
                             </div>
                         </div>
 
-                        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between lg:justify-end gap-5 w-full lg:w-auto pt-5 lg:pt-0 border-t lg:border-t-0 border-white/5">
-                            <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-1.5 px-1 md:px-0">
+                        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between lg:justify-end gap-5 w-full lg:w-auto pt-5 lg:pt-0 border-t lg:border-t-0 border-white/5 min-w-0">
+                            <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-1.5 px-1 md:px-0 shrink-0">
                                 <span className="text-xl font-black text-white">{formatCurrency(Math.abs(entry?.value || 0))}</span>
                                 <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${process.status === 'Concluído' ? 'bg-green-500/10 text-green-500' : 'bg-primary/10 text-primary'}`}>
                                     {process.status}
                                 </span>
                             </div>
 
-                            <div className="flex items-center gap-1 bg-black/40 p-1.5 rounded-2xl border border-white/10 overflow-x-auto no-scrollbar scroll-smooth">
+                            <div className="flex items-center gap-1 bg-black/40 p-1.5 rounded-2xl border border-white/10 overflow-x-auto no-scrollbar scroll-smooth max-w-full">
                                 <button
                                     onClick={() => onEdit(process)}
                                     className="p-2.5 shrink-0 bg-primary/20 hover:bg-primary text-primary hover:text-white rounded-xl transition-all"
