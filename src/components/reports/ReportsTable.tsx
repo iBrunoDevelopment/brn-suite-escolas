@@ -63,7 +63,7 @@ const ReportsTable: React.FC<ReportsTableProps> = ({ processes, onEdit, onDelete
                                 </span>
                             </div>
 
-                            <div className="flex items-center gap-1 bg-black/40 p-1.5 rounded-2xl border border-white/10 overflow-x-auto no-scrollbar scroll-smooth max-w-full">
+                            <div className="flex flex-wrap items-center gap-2 bg-black/40 p-2 rounded-2xl border border-white/10 w-full lg:w-auto">
                                 <button
                                     onClick={() => onEdit(process)}
                                     className="p-2.5 shrink-0 bg-primary/20 hover:bg-primary text-primary hover:text-white rounded-xl transition-all"
@@ -72,9 +72,9 @@ const ReportsTable: React.FC<ReportsTableProps> = ({ processes, onEdit, onDelete
                                     <span className="material-symbols-outlined text-[20px]">edit_document</span>
                                 </button>
 
-                                <div className="w-px h-6 bg-white/10 mx-1.5 shrink-0"></div>
+                                <div className="w-px h-6 bg-white/10 mx-1 shrink-0"></div>
 
-                                <div className="flex items-center gap-1">
+                                <div className="flex flex-wrap items-center gap-1">
                                     <button onClick={() => onPrint(process, 'ata')} className="p-2.5 shrink-0 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl transition-all" title="Ata de Assembleia">
                                         <span className="material-symbols-outlined text-[20px]">description</span>
                                     </button>
@@ -106,7 +106,7 @@ const ReportsTable: React.FC<ReportsTableProps> = ({ processes, onEdit, onDelete
                                     </div>
                                 </div>
 
-                                <div className="w-px h-6 bg-white/10 mx-1.5 shrink-0"></div>
+                                <div className="w-px h-6 bg-white/10 mx-1 shrink-0"></div>
 
                                 <button
                                     onClick={() => onDelete(process.id)}
