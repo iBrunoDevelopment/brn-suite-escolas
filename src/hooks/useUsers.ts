@@ -172,6 +172,13 @@ export const useUsers = (currentUser: User) => {
 
     const deleteUserMutation = useMutation({
         mutationFn: async (userId: string) => {
+            // First delete related records to avoid foreign key constraints
+            await Promise.all([
+                supabase.from('contract_signatures').delete().eq('user_id', userId),
+                supabase.from('notifications').delete().eq('user_id', userId),
+                supabase.from('support_requests').delete().eq('user_id', userId)
+            ]);
+
             const { error } = await supabase.from('users').delete().eq('id', userId);
             if (error) throw error;
         },
