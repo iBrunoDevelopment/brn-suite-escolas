@@ -272,3 +272,19 @@ export interface PlatformBilling {
     description?: string;
 }
 
+
+export interface StatementUpload {
+    id: string;
+    school_id: string;
+    bank_account_id: string;
+    month: number;
+    year: number;
+    account_type: 'Conta Corrente' | 'Conta Investimento';
+    file_url: string;
+    file_name: string;
+    reported_revenue?: number;
+    reported_taxes?: number;
+    reported_balance?: number;
+    uploaded_by?: string;
+    created_at: string;
+}

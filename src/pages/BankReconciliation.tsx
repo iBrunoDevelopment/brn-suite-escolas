@@ -11,6 +11,7 @@ import QuickCreateModal from '../components/reconciliation/QuickCreateModal';
 import ManualMatchModal from '../components/reconciliation/ManualMatchModal';
 import HelpModal from '../components/reconciliation/HelpModal';
 import ReconciliationReport from '../components/reconciliation/ReconciliationReport';
+import CapaModal from '../components/reconciliation/CapaModal';
 
 const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
     const recon = useBankReconciliation(user);
@@ -109,6 +110,18 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
                     selectedBankAccountId={recon.selectedBankAccountId}
                     filterMonth={recon.filterMonth}
                     onClose={() => recon.setShowReport(false)}
+                />
+            )}
+
+            {recon.showCapaModal && (
+                <CapaModal
+                    capaForm={recon.capaForm}
+                    setCapaForm={recon.setCapaForm}
+                    onConfirm={recon.handleConfirmCapa}
+                    onClose={() => recon.setShowCapaModal(false)}
+                    schoolName={recon.schools.find(s => s.id === recon.selectedSchoolId)?.name || ''}
+                    accountName={recon.bankAccounts.find(a => a.id === recon.selectedBankAccountId)?.name || ''}
+                    monthYear={new Date(recon.filterMonth + '-02').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
                 />
             )}
         </div>

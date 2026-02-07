@@ -59,6 +59,9 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
     return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
+  const [activeAlertTab, setActiveAlertTab] = React.useState<'Tudo' | 'Auditoria' | 'Gestão' | 'Financeiro' | 'Sistema'>('Tudo');
+  const [alertSchoolSearch, setAlertSchoolSearch] = React.useState('');
+
   return (
     <div className="flex flex-col gap-6 w-full">
       {/* Filters Summary & Actions */}
@@ -364,53 +367,129 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
 
       {/* Alerts & Logs Area */}
       <section className="bg-card-dark border border-border-dark rounded-xl flex flex-col overflow-hidden min-h-[300px]">
-        <div className="flex border-b border-border-dark bg-[#111a22]">
-          <button className="px-6 py-4 text-sm font-bold text-primary border-b-2 border-primary bg-primary/5 flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px]">notification_important</span>
-            Alertas do Sistema
-            {alerts.length > 0 && <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{alerts.length}</span>}
-          </button>
-        </div>
-        <div className="p-6">
-          {alerts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-slate-500 opacity-60">
-              <span className="material-symbols-outlined text-4xl mb-2">check_circle</span>
-              <p>Tudo certo! Nenhum alerta por enquanto.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {alerts.map(alert => (
+        <div className="flex flex-col sm:flex-row border-b border-border-dark bg-[#111a22]">
+          <div className="px-6 py-4 flex items-center gap-2 border-r border-border-dark/50">
+            <span className="material-symbols-outlined text-primary text-[20px]">notification_important</span>
+            <span className="text-sm font-bold text-white uppercase tracking-widest whitespace-nowrap">Alertas do Sistema</span>
+          </div>
+
+          <div className="flex-1 flex overflow-x-auto scrollbar-hide border-r border-border-dark/50">
+            {(['Tudo', 'Auditoria', 'Gestão', 'Financeiro', 'Sistema'] as const).map(tab => {
+              const count = tab === 'Tudo' ? alerts.length : alerts.filter((a: any) => a.category === tab).length;
+              return (
                 <button
-                  key={alert.id}
-                  onClick={() => setSelectedAlert(alert)}
-                  className={`bg-card-dark border rounded-2xl p-5 flex flex-col gap-4 hover:bg-background-dark/30 transition-all shadow-lg text-left group animate-in fade-in zoom-in duration-300 ${alert.severity === 'Crítico' ? 'border-red-500/20 hover:border-red-500/50' : 'border-orange-500/20 hover:border-orange-500/50'
+                  key={tab}
+                  onClick={() => setActiveAlertTab(tab)}
+                  className={`px-6 py-4 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all border-b-2 whitespace-nowrap ${activeAlertTab === tab
+                    ? 'text-primary border-primary bg-primary/5'
+                    : 'text-slate-500 border-transparent hover:text-slate-300'
                     }`}
                 >
-                  <div className="flex items-center justify-between gap-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${alert.severity === 'Crítico' ? 'bg-red-500/10 text-red-500' : 'bg-orange-500/10 text-orange-500'
+                  {tab}
+                  {count > 0 && (
+                    <span className={`px-1.5 py-0.5 rounded-full text-[9px] ${tab === 'Auditoria' || tab === 'Gestão' ? 'bg-red-500 text-white' : 'bg-slate-700 text-slate-300'
                       }`}>
-                      <span className="material-symbols-outlined">{alert.severity === 'Crítico' ? 'error' : 'warning'}</span>
-                    </div>
-                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md border ${alert.severity === 'Crítico' ? 'text-red-400 bg-red-400/5 border-red-400/20' : 'text-orange-400 bg-orange-400/5 border-orange-400/20'
-                      }`}>
-                      {alert.severity}
+                      {count}
                     </span>
-                  </div>
-                  <div>
-                    <h4 className="text-white font-bold text-sm leading-tight line-clamp-2 group-hover:text-primary transition-colors">{alert.title}</h4>
-                    <p className="text-text-secondary text-xs mt-2 leading-relaxed line-clamp-2">{alert.description}</p>
-                  </div>
-                  <div className="pt-2 border-t border-border-dark/50 flex items-center justify-between mt-auto">
-                    <span className="text-[10px] text-slate-500 font-mono">
-                      {new Date(alert.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    <span className="text-[10px] text-primary font-black uppercase tracking-tighter flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      Detalhes
-                      <span className="material-symbols-outlined text-xs">arrow_forward</span>
-                    </span>
-                  </div>
+                  )}
                 </button>
-              ))}
+              );
+            })}
+          </div>
+
+          <div className="px-4 py-2 flex items-center gap-2 bg-white/[0.02]">
+            <span className="material-symbols-outlined text-slate-500 text-sm">search</span>
+            <input
+              type="text"
+              placeholder="BUSCAR ESCOLA..."
+              value={alertSchoolSearch}
+              onChange={e => setAlertSchoolSearch(e.target.value.toUpperCase())}
+              className="bg-transparent border-none outline-none text-[10px] font-black text-white placeholder:text-slate-600 w-32 md:w-48 tracking-widest"
+            />
+          </div>
+        </div>
+
+        <div className="p-6">
+          {alerts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-slate-500 opacity-60">
+              <span className="material-symbols-outlined text-5xl mb-4">check_circle</span>
+              <p className="font-bold uppercase tracking-widest text-[10px]">Tudo azul! Nenhum alerta pendente.</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-8">
+              {(() => {
+                let filtered = activeAlertTab === 'Tudo' ? alerts : alerts.filter((a: any) => a.category === activeAlertTab);
+
+                if (alertSchoolSearch) {
+                  filtered = filtered.filter((a: any) =>
+                    (a.schoolName || '').toUpperCase().includes(alertSchoolSearch.toUpperCase())
+                  );
+                }
+
+                // Group by School
+                const groups: Record<string, any[]> = {};
+                filtered.forEach((a: any) => {
+                  const key = a.schoolName || 'Geral';
+                  if (!groups[key]) groups[key] = [];
+                  groups[key].push(a);
+                });
+
+                if (Object.keys(groups).length === 0) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-10 text-slate-500 animate-in fade-in">
+                      <span className="material-symbols-outlined text-3xl mb-2">search_off</span>
+                      <p className="text-[10px] font-black uppercase tracking-widest">Nenhuma escola encontrada com este alerta.</p>
+                    </div>
+                  );
+                }
+
+                return Object.entries(groups).map(([schoolName, schoolAlerts]) => (
+                  <div key={schoolName} className="flex flex-col gap-4 animate-in fade-in slide-in-from-left-4">
+                    <div className="flex items-center gap-3 px-2">
+                      <div className="w-1 h-4 bg-primary rounded-full" />
+                      <span className="text-xs font-black text-white uppercase tracking-widest">{schoolName}</span>
+                      <span className="text-[10px] text-slate-500 font-bold bg-white/5 px-2 py-0.5 rounded-full">{schoolAlerts.length}</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {schoolAlerts.map(alert => (
+                        <button
+                          key={alert.id}
+                          onClick={() => setSelectedAlert(alert)}
+                          className={`bg-card-dark border rounded-2xl p-5 flex flex-col gap-4 hover:bg-background-dark/30 transition-all shadow-lg text-left group animate-in fade-in zoom-in duration-300 h-full ${alert.severity === 'Crítico' ? 'border-red-500/20 hover:border-red-500/50' : 'border-orange-500/20 hover:border-orange-500/50'
+                            }`}
+                        >
+                          <div className="flex items-center justify-between gap-4">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${alert.severity === 'Crítico' ? 'bg-red-500/10 text-red-500' : 'bg-orange-500/10 text-orange-500'
+                              }`}>
+                              <span className="material-symbols-outlined">{alert.severity === 'Crítico' ? 'error' : 'warning'}</span>
+                            </div>
+                            <div className="flex flex-col items-end">
+                              <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${alert.severity === 'Crítico' ? 'text-red-400 bg-red-400/5 border-red-400/20' : 'text-orange-400 bg-orange-400/5 border-orange-400/20'
+                                }`}>
+                                {alert.severity}
+                              </span>
+                              <span className="text-[8px] text-slate-600 font-mono mt-1">
+                                {new Date(alert.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                          </div>
+                          <div>
+                            <h4 className="text-white font-bold text-sm leading-tight line-clamp-2 group-hover:text-primary transition-colors">{alert.title}</h4>
+                            <p className="text-slate-500 text-[11px] mt-2 leading-relaxed line-clamp-2">{alert.description}</p>
+                          </div>
+                          <div className="pt-2 border-t border-border-dark/30 flex items-center justify-end mt-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span className="text-[10px] text-primary font-black uppercase tracking-tighter flex items-center gap-1">
+                              Resolver
+                              <span className="material-symbols-outlined text-xs">chevron_right</span>
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ));
+              })()}
             </div>
           )}
         </div>

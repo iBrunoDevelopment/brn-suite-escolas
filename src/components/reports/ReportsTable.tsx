@@ -63,58 +63,66 @@ const ReportsTable: React.FC<ReportsTableProps> = ({ processes, onEdit, onDelete
                                 </span>
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-2 bg-black/40 p-2 rounded-2xl border border-white/10 w-full lg:w-auto">
-                                <button
-                                    onClick={() => onEdit(process)}
-                                    className="p-2.5 shrink-0 bg-primary/20 hover:bg-primary text-primary hover:text-white rounded-xl transition-all"
-                                    title="Editar / Visualizar"
-                                >
-                                    <span className="material-symbols-outlined text-[20px]">edit_document</span>
-                                </button>
-
-                                <div className="w-px h-6 bg-white/10 mx-1 shrink-0"></div>
-
-                                <div className="flex flex-wrap items-center gap-1">
-                                    <button onClick={() => onPrint(process, 'ata')} className="p-2.5 shrink-0 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl transition-all" title="Ata de Assembleia">
-                                        <span className="material-symbols-outlined text-[20px]">description</span>
-                                    </button>
-                                    <button onClick={() => onPrint(process, 'ordem')} className="p-2.5 shrink-0 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl transition-all" title="Ordem de Compra">
-                                        <span className="material-symbols-outlined text-[20px]">shopping_cart</span>
-                                    </button>
-                                    <button onClick={() => onPrint(process, 'consolidacao')} className="p-2.5 shrink-0 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl transition-all" title="Consolidação de Preços">
-                                        <span className="material-symbols-outlined text-[20px]">analytics</span>
-                                    </button>
-                                    <button onClick={() => onPrint(process, 'recibo')} className="p-2.5 shrink-0 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl transition-all" title="Recibo de Pagamento">
-                                        <span className="material-symbols-outlined text-[20px]">payments</span>
+                            <div className="flex flex-col gap-2 w-full lg:flex-row lg:items-center lg:gap-1 lg:bg-black/40 lg:p-1.5 lg:rounded-2xl lg:border lg:border-white/10 lg:w-auto">
+                                {/* Primary Actions: Edit & Delete */}
+                                <div className="flex items-center gap-2 w-full lg:w-auto lg:p-0">
+                                    <button
+                                        onClick={() => onEdit(process)}
+                                        className="flex-1 lg:flex-none p-3 lg:p-2.5 bg-primary/20 hover:bg-primary text-primary hover:text-white rounded-xl transition-all flex items-center justify-center gap-2"
+                                        title="Editar / Visualizar"
+                                    >
+                                        <span className="material-symbols-outlined text-[20px]">edit_document</span>
+                                        <span className="lg:hidden text-[10px] font-black uppercase tracking-widest">Editar</span>
                                     </button>
 
-                                    <div className="w-px h-4 bg-white/5 mx-1 shrink-0"></div>
-
-                                    <div className="flex items-center gap-0.5 px-1 bg-white/5 rounded-lg py-0.5">
-                                        <button onClick={() => onPrint(process, 'cotacao1')} className="p-2 shrink-0 hover:bg-primary/20 text-slate-400 hover:text-primary rounded-lg transition-all flex flex-col items-center" title="Cotação 1">
-                                            <span className="material-symbols-outlined text-[16px]">request_quote</span>
-                                            <span className="text-[7px] font-black">1</span>
-                                        </button>
-                                        <button onClick={() => onPrint(process, 'cotacao2')} className="p-2 shrink-0 hover:bg-primary/20 text-slate-400 hover:text-primary rounded-lg transition-all flex flex-col items-center" title="Cotação 2">
-                                            <span className="material-symbols-outlined text-[16px]">request_quote</span>
-                                            <span className="text-[7px] font-black">2</span>
-                                        </button>
-                                        <button onClick={() => onPrint(process, 'cotacao3')} className="p-2 shrink-0 hover:bg-primary/20 text-slate-400 hover:text-primary rounded-lg transition-all flex flex-col items-center" title="Cotação 3">
-                                            <span className="material-symbols-outlined text-[16px]">request_quote</span>
-                                            <span className="text-[7px] font-black">3</span>
-                                        </button>
-                                    </div>
+                                    <button
+                                        onClick={() => onDelete(process.id)}
+                                        className="flex-1 lg:flex-none p-3 lg:p-2.5 bg-red-500/10 hover:bg-red-500 text-slate-400 hover:text-white rounded-xl transition-all flex items-center justify-center gap-2"
+                                        title="Excluir Processo"
+                                    >
+                                        <span className="material-symbols-outlined text-[20px]">delete_forever</span>
+                                        <span className="lg:hidden text-[10px] font-black uppercase tracking-widest">Excluir</span>
+                                    </button>
                                 </div>
 
-                                <div className="w-px h-6 bg-white/10 mx-1 shrink-0"></div>
+                                {/* Divider or Visual Separation */}
+                                <div className="hidden lg:block w-px h-6 bg-white/10 mx-1 shrink-0"></div>
+                                <div className="lg:hidden h-px bg-white/5 my-1"></div>
 
-                                <button
-                                    onClick={() => onDelete(process.id)}
-                                    className="p-2.5 shrink-0 hover:bg-red-500/10 text-slate-400 hover:text-red-500 rounded-xl transition-all"
-                                    title="Excluir Processo"
-                                >
-                                    <span className="material-symbols-outlined text-[20px]">delete_forever</span>
-                                </button>
+                                {/* Secondary Actions: Print Templates */}
+                                <div className="bg-black/20 lg:bg-transparent p-2 lg:p-0 rounded-xl lg:rounded-none border border-white/5 lg:border-none">
+                                    <div className="grid grid-cols-4 sm:flex sm:items-center gap-1">
+                                        <button onClick={() => onPrint(process, 'ata')} className="p-2.5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl transition-all flex items-center justify-center" title="Ata de Assembleia">
+                                            <span className="material-symbols-outlined text-[20px]">description</span>
+                                        </button>
+                                        <button onClick={() => onPrint(process, 'ordem')} className="p-2.5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl transition-all flex items-center justify-center" title="Ordem de Compra">
+                                            <span className="material-symbols-outlined text-[20px]">shopping_cart</span>
+                                        </button>
+                                        <button onClick={() => onPrint(process, 'consolidacao')} className="p-2.5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl transition-all flex items-center justify-center" title="Consolidação de Preços">
+                                            <span className="material-symbols-outlined text-[20px]">analytics</span>
+                                        </button>
+                                        <button onClick={() => onPrint(process, 'recibo')} className="p-2.5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl transition-all flex items-center justify-center" title="Recibo de Pagamento">
+                                            <span className="material-symbols-outlined text-[20px]">payments</span>
+                                        </button>
+
+                                        <div className="hidden lg:block w-px h-4 bg-white/5 mx-1 shrink-0"></div>
+
+                                        <div className="col-span-4 mt-1 sm:mt-0 sm:col-auto flex items-center gap-0.5 px-1 bg-white/5 rounded-lg py-0.5 justify-around sm:justify-start">
+                                            <button onClick={() => onPrint(process, 'cotacao1')} className="p-2 shrink-0 hover:bg-primary/20 text-slate-400 hover:text-primary rounded-lg transition-all flex flex-col items-center" title="Cotação 1">
+                                                <span className="material-symbols-outlined text-[16px]">request_quote</span>
+                                                <span className="text-[7px] font-black">1</span>
+                                            </button>
+                                            <button onClick={() => onPrint(process, 'cotacao2')} className="p-2 shrink-0 hover:bg-primary/20 text-slate-400 hover:text-primary rounded-lg transition-all flex flex-col items-center" title="Cotação 2">
+                                                <span className="material-symbols-outlined text-[16px]">request_quote</span>
+                                                <span className="text-[7px] font-black">2</span>
+                                            </button>
+                                            <button onClick={() => onPrint(process, 'cotacao3')} className="p-2 shrink-0 hover:bg-primary/20 text-slate-400 hover:text-primary rounded-lg transition-all flex flex-col items-center" title="Cotação 3">
+                                                <span className="material-symbols-outlined text-[16px]">request_quote</span>
+                                                <span className="text-[7px] font-black">3</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

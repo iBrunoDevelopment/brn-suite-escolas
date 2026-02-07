@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { User } from '../types';
+import { User, StatementUpload } from '../types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '../context/ToastContext';
 
@@ -13,7 +13,7 @@ export interface BankTransaction {
     fitid: string;  // Bank unique transaction ID
     matched_entry_id?: string;
     status: 'pending' | 'matched' | 'new';
-    extract_type: 'corrente' | 'investimento';
+    extract_type: 'Conta Corrente' | 'Conta Investimento';
 }
 
 export const useBankReconciliation = (user: User) => {
@@ -26,17 +26,20 @@ export const useBankReconciliation = (user: User) => {
     const [selectedSchoolId, setSelectedSchoolId] = useState(user.schoolId || '');
     const [selectedBankAccountId, setSelectedBankAccountId] = useState('');
     const [filterMonth, setFilterMonth] = useState(new Date().toISOString().substring(0, 7)); // YYYY-MM
-    const [uploadType, setUploadType] = useState<'corrente' | 'investimento'>('corrente');
+    const [uploadType, setUploadType] = useState<'Conta Corrente' | 'Conta Investimento'>('Conta Corrente');
 
     // Modals & UI State
     const [showQuickCreate, setShowQuickCreate] = useState(false);
     const [showManualMatch, setShowManualMatch] = useState(false);
     const [showHelp, setShowHelp] = useState(false);
     const [showReport, setShowReport] = useState(false);
+    const [showCapaModal, setShowCapaModal] = useState(false);
 
     const [quickCreateBT, setQuickCreateBT] = useState<BankTransaction | null>(null);
     const [manualMatchBT, setManualMatchBT] = useState<BankTransaction | null>(null);
+    const [pendingFile, setPendingFile] = useState<File | null>(null);
     const [manualSearch, setManualSearch] = useState('');
+    const [capaForm, setCapaForm] = useState({ revenue: 0, taxes: 0, balance: 0 });
     const [quickForm, setQuickForm] = useState({ program_id: '', rubric_id: '', supplier_id: '', description: '', nature: 'Custeio' });
 
     // Queries
@@ -165,8 +168,41 @@ export const useBankReconciliation = (user: User) => {
         }
     });
 
+    const recordUploadMutation = useMutation({
+        mutationFn: async ({ file, schoolId, bankAccountId, month, year, accountType, capaData }: {
+            file: File, schoolId: string, bankAccountId: string, month: number, year: number, accountType: string, capaData?: any
+        }) => {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${schoolId}/${year}/${month}/${accountType.replace(' ', '_')}_${Date.now()}.${fileExt}`;
+            const filePath = `statements/${fileName}`;
+
+            // 1. Upload to Storage
+            const { error: uploadError } = await supabase.storage.from('statements').upload(filePath, file);
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage.from('statements').getPublicUrl(filePath);
+
+            // 2. Save record in database
+            const { error: dbError } = await supabase.from('bank_statement_uploads').upsert({
+                school_id: schoolId,
+                bank_account_id: bankAccountId,
+                month,
+                year,
+                account_type: accountType,
+                file_url: publicUrl,
+                file_name: file.name,
+                reported_revenue: capaData?.revenue || 0,
+                reported_taxes: capaData?.taxes || 0,
+                reported_balance: capaData?.balance || 0,
+                uploaded_by: user.id
+            }, { onConflict: 'bank_account_id, month, year, account_type' });
+
+            if (dbError) throw dbError;
+        }
+    });
+
     // Parsing Logic
-    const parseOFX = (text: string, uploadType: 'corrente' | 'investimento') => {
+    const parseOFX = (text: string, uploadTypeShort: 'Conta Corrente' | 'Conta Investimento') => {
         const newTransactions: BankTransaction[] = [];
         const stmtRows = text.split('<STMTTRN>');
         stmtRows.shift();
@@ -191,16 +227,16 @@ export const useBankReconciliation = (user: User) => {
                     description: memo,
                     value: Math.abs(value),
                     type: value > 0 ? 'C' : 'D',
-                    fitid: uploadType === 'investimento' ? `INV-${fitid}` : fitid,
+                    fitid: uploadTypeShort === 'Conta Investimento' ? `INV-${fitid}` : fitid,
                     status: 'pending',
-                    extract_type: uploadType
+                    extract_type: uploadTypeShort
                 });
             }
         });
         return newTransactions;
     };
 
-    const parseCSV = (text: string, fileName: string, uploadType: 'corrente' | 'investimento') => {
+    const parseCSV = (text: string, fileName: string, uploadTypeShort: 'Conta Corrente' | 'Conta Investimento') => {
         const rows = text.split('\n');
         const newTransactions: BankTransaction[] = [];
         let startIdx = 0;
@@ -232,7 +268,7 @@ export const useBankReconciliation = (user: User) => {
                             type: value > 0 ? 'C' : 'D',
                             fitid: `csv-${fileName}-${index}`,
                             status: 'pending',
-                            extract_type: uploadType
+                            extract_type: uploadTypeShort
                         });
                     }
                 }
@@ -260,23 +296,69 @@ export const useBankReconciliation = (user: User) => {
             return;
         }
 
+        const lowName = file.name.toLowerCase();
+
+        // Investment PDF logic - Show Capa de Conferência first
+        if (uploadType === 'Conta Investimento' && lowName.endsWith('.pdf')) {
+            setPendingFile(file);
+            setShowCapaModal(true);
+            return;
+        }
+
         try {
+            // 1. Record the upload in DB and storage (for non-PDF or non-investment flow)
+            const [year, month] = filterMonth.split('-').map(Number);
+            await recordUploadMutation.mutateAsync({
+                file,
+                schoolId: selectedSchoolId,
+                bankAccountId: selectedBankAccountId,
+                month,
+                year,
+                accountType: uploadType
+            });
+
+            // 2. Parse for conciliation
             const text = await file.text();
             let newBatch: BankTransaction[] = [];
-            if (file.name.toLowerCase().endsWith('.ofx')) newBatch = parseOFX(text, uploadType);
-            else if (file.name.toLowerCase().endsWith('.csv')) newBatch = parseCSV(text, file.name, uploadType);
-            else return addToast('Apenas .OFX ou .CSV são aceitos.', 'error');
+            if (lowName.endsWith('.ofx') || lowName.endsWith('.ofc')) newBatch = parseOFX(text, uploadType);
+            else if (lowName.endsWith('.csv')) newBatch = parseCSV(text, file.name, uploadType);
+            else return addToast('Para Conta Corrente, use os formatos .OFX, .OFC ou .CSV.', 'error');
 
             const combined = [...transactions];
             newBatch.forEach(nt => {
                 if (!combined.some(t => t.fitid === nt.fitid)) combined.push(nt);
             });
 
-            // Perform auto-match using the latest systemEntries from Query
             const matched = autoMatch(combined, systemEntries);
             setTransactions(matched);
-        } catch (e) {
+            addToast('Extrato importado e vinculado com sucesso!', 'success');
+        } catch (e: any) {
             console.error(e);
+            addToast('Falha no upload/processamento: ' + e.message, 'error');
+        }
+    };
+
+    const handleConfirmCapa = async () => {
+        if (!pendingFile || !selectedSchoolId || !selectedBankAccountId) return;
+
+        try {
+            const [year, month] = filterMonth.split('-').map(Number);
+            await recordUploadMutation.mutateAsync({
+                file: pendingFile,
+                schoolId: selectedSchoolId,
+                bankAccountId: selectedBankAccountId,
+                month,
+                year,
+                accountType: uploadType,
+                capaData: capaForm
+            });
+
+            addToast('Extrato de Investimento vinculado com sucesso!', 'success');
+            setShowCapaModal(false);
+            setPendingFile(null);
+            setCapaForm({ revenue: 0, taxes: 0, balance: 0 });
+        } catch (e: any) {
+            addToast('Erro ao salvar conferência: ' + e.message, 'error');
         }
     };
 
@@ -305,20 +387,22 @@ export const useBankReconciliation = (user: User) => {
 
         const findRubric = (term: string) => rubrics.find((r: any) => r.name.toUpperCase().includes(term));
 
-        if (bt.extract_type === 'investimento' || desc.includes('RENDIMENTO') || desc.includes('APLIC')) {
+        if (bt.extract_type === 'Conta Investimento' || desc.includes('RENDIMENTO') || desc.includes('APLIC') || desc.includes('INVEST')) {
             const r = findRubric('RENDIMENTO') || findRubric('APLICAÇÃO');
             if (r) {
                 suggestedRubricId = r.id;
                 suggestedProgramId = r.program_id;
                 if ((r as any).default_nature) suggestedNature = (r as any).default_nature;
             }
-        } else if (desc.includes('TARIFA') || desc.includes('CESTA')) {
-            const r = findRubric('TARIFA') || findRubric('SERVIÇO');
+        } else if (desc.includes('TARIFA') || desc.includes('CESTA') || desc.includes('MAN CC') || desc.includes('ENCARGO') || desc.includes('TAXA')) {
+            const r = findRubric('TARIFA') || findRubric('SERVIÇO') || findRubric('BANCO');
             if (r) {
                 suggestedRubricId = r.id;
                 suggestedProgramId = r.program_id;
                 if ((r as any).default_nature) suggestedNature = (r as any).default_nature;
             }
+        } else if (desc.includes('RESG') || desc.includes('DEVOL') || desc.includes('CRED OB')) {
+            // Let user decide for credits, but maybe suggest a general rubrics
         }
 
         setQuickCreateBT(bt);
@@ -355,11 +439,14 @@ export const useBankReconciliation = (user: User) => {
         showManualMatch, setShowManualMatch,
         showHelp, setShowHelp,
         showReport, setShowReport,
+        showCapaModal, setShowCapaModal,
         quickCreateBT, setQuickCreateBT,
         manualMatchBT, setManualMatchBT,
         manualSearch, setManualSearch,
         quickForm, setQuickForm,
+        capaForm, setCapaForm,
         handleFileUpload,
+        handleConfirmCapa,
         handleConfirmMatch,
         handleBulkReconcile,
         handleQuickCreateStart,

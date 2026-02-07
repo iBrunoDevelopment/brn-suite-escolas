@@ -172,15 +172,33 @@ export const useUsers = (currentUser: User) => {
 
     const deleteUserMutation = useMutation({
         mutationFn: async (userId: string) => {
-            // First delete related records to avoid foreign key constraints
-            await Promise.all([
-                supabase.from('contract_signatures').delete().eq('user_id', userId),
-                supabase.from('notifications').delete().eq('user_id', userId),
-                supabase.from('support_requests').delete().eq('user_id', userId)
-            ]);
+            // Deletar registros relacionados de forma sequencial para maior controle
+            // 1. Assinaturas de Contrato (Causa comum de erro de FK)
+            const { error: sigError } = await supabase.from('contract_signatures').delete().eq('user_id', userId);
+            if (sigError) console.warn('Aviso: Erro ao remover assinaturas:', sigError.message);
 
+            // 2. Notificações (Ambas as tabelas possíveis no sistema)
+            await supabase.from('notifications').delete().eq('user_id', userId);
+            await supabase.from('accountability_notifications').delete().eq('user_id', userId);
+
+            // 3. Solicitações de Suporte
+            const { error: supportError } = await supabase.from('support_requests').delete().eq('user_id', userId);
+            if (supportError) console.warn('Aviso: Erro ao remover suporte:', supportError.message);
+
+            // 4. Logs de Auditoria (se vinculados por ID em alguma versão)
+            // Tenta deletar de possíveis tabelas de log/histórico que usem user_id
+            await supabase.from('audit_logs').delete().eq('user_id', userId);
+            await supabase.from('xp_logs').delete().eq('user_id', userId);
+
+            // Deleção final do usuário
             const { error } = await supabase.from('users').delete().eq('id', userId);
-            if (error) throw error;
+
+            if (error) {
+                if (error.code === '23503') {
+                    throw new Error('Não foi possível excluir o usuário pois ele possui registros vinculados que não puderam ser removidos automaticamente. Recomendamos desativar o usuário.');
+                }
+                throw error;
+            }
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['users'] });

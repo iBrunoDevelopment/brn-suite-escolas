@@ -1,10 +1,11 @@
 import React from 'react';
 
+
 interface ImportZoneProps {
     dragActive: boolean;
     setDragActive: (active: boolean) => void;
-    uploadType: 'corrente' | 'investimento';
-    setUploadType: (type: 'corrente' | 'investimento') => void;
+    uploadType: 'Conta Corrente' | 'Conta Investimento';
+    setUploadType: (type: 'Conta Corrente' | 'Conta Investimento') => void;
     onFileUpload: (file: File) => void;
     filterMonth: string;
 }
@@ -34,14 +35,14 @@ const ImportZone: React.FC<ImportZoneProps> = ({
 
             <div className="flex bg-black/20 p-1 rounded-2xl border border-white/5">
                 <button
-                    onClick={() => setUploadType('corrente')}
-                    className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${uploadType === 'corrente' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-slate-500 hover:text-white'}`}
+                    onClick={() => setUploadType('Conta Corrente')}
+                    className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${uploadType === 'Conta Corrente' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-slate-500 hover:text-white'}`}
                 >
                     Conta Corrente
                 </button>
                 <button
-                    onClick={() => setUploadType('investimento')}
-                    className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${uploadType === 'investimento' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20' : 'text-slate-500 hover:text-white'}`}
+                    onClick={() => setUploadType('Conta Investimento')}
+                    className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${uploadType === 'Conta Investimento' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20' : 'text-slate-500 hover:text-white'}`}
                 >
                     Investimento
                 </button>
@@ -49,9 +50,11 @@ const ImportZone: React.FC<ImportZoneProps> = ({
 
             <label className="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-xs cursor-pointer transition-all active:scale-95 shadow-lg shadow-primary/20">
                 Selecionar Arquivo
-                <input type="file" className="hidden" accept=".ofx,.csv" onChange={handleFileChange} />
+                <input type="file" className="hidden" accept={uploadType === 'Conta Investimento' ? ".pdf,.ofx,.csv" : ".ofx,.ofc,.csv"} onChange={handleFileChange} />
             </label>
-            <p className="text-[10px] text-slate-600 font-bold uppercase tracking-tighter">Arquivos .OFX ou .CSV são suportados</p>
+            <p className="text-[10px] text-slate-600 font-bold uppercase tracking-tighter">
+                {uploadType === 'Conta Investimento' ? 'Arquivos .PDF, .OFX ou .CSV são suportados' : 'Arquivos .OFX, .OFC ou .CSV são suportados'}
+            </p>
         </div>
     );
 };

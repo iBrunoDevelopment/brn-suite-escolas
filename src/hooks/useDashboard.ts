@@ -36,21 +36,23 @@ export const useDashboard = (user: User) => {
 
     // -- QUERIES --
 
-    // 1. Auxiliary Data (Schools, Programs, Rubrics, Suppliers)
-    const { data: auxData = { schools: [], programs: [], rubrics: [], suppliers: [] } } = useQuery({
+    // 1. Auxiliary Data (Schools, Programs, Rubrics, Suppliers, Bank Accounts)
+    const { data: auxData = { schools: [], programs: [], rubrics: [], suppliers: [], bankAccounts: [] } } = useQuery({
         queryKey: ['dashboard_aux'],
         queryFn: async () => {
-            const [schools, programs, rubrics, suppliers] = await Promise.all([
+            const [schools, programs, rubrics, suppliers, bankAccounts] = await Promise.all([
                 supabase.from('schools').select('*').order('name'),
                 supabase.from('programs').select('*').order('name'),
                 supabase.from('rubrics').select('*').order('name'),
-                supabase.from('suppliers').select('*').order('name')
+                supabase.from('suppliers').select('*').order('name'),
+                supabase.from('bank_accounts').select('*').order('name')
             ]);
             return {
                 schools: schools.data || [],
                 programs: programs.data || [],
                 rubrics: rubrics.data || [],
-                suppliers: suppliers.data || []
+                suppliers: suppliers.data || [],
+                bankAccounts: bankAccounts.data || []
             };
         },
         staleTime: 1000 * 60 * 30 // 30 minutes
@@ -70,15 +72,16 @@ export const useDashboard = (user: User) => {
         staleTime: 1000 * 60 * 5
     });
 
-    // 3. Raw Data for Calculations (Entries, Processes, Reprogrammed)
+    // 3. Raw Data for Calculations (Entries, Processes, Reprogrammed, Uploads)
     // We fetch broadly based on role, then filter in memory for quick dashboard interactions
-    const { data: rawData = { entries: [], processes: [], reprogrammed: [] }, isLoading } = useQuery({
+    const { data: rawData = { entries: [], processes: [], reprogrammed: [], uploads: [] }, isLoading } = useQuery({
         queryKey: ['dashboard_data', user.id, user.role, user.schoolId, user.assignedSchools],
         queryFn: async () => {
             // Base queries
             let entriesQ = supabase.from('financial_entries').select('*');
             let processesQ = supabase.from('accountability_processes').select('financial_entry_id');
             let reprogQ = supabase.from('reprogrammed_balances').select('*');
+            let uploadsQ = supabase.from('bank_statement_uploads').select('*');
 
             // Apply Role Restrictions
             if (user.role !== UserRole.ADMIN && user.role !== UserRole.OPERADOR) {
@@ -87,20 +90,22 @@ export const useDashboard = (user: User) => {
                     entriesQ = entriesQ.eq('school_id', sid);
                     processesQ = processesQ.eq('school_id', sid);
                     reprogQ = reprogQ.eq('school_id', sid);
+                    uploadsQ = uploadsQ.eq('school_id', sid);
                 } else if (user.role === UserRole.TECNICO_GEE) {
                     const sids = user.assignedSchools || [];
                     if (sids.length > 0) {
                         entriesQ = entriesQ.in('school_id', sids);
                         processesQ = processesQ.in('school_id', sids);
                         reprogQ = reprogQ.in('school_id', sids);
+                        uploadsQ = uploadsQ.in('school_id', sids);
                     } else {
                         // Assigned user with no schools
-                        return { entries: [], processes: [], reprogrammed: [] };
+                        return { entries: [], processes: [], reprogrammed: [], uploads: [] };
                     }
                 }
             }
 
-            const [e, p, r] = await Promise.all([entriesQ, processesQ, reprogQ]);
+            const [e, p, r, u] = await Promise.all([entriesQ, processesQ, reprogQ, uploadsQ]);
 
             // Check for monthly reminders trigger (Admin side effect)
             if (user.role === UserRole.ADMIN) {
@@ -113,7 +118,8 @@ export const useDashboard = (user: User) => {
             return {
                 entries: e.data || [],
                 processes: p.data || [],
-                reprogrammed: r.data || []
+                reprogrammed: r.data || [],
+                uploads: u.data || []
             };
         },
         staleTime: 1000 * 60 * 5 // 5 minutes
@@ -122,7 +128,7 @@ export const useDashboard = (user: User) => {
     // -- DATA PROCESSING (useMemo) --
 
     const dashboardStats = useMemo(() => {
-        const { entries, processes, reprogrammed } = rawData;
+        const { entries, processes, reprogrammed, uploads } = rawData;
 
         // 1. Filter Data
         let filteredEntries = entries;
@@ -234,6 +240,9 @@ export const useDashboard = (user: User) => {
                 title: 'Usuários Aguardando Aprovação',
                 description: `Existem ${pendingUsersCount} usuários que ainda não foram vinculados a uma escola ou estão desativados.`,
                 severity: 'Médio',
+                category: 'Sistema',
+                schoolId: 'global',
+                schoolName: 'Sistema',
                 timestamp: today.toISOString()
             });
         }
@@ -250,6 +259,7 @@ export const useDashboard = (user: User) => {
                 title: 'Pendências Antigas',
                 description: `Existem ${longPending.length} lançamentos pendentes há mais de 15 dias.`,
                 severity: 'Médio',
+                category: 'Financeiro',
                 timestamp: today.toISOString()
             });
         }
@@ -265,6 +275,7 @@ export const useDashboard = (user: User) => {
                 title: 'Falta Prestação de Contas',
                 description: `${unaccounted.length} pagamentos confirmados ainda não possuem documentação de prestação de contas vinculada.`,
                 severity: 'Crítico',
+                category: 'Gestão',
                 timestamp: today.toISOString()
             });
         }
@@ -293,6 +304,9 @@ export const useDashboard = (user: User) => {
                     title: 'Saldo Negativo Crítico',
                     description: `O programa ${progName} (${data.nature}) em ${schName} está com saldo de ${val}.`,
                     severity: 'Crítico',
+                    category: 'Auditoria',
+                    schoolId: data.schoolId,
+                    schoolName: schName,
                     timestamp: today.toISOString()
                 });
             } else if (data.balance > 0 && data.balance < 500) {
@@ -301,10 +315,115 @@ export const useDashboard = (user: User) => {
                     title: 'Saldo Baixo',
                     description: `Atenção: O programa ${progName} (${data.nature}) em ${schName} possui apenas ${val} restantes.`,
                     severity: 'Atenção',
+                    category: 'Financeiro',
+                    schoolId: data.schoolId,
+                    schoolName: schName,
                     timestamp: today.toISOString()
                 });
             }
         });
+
+        // Alert: Missing Bank Statements (Compliance)
+        const currentMonth = today.getMonth() + 1;
+        const currentYear = today.getFullYear();
+        // Check last 3 months
+        const periodsToCheck = [];
+        for (let i = 1; i <= 3; i++) {
+            let m = currentMonth - i;
+            let y = currentYear;
+            if (m <= 0) { m += 12; y -= 1; }
+            periodsToCheck.push({ month: m, year: y });
+        }
+
+        const activeSchools = filters.schoolId
+            ? auxData.schools.filter((s: any) => s.id === filters.schoolId)
+            : (user.role === UserRole.ADMIN || user.role === UserRole.OPERADOR
+                ? auxData.schools
+                : auxData.schools.filter((s: any) => user.assignedSchools?.includes(s.id) || s.id === user.schoolId));
+
+        activeSchools.forEach((sch: any) => {
+            const schAccounts = auxData.bankAccounts.filter((ba: any) => ba.school_id === sch.id);
+
+            periodsToCheck.forEach(period => {
+                schAccounts.forEach(acc => {
+                    const types = ['Conta Corrente', 'Conta Investimento'];
+                    types.forEach(type => {
+                        const exists = (uploads || []).some((u: any) =>
+                            u.bank_account_id === acc.id &&
+                            u.month === period.month &&
+                            u.year === period.year &&
+                            u.account_type === type
+                        );
+
+                        if (!exists) {
+                            const monthName = new Date(period.year, period.month - 1).toLocaleString('pt-BR', { month: 'long' });
+                            alerts.push({
+                                id: `missing-stmt-${acc.id}-${period.month}-${period.year}-${type}`,
+                                title: 'Extrato Faltante',
+                                description: `O extrato de ${type} (${acc.name}) da escola ${sch.name} referente a ${monthName}/${period.year} ainda não foi enviado.`,
+                                severity: 'Crítico',
+                                category: 'Auditoria',
+                                schoolId: sch.id,
+                                schoolName: sch.name,
+                                timestamp: today.toISOString()
+                            });
+                        }
+                    });
+                });
+            });
+        });
+
+        // Alert: Investment Yield Auditor (O Pulo do Gato)
+        uploads.filter((u: any) => u.account_type === 'Conta Investimento' && u.reported_revenue > 0).forEach((upload: any) => {
+            const sch = auxData.schools.find((s: any) => s.id === upload.school_id);
+            const acc = auxData.bankAccounts.find((a: any) => a.id === upload.bank_account_id);
+
+            // Sum revenue entries for this school, account and month
+            const monthEntries = entries.filter((e: any) =>
+                e.school_id === upload.school_id &&
+                e.bank_account_id === upload.bank_account_id &&
+                e.type === 'Entrada' &&
+                (e.category === 'Rendimento de Aplicação' || (e.description && e.description.toUpperCase().includes('RENDIMENTO'))) &&
+                new Date(e.date).getUTCMonth() + 1 === upload.month &&
+                new Date(e.date).getUTCFullYear() === upload.year
+            );
+
+            const totalSystemRevenue = monthEntries.reduce((acc: number, curr: any) => acc + Number(curr.value), 0);
+            const diff = Math.abs(totalSystemRevenue - Number(upload.reported_revenue));
+
+            if (diff > 0.05) { // More than 5 cents tolerance
+                const monthName = new Date(upload.year, upload.month - 1).toLocaleString('pt-BR', { month: 'long' });
+                alerts.push({
+                    id: `yield-divergence-${upload.id}`,
+                    title: 'Divergência de Rendimento',
+                    description: `A escola ${sch?.name || 'Escola'} informou R$ ${Number(upload.reported_revenue).toFixed(2)} de rendimento no extrato de ${monthName}, mas o sistema possui apenas R$ ${totalSystemRevenue.toFixed(2)} lançados.`,
+                    severity: 'Crítico',
+                    category: 'Auditoria',
+                    schoolId: upload.school_id,
+                    schoolName: sch?.name || '',
+                    timestamp: today.toISOString()
+                });
+            }
+        });
+
+        // Alert: Conciliation Divergence
+        const unreconciledOld = entries.filter((e: any) => {
+            if (e.is_reconciled) return false;
+            if (e.status === TransactionStatus.PENDENTE) return false; // Ignore those truly pending
+            const diffTime = Math.abs(today.getTime() - new Date(e.date).getTime());
+            return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) > 7; // More than 7 days without reconciliation
+        });
+
+        if (unreconciledOld.length > 0) {
+            alerts.push({
+                id: 'conciliation-divergence',
+                title: 'Divergência na Conciliação',
+                description: `Existem ${unreconciledOld.length} lançamentos confirmados há mais de 7 dias que não coincidem com nenhum extrato bancário enviado.`,
+                severity: 'Crítico',
+                category: 'Auditoria',
+                timestamp: today.toISOString()
+            });
+        }
 
         return {
             stats: {
