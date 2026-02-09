@@ -50,11 +50,17 @@ const ImportZone: React.FC<ImportZoneProps> = ({
 
             <label className="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-xs cursor-pointer transition-all active:scale-95 shadow-lg shadow-primary/20">
                 Selecionar Arquivo
-                <input type="file" className="hidden" accept={uploadType === 'Conta Investimento' ? ".pdf,.ofx,.csv" : ".ofx,.ofc,.csv"} onChange={handleFileChange} />
+                <input type="file" className="hidden" accept=".pdf,.ofx,.ofc,.csv" onChange={handleFileChange} />
             </label>
-            <p className="text-[10px] text-slate-600 font-bold uppercase tracking-tighter">
-                {uploadType === 'Conta Investimento' ? 'Arquivos .PDF, .OFX ou .CSV são suportados' : 'Arquivos .OFX, .OFC ou .CSV são suportados'}
-            </p>
+            <div className="flex flex-col items-center gap-1">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">
+                    DATA (.OFX, .CSV): Processa os lançamentos automaticamente
+                </p>
+                <div className="w-1 h-1 rounded-full bg-white/10"></div>
+                <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-tight">
+                    DOCUMENTO (.PDF): Guarda o extrato oficial para auditoria
+                </p>
+            </div>
         </div>
     );
 };

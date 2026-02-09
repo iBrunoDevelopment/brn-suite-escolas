@@ -169,11 +169,11 @@ export const useBankReconciliation = (user: User) => {
     });
 
     const recordUploadMutation = useMutation({
-        mutationFn: async ({ file, schoolId, bankAccountId, month, year, accountType, capaData }: {
-            file: File, schoolId: string, bankAccountId: string, month: number, year: number, accountType: string, capaData?: any
+        mutationFn: async ({ file, schoolId, bankAccountId, month, year, accountType, capaData, isPdf }: {
+            file: File, schoolId: string, bankAccountId: string, month: number, year: number, accountType: string, capaData?: any, isPdf?: boolean
         }) => {
             const fileExt = file.name.split('.').pop();
-            const fileName = `${schoolId}/${year}/${month}/${accountType.replace(' ', '_')}_${Date.now()}.${fileExt}`;
+            const fileName = `${schoolId}/${year}/${month}/${accountType.replace(' ', '_')}_${isPdf ? 'DOC' : 'DATA'}_${Date.now()}.${fileExt}`;
             const filePath = `statements/${fileName}`;
 
             // 1. Upload to Storage
@@ -182,20 +182,34 @@ export const useBankReconciliation = (user: User) => {
 
             const { data: { publicUrl } } = supabase.storage.from('statements').getPublicUrl(filePath);
 
-            // 2. Save record in database
-            const { error: dbError } = await supabase.from('bank_statement_uploads').upsert({
+            // 2. Prepare payload for upsert
+            const payload: any = {
                 school_id: schoolId,
                 bank_account_id: bankAccountId,
                 month,
                 year,
                 account_type: accountType,
-                file_url: publicUrl,
-                file_name: file.name,
-                reported_revenue: capaData?.revenue || 0,
-                reported_taxes: capaData?.taxes || 0,
-                reported_balance: capaData?.balance || 0,
                 uploaded_by: user.id
-            }, { onConflict: 'bank_account_id, month, year, account_type' });
+            };
+
+            if (isPdf) {
+                payload.pdf_url = publicUrl;
+                payload.pdf_name = file.name;
+            } else {
+                payload.file_url = publicUrl;
+                payload.file_name = file.name;
+            }
+
+            if (capaData) {
+                payload.reported_revenue = capaData.revenue || 0;
+                payload.reported_taxes = capaData.taxes || 0;
+                payload.reported_balance = capaData.balance || 0;
+            }
+
+            // 3. Save record in database
+            const { error: dbError } = await supabase.from('bank_statement_uploads').upsert(payload, {
+                onConflict: 'bank_account_id, month, year, account_type'
+            });
 
             if (dbError) throw dbError;
         }
@@ -306,23 +320,31 @@ export const useBankReconciliation = (user: User) => {
         }
 
         try {
-            // 1. Record the upload in DB and storage (for non-PDF or non-investment flow)
+            const isPdf = lowName.endsWith('.pdf');
             const [year, month] = filterMonth.split('-').map(Number);
+
+            // 1. Record the upload in DB and storage
             await recordUploadMutation.mutateAsync({
                 file,
                 schoolId: selectedSchoolId,
                 bankAccountId: selectedBankAccountId,
                 month,
                 year,
-                accountType: uploadType
+                accountType: uploadType,
+                isPdf
             });
 
-            // 2. Parse for conciliation
+            // If it's just a PDF, we stop here (no transaction parsing)
+            if (isPdf) {
+                return addToast('Extrato PDF vinculado como documento oficial do mês.', 'success');
+            }
+
+            // 2. Parse for conciliation (for data files)
             const text = await file.text();
             let newBatch: BankTransaction[] = [];
             if (lowName.endsWith('.ofx') || lowName.endsWith('.ofc')) newBatch = parseOFX(text, uploadType);
             else if (lowName.endsWith('.csv')) newBatch = parseCSV(text, file.name, uploadType);
-            else return addToast('Para Conta Corrente, use os formatos .OFX, .OFC ou .CSV.', 'error');
+            else return addToast('Para processar dados, use os formatos .OFX, .OFC ou .CSV.', 'error');
 
             const combined = [...transactions];
             newBatch.forEach(nt => {
@@ -331,7 +353,7 @@ export const useBankReconciliation = (user: User) => {
 
             const matched = autoMatch(combined, systemEntries);
             setTransactions(matched);
-            addToast('Extrato importado e vinculado com sucesso!', 'success');
+            addToast('Extrato de dados processado com sucesso!', 'success');
         } catch (e: any) {
             console.error(e);
             addToast('Falha no upload/processamento: ' + e.message, 'error');

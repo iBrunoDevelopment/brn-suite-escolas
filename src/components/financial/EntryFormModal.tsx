@@ -53,6 +53,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
     const [attachments, setAttachments] = useState<any[]>([]);
     const [technicalProcess, setTechnicalProcess] = useState<any>(null);
     const [entryLogs, setEntryLogs] = useState<any[]>([]);
+    const [linkedStatement, setLinkedStatement] = useState<any>(null);
 
     const [isSplitMode, setIsSplitMode] = useState(false);
     const [splitItems, setSplitItems] = useState<SplitItem[]>([]);
@@ -95,7 +96,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
         setTotalValue(''); setMainDescription(''); setSelectedSupplierId(''); setSelectedSchoolId(user.schoolId || '');
         setSelectedProgramId(''); setStatus(TransactionStatus.PENDENTE); setInvoiceDate('');
         setSelectedBankAccountId(''); setSelectedPaymentMethodId(''); setDocumentNumber(''); setAuthNumber('');
-        setAttachments([]); setTechnicalProcess(null); setIsSplitMode(false); setSplitItems([]);
+        setAttachments([]); setTechnicalProcess(null); setLinkedStatement(null); setIsSplitMode(false); setSplitItems([]);
         setSingleRubricId(''); setSingleNature(TransactionNature.CUSTEIO); setActiveTab('dados');
     };
 
@@ -140,6 +141,20 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                 setIsSplitMode(true);
                 setSplitItems(splitData);
                 fetchEntryLogs(first.id);
+
+                // Fetch linked statement if reconciled
+                if (first.is_reconciled && first.bank_account_id) {
+                    const entryDate = new Date(first.date);
+                    const month = entryDate.getMonth() + 1;
+                    const year = entryDate.getFullYear();
+                    const { data: stmt } = await supabase.from('bank_statement_uploads')
+                        .select('file_url, file_name, pdf_url, pdf_name')
+                        .eq('bank_account_id', first.bank_account_id)
+                        .eq('month', month)
+                        .eq('year', year)
+                        .maybeSingle();
+                    if (stmt) setLinkedStatement(stmt);
+                }
             }
         } else if (editingId) {
             const { data: entry } = await supabase.from('financial_entries').select('*').eq('id', editingId).single();
@@ -163,6 +178,23 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                 setSingleRubricId(entry.rubric_id || '');
                 setSingleNature(entry.nature);
                 fetchEntryLogs(entry.id);
+
+                // Fetch linked statement if reconciled
+                if (entry.is_reconciled && entry.bank_account_id) {
+                    const entryDate = new Date(entry.date);
+                    const month = entryDate.getMonth() + 1;
+                    const year = entryDate.getFullYear();
+
+                    const { data: stmt } = await supabase
+                        .from('bank_statement_uploads')
+                        .select('file_url, file_name, pdf_url, pdf_name')
+                        .eq('bank_account_id', entry.bank_account_id)
+                        .eq('month', month)
+                        .eq('year', year)
+                        .maybeSingle();
+
+                    if (stmt) setLinkedStatement(stmt);
+                }
 
                 // Fetch technical process if exists
                 const { data: process } = await supabase.from('accountability_processes').select('*').eq('financial_entry_id', entry.id).maybeSingle();
@@ -564,12 +596,19 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                                     <div className="flex flex-wrap gap-2">
                                         {(() => {
                                             const isExtratoAllowed = ['Tarifa Bancária', 'Devolução de Recurso (FNDE/Estado)', 'Repasse / Crédito', 'Rendimento de Aplicação'].includes(category);
+                                            const isImposto = category === 'Impostos / Tributos';
+                                            const isBankSpecial = ['Tarifa Bancária', 'Rendimento de Aplicação', 'Reembolso / Estorno', 'Repasse / Crédito'].includes(category);
+
                                             const cats = [
-                                                { label: 'Nota Fiscal', icon: 'receipt_long' },
+                                                {
+                                                    label: isImposto ? 'Guia (DARF/GPS)' : (isBankSpecial ? 'Documento' : 'Nota Fiscal'),
+                                                    icon: isImposto ? 'description' : (isBankSpecial ? 'history_edu' : 'receipt_long'),
+                                                    restricted: isBankSpecial && category !== 'Reembolso / Estorno' // Não precisa de NF pra tarifa/rendimento
+                                                },
                                                 { label: 'Comprovante', icon: 'payments' },
-                                                { label: 'Espelho da Nota', icon: 'content_copy' },
+                                                { label: 'Espelho da Nota', icon: 'content_copy', restricted: isBankSpecial || isImposto },
                                                 { label: 'Extrato Bancário', icon: 'account_balance', restricted: !isExtratoAllowed },
-                                                { label: 'Certidões', icon: 'verified' }
+                                                { label: 'Certidões', icon: 'verified', restricted: isBankSpecial }
                                             ].filter(c => !c.restricted);
 
                                             return cats.map(c => (
@@ -601,6 +640,25 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                                                 </div>
                                             </div>
                                         ))}
+
+                                        {linkedStatement && (
+                                            <div className={`flex items-center justify-between p-3 rounded-2xl border transition-all animate-in slide-in-from-left-2 ${linkedStatement.pdf_url ? 'bg-emerald-500/10 border-emerald-500/20 hover:border-emerald-500/40' : 'bg-amber-500/10 border-amber-500/20 hover:border-amber-500/40'}`}>
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${linkedStatement.pdf_url ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                                                        <span className="material-symbols-outlined text-base">account_balance</span>
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs text-white font-bold truncate max-w-[150px]">{linkedStatement.pdf_name || linkedStatement.file_name}</p>
+                                                        <p className={`text-[9px] font-black uppercase tracking-tighter ${linkedStatement.pdf_url ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                                            {linkedStatement.pdf_url ? 'Extrato Oficial (PDF)' : 'Extrato de Dados (OFX/CSV)'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <a href={linkedStatement.pdf_url || linkedStatement.file_url} target="_blank" className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all ${linkedStatement.pdf_url ? 'hover:bg-emerald-500/20 text-emerald-400 hover:text-white' : 'hover:bg-amber-500/20 text-amber-400 hover:text-white'}`}>
+                                                    <span className="material-symbols-outlined text-base">visibility</span>
+                                                </a>
+                                            </div>
+                                        )}
                                         {attachments.length === 0 && (
                                             <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-white/[0.02] rounded-3xl">
                                                 <span className="material-symbols-outlined text-3xl text-slate-700 mb-2">cloud_upload</span>
