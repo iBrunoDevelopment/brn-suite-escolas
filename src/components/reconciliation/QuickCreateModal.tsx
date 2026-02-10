@@ -59,7 +59,7 @@ const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
 
                     <div className="flex flex-col gap-1">
                         <label htmlFor="qc-program" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Programa</label>
-                        <select
+                        <select title="Selecione o Programa" aria-label="Selecione o Programa"
                             id="qc-program"
                             value={quickForm.program_id}
                             onChange={e => setQuickForm({ ...quickForm, program_id: e.target.value })}
@@ -72,7 +72,7 @@ const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
 
                     <div className="flex flex-col gap-1">
                         <label htmlFor="qc-rubric" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Rubrica (Opcional)</label>
-                        <select
+                        <select title="Selecione a Rubrica" aria-label="Selecione a Rubrica"
                             id="qc-rubric"
                             value={quickForm.rubric_id}
                             onChange={e => {
@@ -92,7 +92,7 @@ const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
 
                     <div className="flex flex-col gap-1">
                         <label htmlFor="qc-nature" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Natureza</label>
-                        <select
+                        <select title="Selecione a Natureza" aria-label="Selecione a Natureza"
                             id="qc-nature"
                             value={quickForm.nature}
                             onChange={e => setQuickForm({ ...quickForm, nature: e.target.value })}
@@ -105,7 +105,7 @@ const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
 
                     <div className="flex flex-col gap-1">
                         <label htmlFor="qc-supplier" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Fornecedor (Opcional)</label>
-                        <select
+                        <select title="Selecione o Fornecedor" aria-label="Selecione o Fornecedor"
                             id="qc-supplier"
                             value={quickForm.supplier_id}
                             onChange={e => setQuickForm({ ...quickForm, supplier_id: e.target.value })}

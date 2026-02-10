@@ -5,6 +5,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import App from './App';
 import './index.css';
 import { ToastProvider } from './context/ToastContext';
+import { AuthProvider } from './context/AuthContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,7 +28,9 @@ root.render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
-        <App />
+        <AuthProvider>
+          <App />
+        </AuthProvider>
       </ToastProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>

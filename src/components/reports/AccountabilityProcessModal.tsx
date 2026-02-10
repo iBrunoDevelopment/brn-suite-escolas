@@ -550,7 +550,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                                     </div>
                                     <div>
                                         <label htmlFor="process_status" className="text-[8px] md:text-[10px] font-black uppercase text-slate-500 tracking-widest md:tracking-[0.25em] mb-3 block opacity-60">Status</label>
-                                        <select id="process_status" value={processStatus} onChange={e => setProcessStatus(e.target.value as any)} className="w-full bg-black/40 border border-white/10 rounded-xl md:rounded-2xl h-12 md:h-14 px-4 md:px-5 text-white text-[11px] font-black focus:border-primary outline-none transition-all">
+                                        <select title="Selecionar Status do Processo" aria-label="Selecionar Status do Processo" id="process_status" value={processStatus} onChange={e => setProcessStatus(e.target.value as any)} className="w-full bg-black/40 border border-white/10 rounded-xl md:rounded-2xl h-12 md:h-14 px-4 md:px-5 text-white text-[11px] font-black focus:border-primary outline-none transition-all">
                                             <option value="Em Andamento">Em Andamento</option>
                                             <option value="Concluído">Concluído</option>
                                         </select>

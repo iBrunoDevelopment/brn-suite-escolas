@@ -21,44 +21,17 @@ import LandingPage from './pages/LandingPage';
 import Contract from './pages/Contract';
 import ValidateReport from './pages/ValidateReport';
 
+import { useAuth } from './context/AuthContext';
+
 const App: React.FC = () => {
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const { currentUser, loading, logout, needsSignature, setNeedsSignature } = useAuth();
     const [activePage, setActivePage] = useState<string>('dashboard');
-    const [loading, setLoading] = useState(true);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [showLogin, setShowLogin] = useState(false);
     const [showGuide, setShowGuide] = useState(false);
-    const [needsSignature, setNeedsSignature] = useState(false);
 
     useEffect(() => {
-        const initSession = async () => {
-            try {
-                const { data, error } = await supabase.auth.getSession();
-                if (error) {
-                    setLoading(false);
-                    return;
-                }
-                if (data.session?.user) {
-                    fetchProfile(data.session.user.id, data.session.user.email!);
-                } else {
-                    setLoading(false);
-                }
-            } catch (err) {
-                setLoading(false);
-            }
-        };
-        initSession();
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            if (session?.user) {
-                fetchProfile(session.user.id, session.user.email!);
-            } else {
-                setCurrentUser(null);
-                setLoading(false);
-            }
-        });
-
         const handlePageChangeEvent = (e: any) => {
             if (e.detail) {
                 setActivePage(e.detail);
@@ -68,89 +41,9 @@ const App: React.FC = () => {
         window.addEventListener('changePage', handlePageChangeEvent);
 
         return () => {
-            subscription?.unsubscribe();
             window.removeEventListener('changePage', handlePageChangeEvent);
         };
     }, []);
-
-    const checkContractSignature = async (userId: string, role: UserRole) => {
-        // Only require signature for DIRECTORS
-        if (role !== UserRole.DIRETOR) {
-            setNeedsSignature(false);
-            return;
-        }
-
-        const { data } = await supabase
-            .from('contract_signatures')
-            .select('id')
-            .eq('user_id', userId)
-            .limit(1)
-            .maybeSingle();
-
-        setNeedsSignature(!data);
-    };
-
-    const fetchProfile = async (userId: string, email: string) => {
-        setLoading(true);
-        try {
-            let { data, error } = await supabase
-                .from('users')
-                .select('*')
-                .eq('id', userId)
-                .maybeSingle();
-
-            if (!data && !error) {
-                const { data: claimed } = await supabase.rpc('claim_profile_by_email');
-
-                if (claimed) {
-                    const { data: refreshed } = await supabase.from('users').select('*').eq('id', userId).single();
-                    data = refreshed;
-                } else {
-                    const newProfile = {
-                        id: userId,
-                        email: email,
-                        name: email.split('@')[0],
-                        role: UserRole.CLIENTE,
-                        school_id: null,
-                        active: true
-                    };
-
-                    const { error: insertError } = await supabase.from('users').insert(newProfile);
-                    if (!insertError) {
-                        data = newProfile as any;
-                    }
-                }
-            }
-
-            if (data) {
-                const userObj = {
-                    id: data.id,
-                    name: data.name,
-                    email: data.email,
-                    role: data.role as UserRole,
-                    schoolId: data.school_id,
-                    assignedSchools: data.assigned_schools,
-                    active: data.active,
-                    gee: data.gee,
-                    avatar_url: data.avatar_url
-                };
-                setCurrentUser(userObj);
-                checkContractSignature(userObj.id, userObj.role);
-            } else {
-                setCurrentUser(null);
-            }
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleLogout = async () => {
-        await supabase.auth.signOut();
-        setCurrentUser(null);
-        setNeedsSignature(false);
-    };
 
     if (window.location.pathname === '/validate') {
         return <ValidateReport />;
@@ -170,12 +63,14 @@ const App: React.FC = () => {
             return <ProgramsGuide onBack={() => setShowGuide(false)} />;
         }
         if (showLogin) {
-            return <Login onLogin={setCurrentUser} onBack={() => setShowLogin(false)} />;
+            return <Login onLogin={() => { }} onBack={() => setShowLogin(false)} />;
         }
         return <LandingPage onLoginClick={() => setShowLogin(true)} onGuideClick={() => setShowGuide(true)} />;
     }
 
     const renderContent = () => {
+        if (!currentUser) return null;
+
         const isStaff = currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.OPERADOR;
         const hasAssignedSchools = currentUser.assignedSchools && currentUser.assignedSchools.length > 0;
         const isAuthorized = isStaff || currentUser.schoolId || hasAssignedSchools;
@@ -222,7 +117,7 @@ const App: React.FC = () => {
                     setActivePage(page);
                     setIsMobileMenuOpen(false);
                 }}
-                onLogout={handleLogout}
+                onLogout={logout}
                 isCollapsed={isSidebarCollapsed}
                 onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                 isMobileOpen={isMobileMenuOpen}

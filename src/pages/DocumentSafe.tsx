@@ -283,6 +283,7 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                 <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Categoria</label>
                     <select
+                        title="Filtrar por Categoria"
                         value={filterCategory}
                         aria-label="Filtrar por Categoria"
                         onChange={e => setFilterCategory(e.target.value)}
@@ -295,6 +296,7 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                 <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Escola</label>
                     <select
+                        title="Filtrar por Escola"
                         value={filterSchool}
                         aria-label="Filtrar por Escola"
                         onChange={e => { setFilterSchool(e.target.value); setFilterProcess(''); }}
@@ -307,6 +309,7 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                 <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Prestação (Processo)</label>
                     <select
+                        title="Filtrar por Prestação de Contas"
                         value={filterProcess}
                         aria-label="Filtrar por Prestação de Contas"
                         onChange={e => setFilterProcess(e.target.value)}

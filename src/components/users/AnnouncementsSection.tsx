@@ -23,7 +23,7 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ announcemen
             <div className="p-8 space-y-6">
                 <div className="space-y-2">
                     <label htmlFor="ann-target" className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Público-Alvo</label>
-                    <select id="ann-target" value={announcement.target} onChange={e => setAnnouncement({ ...announcement, target: e.target.value as any })} className="input-field">
+                    <select title="Selecione o Público-Alvo" aria-label="Selecione o Público-Alvo" id="ann-target" value={announcement.target} onChange={e => setAnnouncement({ ...announcement, target: e.target.value as any })} className="input-field">
                         <option value="all">Todos os Usuários</option>
                         {Object.values(UserRole).map(role => <option key={role} value={role}>{role}s</option>)}
                     </select>

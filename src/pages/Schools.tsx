@@ -442,9 +442,11 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                                     <input type="text" aria-label="Código SEEC" placeholder="000" value={formData.seec} onChange={e => setFormData({ ...formData, seec: e.target.value })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" />
                                 </div>
                                 <div className="md:col-span-2">
-                                    <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Regional (GEE)</label>
+                                    <label htmlFor="school_gee_id" className="text-xs font-bold text-slate-400 uppercase mb-1 block">Regional (GEE)</label>
                                     <select
+                                        title="Regional (GEE)"
                                         aria-label="Regional (GEE)"
+                                        id="school_gee_id"
                                         value={formData.gee_id}
                                         onChange={e => {
                                             const selected = gees.find(g => g.id === e.target.value);
@@ -459,9 +461,11 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                                 </div>
 
                                 <div className="md:col-span-2">
-                                    <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Plano Contratado</label>
+                                    <label htmlFor="school_plan_id" className="text-xs font-bold text-slate-400 uppercase mb-1 block">Plano Contratado</label>
                                     <select
+                                        title="Plano Contratado"
                                         aria-label="Plano Contratado"
+                                        id="school_plan_id"
                                         value={formData.plan_id}
                                         onChange={e => setFormData({ ...formData, plan_id: e.target.value })}
                                         className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none border-emerald-500/30"
@@ -517,15 +521,15 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                                     <input type="text" aria-label="Logradouro / Endereço" placeholder="Endereço, Nº, Bairro" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value.toUpperCase() })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">UF</label>
-                                    <select aria-label="UF" value={formData.uf} onChange={e => setFormData({ ...formData, uf: e.target.value, city: '' })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none">
+                                    <label htmlFor="school_uf" className="text-xs font-bold text-slate-400 uppercase mb-1 block">UF</label>
+                                    <select title="UF" aria-label="UF" id="school_uf" value={formData.uf} onChange={e => setFormData({ ...formData, uf: e.target.value, city: '' })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none">
                                         <option value="">Selecione...</option>
                                         {['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'].map(uf => <option key={uf} value={uf}>{uf}</option>)}
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Cidade</label>
-                                    <select aria-label="Cidade" disabled={!formData.uf || isLoadingCities} value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none disabled:opacity-50">
+                                    <label htmlFor="school_city" className="text-xs font-bold text-slate-400 uppercase mb-1 block">Cidade</label>
+                                    <select title="Cidade" aria-label="Cidade" id="school_city" disabled={!formData.uf || isLoadingCities} value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none disabled:opacity-50">
                                         <option value="">{isLoadingCities ? 'Carregando...' : 'Selecione...'}</option>
                                         {cities.map(city => <option key={city} value={city}>{city}</option>)}
                                     </select>

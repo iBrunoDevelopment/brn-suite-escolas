@@ -84,10 +84,9 @@ const FilterBar: React.FC<FilterBarProps> = ({
                 <div className="bg-[#111a22] border border-surface-border rounded-2xl p-4 md:p-6 grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-6 items-end animate-in fade-in slide-in-from-top-4">
                     <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Unidade Escolar</label>
-                        <select
+                        <select title="Filtrar por Unidade Escolar" aria-label="Filtrar por Unidade Escolar"
                             value={filters.school}
                             onChange={e => setFilters({ ...filters, school: e.target.value })}
-                            aria-label="Filtrar por Unidade Escolar"
                             className="w-full bg-[#1c2936] text-white text-xs h-10 px-3 rounded-xl border border-white/10 outline-none focus:border-primary"
                         >
                             <option value="">Todas as Escolas</option>
@@ -96,10 +95,9 @@ const FilterBar: React.FC<FilterBarProps> = ({
                     </div>
                     <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Programa / Recurso</label>
-                        <select
+                        <select title="Filtrar por Programa" aria-label="Filtrar por Programa"
                             value={filters.program}
                             onChange={e => setFilters({ ...filters, program: e.target.value, rubric: '' })}
-                            aria-label="Filtrar por Programa"
                             className="w-full bg-[#1c2936] text-white text-xs h-10 px-3 rounded-xl border border-white/10 outline-none focus:border-primary"
                         >
                             <option value="">Todos</option>
@@ -108,10 +106,9 @@ const FilterBar: React.FC<FilterBarProps> = ({
                     </div>
                     <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Rubrica</label>
-                        <select
+                        <select title="Filtrar por Rubrica" aria-label="Filtrar por Rubrica"
                             value={filters.rubric}
                             onChange={e => setFilters({ ...filters, rubric: e.target.value })}
-                            aria-label="Filtrar por Rubrica"
                             className="w-full bg-[#1c2936] text-white text-xs h-10 px-3 rounded-xl border border-white/10 outline-none focus:border-primary"
                         >
                             <option value="">Todas</option>
@@ -123,7 +120,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                     </div>
                     <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Período</label>
-                        <select
+                        <select title="Selecionar Período Pré-definido" aria-label="Selecionar Período Pré-definido"
                             onChange={(e) => {
                                 const val = e.target.value;
                                 if (!val) return;
@@ -136,7 +133,6 @@ const FilterBar: React.FC<FilterBarProps> = ({
                                     setFilters({ ...filters, startDate: `${year}-01-01`, endDate: `${year}-12-31` });
                                 }
                             }}
-                            aria-label="Selecionar Período Pré-definido"
                             className="bg-[#1c2936] text-white text-xs h-10 px-3 rounded-xl border border-white/10 outline-none focus:border-primary"
                         >
                             <option value="">Personalizado...</option>
@@ -153,7 +149,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                     </div>
                     <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Natureza</label>
-                        <select aria-label="Filtrar por Natureza" value={filters.nature} onChange={e => setFilters({ ...filters, nature: e.target.value })} className="w-full bg-[#1c2936] text-white text-xs h-10 px-3 rounded-xl border border-white/10 outline-none focus:border-primary">
+                        <select title="Filtrar por Natureza" aria-label="Filtrar por Natureza" value={filters.nature} onChange={e => setFilters({ ...filters, nature: e.target.value })} className="w-full bg-[#1c2936] text-white text-xs h-10 px-3 rounded-xl border border-white/10 outline-none focus:border-primary">
                             <option value="">Todas</option>
                             <option value="Custeio">Custeio</option>
                             <option value="Capital">Capital</option>
@@ -161,7 +157,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                     </div>
                     <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Fornecedor</label>
-                        <select aria-label="Filtrar por Fornecedor" value={filters.supplier} onChange={e => setFilters({ ...filters, supplier: e.target.value })} className="w-full bg-[#1c2936] text-white text-xs h-10 px-3 rounded-xl border border-white/10 outline-none focus:border-primary">
+                        <select title="Filtrar por Fornecedor" aria-label="Filtrar por Fornecedor" value={filters.supplier} onChange={e => setFilters({ ...filters, supplier: e.target.value })} className="w-full bg-[#1c2936] text-white text-xs h-10 px-3 rounded-xl border border-white/10 outline-none focus:border-primary">
                             <option value="">Todos</option>
                             {auxData.suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>

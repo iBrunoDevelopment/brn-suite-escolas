@@ -89,9 +89,10 @@ const ReportOptionsModal: React.FC<ReportOptionsModalProps> = ({ isOpen, onClose
                                         <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Escola</label>
                                         <div className="relative">
                                             <select
+                                                title="Escolher Escola no Relatório"
+                                                aria-label="Escolher Escola no Relatório"
                                                 value={options.filterSchool}
                                                 onChange={(e) => setOptions({ ...options, filterSchool: e.target.value })}
-                                                aria-label="Escolher Escola no Relatório"
                                                 className="w-full bg-[#0f172a] text-white text-[10px] h-10 px-3 rounded-xl border border-white/5 outline-none focus:border-primary/30 appearance-none pr-8 cursor-pointer"
                                             >
                                                 <option value="">Todas as Unidades</option>
@@ -104,9 +105,10 @@ const ReportOptionsModal: React.FC<ReportOptionsModalProps> = ({ isOpen, onClose
                                         <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Programa</label>
                                         <div className="relative">
                                             <select
+                                                title="Escolher Programa no Relatório"
+                                                aria-label="Escolher Programa no Relatório"
                                                 value={options.filterProgram}
                                                 onChange={(e) => setOptions({ ...options, filterProgram: e.target.value })}
-                                                aria-label="Escolher Programa no Relatório"
                                                 className="w-full bg-[#0f172a] text-white text-[10px] h-10 px-3 rounded-xl border border-white/5 outline-none focus:border-primary/30 appearance-none pr-8 cursor-pointer"
                                             >
                                                 <option value="">Resumo Conexo</option>
@@ -185,9 +187,10 @@ const ReportOptionsModal: React.FC<ReportOptionsModalProps> = ({ isOpen, onClose
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Exibição de Dados</label>
                             <div className="relative">
                                 <select
+                                    title="Critério de agrupamento de dados"
+                                    aria-label="Critério de agrupamento de dados"
                                     value={options.groupReport}
                                     onChange={(e) => setOptions({ ...options, groupReport: e.target.value as any })}
-                                    aria-label="Critério de agrupamento de dados"
                                     className="w-full bg-[#0f172a] text-white text-xs h-12 px-4 rounded-2xl border border-white/5 outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all cursor-pointer appearance-none pr-10"
                                 >
                                     <option value="school" className="bg-[#1c2936]">Agrupar por Unidade Escolar</option>

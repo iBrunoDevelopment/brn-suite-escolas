@@ -187,6 +187,8 @@ const SuppliersSection: React.FC<SuppliersSectionProps> = ({
                         <div className="flex flex-col gap-1">
                             <label htmlFor="sup_uf" className="text-xs text-slate-400">UF</label>
                             <select
+                                title="Selecione o Estado"
+                                aria-label="Selecione o Estado"
                                 id="sup_uf"
                                 value={newSupplier.uf}
                                 onChange={e => setNewSupplier({ ...newSupplier, uf: e.target.value })}
@@ -201,6 +203,8 @@ const SuppliersSection: React.FC<SuppliersSectionProps> = ({
                         <div className="flex flex-col gap-1 md:col-span-2">
                             <label htmlFor="sup_city" className="text-xs text-slate-400">Cidade {loadingCities && <span className="text-[10px] text-primary animate-pulse font-bold">(Carregando...)</span>}</label>
                             <select
+                                title="Selecione a Cidade"
+                                aria-label="Selecione a Cidade"
                                 id="sup_city"
                                 value={newSupplier.city}
                                 onChange={e => setNewSupplier({ ...newSupplier, city: e.target.value })}

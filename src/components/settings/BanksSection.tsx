@@ -44,14 +44,14 @@ const BanksSection: React.FC<BanksSectionProps> = ({
                     </div>
                     <div className="flex flex-col gap-1">
                         <label htmlFor="bank_prog" className="text-xs text-slate-400">Vincular a Programa / Conta</label>
-                        <select id="bank_prog" value={newBank.program_id} onChange={e => setNewBank({ ...newBank, program_id: e.target.value })} className="bg-surface-dark border border-surface-border rounded px-3 py-2 text-sm text-white focus:border-primary outline-none">
+                        <select title="Vincular a Programa / Conta" aria-label="Vincular a Programa / Conta" id="bank_prog" value={newBank.program_id} onChange={e => setNewBank({ ...newBank, program_id: e.target.value })} className="bg-surface-dark border border-surface-border rounded px-3 py-2 text-sm text-white focus:border-primary outline-none">
                             <option value="">Selecione...</option>
                             {programs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
                     </div>
                     <div className="flex flex-col gap-1">
                         <label htmlFor="bank_sc" className="text-xs text-slate-400">Escola Responsável</label>
-                        <select id="bank_sc" value={newBank.school_id} onChange={e => setNewBank({ ...newBank, school_id: e.target.value })} className="bg-surface-dark border border-surface-border rounded px-3 py-2 text-sm text-white focus:border-primary outline-none">
+                        <select title="Selecione a Unidade Escolar" aria-label="Selecione a Unidade Escolar" id="bank_school" value={newBank.school_id} onChange={e => setNewBank({ ...newBank, school_id: e.target.value })} className="bg-[#1e293b] rounded-lg h-10 px-3 text-white border-none outline-none focus:ring-1 focus:ring-primary w-full shadow-inner">
                             <option value="">Selecione a Escola...</option>
                             {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
@@ -93,6 +93,7 @@ const BanksSection: React.FC<BanksSectionProps> = ({
                 </div>
                 <div className="w-full md:w-56">
                     <select
+                        title="Filtrar por Programa"
                         aria-label="Filtrar por Programa"
                         value={filterProgram}
                         onChange={e => setFilterProgram(e.target.value)}
@@ -104,6 +105,7 @@ const BanksSection: React.FC<BanksSectionProps> = ({
                 </div>
                 <div className="w-full md:w-56">
                     <select
+                        title="Filtrar por Escola"
                         aria-label="Filtrar por Escola"
                         value={filterSchool}
                         onChange={e => setFilterSchool(e.target.value)}

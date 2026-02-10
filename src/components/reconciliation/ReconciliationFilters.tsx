@@ -41,6 +41,8 @@ const ReconciliationFilters: React.FC<ReconciliationFiltersProps> = ({
                     </div>
                 ) : (
                     <select
+                        title="Selecione a Escola"
+                        aria-label="Selecione a Escola"
                         id="filter-school"
                         value={selectedSchoolId}
                         onChange={e => { setSelectedSchoolId(e.target.value); setSelectedBankAccountId(''); }}
@@ -56,6 +58,8 @@ const ReconciliationFilters: React.FC<ReconciliationFiltersProps> = ({
             <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
                 <label htmlFor="filter-bank" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Conta Bancária</label>
                 <select
+                    title="Selecione a Conta Bancária"
+                    aria-label="Selecione a Conta Bancária"
                     id="filter-bank"
                     value={selectedBankAccountId}
                     disabled={!selectedSchoolId}
@@ -75,6 +79,7 @@ const ReconciliationFilters: React.FC<ReconciliationFiltersProps> = ({
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Mês de Referência</label>
                 <div className="flex gap-2">
                     <select
+                        title="Selecionar Mês"
                         aria-label="Selecionar Mês"
                         value={filterMonth.split('-')[1] || ''}
                         onChange={e => {
@@ -90,6 +95,7 @@ const ReconciliationFilters: React.FC<ReconciliationFiltersProps> = ({
                         })}
                     </select>
                     <select
+                        title="Selecionar Ano"
                         aria-label="Selecionar Ano"
                         value={filterMonth.split('-')[0] || ''}
                         onChange={e => {

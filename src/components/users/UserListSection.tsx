@@ -41,11 +41,11 @@ const UserListSection: React.FC<UserListSectionProps> = ({
         <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white/50 dark:bg-slate-800/50 p-4 rounded-3xl border border-slate-200/50 dark:border-slate-700/50">
                 <input type="text" placeholder="Pesquisar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="input-field" aria-label="Pesquisar usuários" />
-                <select value={filterRole} onChange={e => setFilterRole(e.target.value)} className="input-field" aria-label="Filtrar por cargo">
+                <select title="Filtrar por cargo" value={filterRole} onChange={e => setFilterRole(e.target.value)} className="input-field" aria-label="Filtrar por cargo">
                     <option value="all">Todos os Cargos</option>
                     {Object.values(UserRole).map(role => <option key={role} value={role}>{role}</option>)}
                 </select>
-                <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input-field" aria-label="Filtrar por status">
+                <select title="Filtrar por status" value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input-field" aria-label="Filtrar por status">
                     <option value="all">Todos os Status</option>
                     <option value="active">Ativos</option>
                     <option value="inactive">Inativos</option>

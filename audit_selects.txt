@@ -1,0 +1,42 @@
+d:\PROJETOS\brn-suite-escolas\src\components\financial\FilterBar.tsx : <select                             value={filters.school}                             onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\financial\FilterBar.tsx : <select                             value={filters.program}                             onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\financial\FilterBar.tsx : <select                             value={filters.rubric}                             onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\financial\FilterBar.tsx : <select                             onChange={(e) =>
+d:\PROJETOS\brn-suite-escolas\src\components\reconciliation\QuickCreateModal.tsx : <select                             id="qc-program"                             value={quickForm.program_id}                             onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\reconciliation\QuickCreateModal.tsx : <select                             id="qc-rubric"                             value={quickForm.rubric_id}                             onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\reconciliation\QuickCreateModal.tsx : <select                             id="qc-nature"                             value={quickForm.nature}                             onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\reconciliation\QuickCreateModal.tsx : <select                             id="qc-supplier"                             value={quickForm.supplier_id}                             onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\reconciliation\ReconciliationFilters.tsx : <select                         id="filter-school"                         value={selectedSchoolId}                         onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\reconciliation\ReconciliationFilters.tsx : <select                     id="filter-bank"                     value={selectedBankAccountId}                     disabled={!selectedSchoolId}                     onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\reconciliation\ReconciliationFilters.tsx : <select                         aria-label="Selecionar Mês"                         value={filterMonth.split('-')[1] || ''}                         onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\reconciliation\ReconciliationFilters.tsx : <select                         aria-label="Selecionar Ano"                         value={filterMonth.split('-')[0] || ''}                         onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\reports\AccountabilityProcessModal.tsx : <select id="process_status" value={processStatus} onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\reports\ReportOptionsModal.tsx : <select                                                 value={options.filterSchool}                                                 onChange={(e) =>
+d:\PROJETOS\brn-suite-escolas\src\components\reports\ReportOptionsModal.tsx : <select                                                 value={options.filterProgram}                                                 onChange={(e) =>
+d:\PROJETOS\brn-suite-escolas\src\components\reports\ReportOptionsModal.tsx : <select                                     value={options.groupReport}                                     onChange={(e) =>
+d:\PROJETOS\brn-suite-escolas\src\components\settings\BanksSection.tsx : <select id="bank_prog" value={newBank.program_id} onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\settings\BanksSection.tsx : <select id="bank_sc" value={newBank.school_id} onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\settings\BanksSection.tsx : <select                         aria-label="Filtrar por Programa"                         value={filterProgram}                         onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\settings\BanksSection.tsx : <select                         aria-label="Filtrar por Escola"                         value={filterSchool}                         onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\settings\RubricsSection.tsx : <select                                 id="rubric_program"                                 value={newRubric.program_id}                                 onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\settings\RubricsSection.tsx : <select                                 id="rubric_school"                                 value={newRubric.school_id}                                 onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\settings\RubricsSection.tsx : <select                             aria-label="Filtrar por Programa"                             value={filterProgram}                             onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\settings\RubricsSection.tsx : <select                             aria-label="Filtrar por Escola"                             value={filterSchool}                             onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\settings\SuppliersSection.tsx : <select                                 id="sup_uf"                                 value={newSupplier.uf}                                 onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\settings\SuppliersSection.tsx : <select                                 id="sup_city"                                 value={newSupplier.city}                                 onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\users\AnnouncementsSection.tsx : <select id="ann-target" value={announcement.target} onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\users\UserFormModal.tsx : <select id="user-role" value={editingUser.role} onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\users\UserFormModal.tsx : <select id="user-school" value={editingUser.schoolId || ''} onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\users\UserFormModal.tsx : <select id="user-gee" value={editingUser.gee || ''} onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\users\UserListSection.tsx : <select value={filterRole} onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\components\users\UserListSection.tsx : <select value={filterStatus} onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\pages\DocumentSafe.tsx : <select                         value={filterCategory}                         aria-label="Filtrar por Categoria"                         onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\pages\DocumentSafe.tsx : <select                         value={filterSchool}                         aria-label="Filtrar por Escola"                         onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\pages\DocumentSafe.tsx : <select                         value={filterProcess}                         aria-label="Filtrar por Prestação de Contas"                         onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\pages\Reports.tsx : <select             id="filter_school"             value={filters.schoolId}             onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\pages\Reports.tsx : <select             id="filter_program"             value={filters.programId}             onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\pages\Reports.tsx : <select             id="filter_status"             value={filters.status}             onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\pages\Schools.tsx : <select                                         aria-label="Regional (GEE)"                                         value={formData.gee_id}                                         onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\pages\Schools.tsx : <select                                         aria-label="Plano Contratado"                                         value={formData.plan_id}                                         onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\pages\Schools.tsx : <select aria-label="UF" value={formData.uf} onChange={e =>
+d:\PROJETOS\brn-suite-escolas\src\pages\Schools.tsx : <select aria-label="Cidade" disabled={!formData.uf || isLoadingCities} value={formData.city} onChange={e =>

@@ -1,83 +1,49 @@
 
-import React from 'react';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  PieChart, Pie, Cell, Line, ComposedChart
-} from 'recharts';
+import React, { useState } from 'react';
 import { User, UserRole } from '../types';
 import { usePermissions, useAccessibleSchools } from '../hooks/usePermissions';
 import { useDashboard } from '../hooks/useDashboard';
-
-const COLORS = ['#137fec', '#0bda5b', '#fb923c', '#94a3b8'];
-
-const ChartEmptyState: React.FC<{ message: string, icon: string }> = ({ message, icon }) => (
-  <div className="flex flex-col items-center justify-center h-full w-full py-12 text-center animate-in fade-in zoom-in duration-700">
-    <div className="w-20 h-20 rounded-3xl bg-white/5 flex items-center justify-center mb-6 border border-white/10 shadow-2xl relative group">
-      <div className="absolute inset-0 bg-primary/10 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-      <span className="material-symbols-outlined text-5xl text-text-secondary opacity-40 relative z-10">{icon}</span>
-    </div>
-    <h4 className="text-white/80 font-bold text-sm mb-2">Sem dados no período</h4>
-    <p className="text-text-secondary text-xs max-w-[240px] leading-relaxed px-4">{message}</p>
-  </div>
-);
+import Button from '../components/common/Button';
+import DashboardStats from '../components/financial/DashboardStats';
+import DashboardCharts from '../components/financial/DashboardCharts';
+import DashboardAlerts from '../components/financial/DashboardAlerts';
 
 const Dashboard: React.FC<{ user: User }> = ({ user }) => {
-  // Use custom hook
   const {
-    // Data
     isLoading: loading,
     auxData: availableOptions,
     stats,
     flowData,
     pieData,
     alerts,
-
-    // State & Setters
     filters, setFilters,
     showBroadcast, setShowBroadcast,
     selectedAlert, setSelectedAlert,
     broadcastForm, setBroadcastForm,
-
-    // Actions
     refresh,
     sendBroadcast,
     isSendingBroadcast
   } = useDashboard(user);
 
-  // Permissions & Access
   const dashPerm = usePermissions(user, 'entries');
   const accessibleSchools = useAccessibleSchools(user, availableOptions.schools);
-
-  // Define handleSendBroadcast correctly for the button click
-  const handleSendBroadcast = () => {
-    sendBroadcast();
-  };
-
-  const [showFilters, setShowFilters] = React.useState(false);
-
-  const formatCurrency = (val: number) => {
-    return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  };
-
-  const [activeAlertTab, setActiveAlertTab] = React.useState<'Tudo' | 'Auditoria' | 'Gestão' | 'Financeiro' | 'Sistema'>('Tudo');
-  const [alertSchoolSearch, setAlertSchoolSearch] = React.useState('');
+  const [showFilters, setShowFilters] = useState(false);
 
   return (
     <div className="flex flex-col gap-6 w-full">
       {/* Filters Summary & Actions */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-4 bg-card-dark/50 p-3 rounded-xl border border-border-dark overflow-x-auto">
-          {/* Left side: Active Filters Summary or just toggle */}
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              variant={showFilters ? 'primary' : 'secondary'}
+              size="sm"
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${showFilters ? 'bg-primary text-white border-primary' : 'bg-white/5 text-white border-white/10 hover:bg-white/10'}`}
+              icon={showFilters ? 'close' : 'filter_list'}
             >
-              <span className="material-symbols-outlined text-[18px]">{showFilters ? 'close' : 'filter_list'}</span>
               {showFilters ? 'Fechar Filtros' : 'Filtros Avançados'}
-            </button>
+            </Button>
 
-            {/* Show active filter badges if collapsed */}
             {!showFilters && (
               <div className="hidden sm:flex items-center gap-2 overflow-x-auto scrollbar-hide">
                 {filters.schoolId && filters.schoolId !== (user.schoolId || '') && (
@@ -90,25 +56,21 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
                     {availableOptions.programs.find(p => p.id === filters.program)?.name}
                   </span>
                 )}
-                {filters.nature && (
-                  <span className="px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold whitespace-nowrap">
-                    {filters.nature}
-                  </span>
-                )}
               </div>
             )}
           </div>
 
-          {/* Right side: Actions */}
           <div className="flex items-center gap-2">
             {user.role === UserRole.ADMIN && (
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => setShowBroadcast(true)}
-                className="flex items-center gap-2 px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap"
+                icon="campaign"
+                className="text-[10px] font-black uppercase tracking-widest"
               >
-                <span className="material-symbols-outlined text-sm">campaign</span>
                 <span className="hidden md:inline">Comunicado</span>
-              </button>
+              </Button>
             )}
             {stats.pendencias > 0 && (
               <div className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 bg-orange-500/10 border border-orange-500/20 rounded-lg animate-pulse shrink-0">
@@ -116,18 +78,22 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
                 <span className="text-[10px] font-black text-orange-500 uppercase">{stats.pendencias} <span className="hidden sm:inline">Pendentes</span></span>
               </div>
             )}
-            <button onClick={() => refresh()} className="flex items-center justify-center gap-2 bg-primary hover:bg-blue-600 text-white w-10 h-10 md:w-auto md:h-auto md:px-5 md:py-2.5 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-blue-500/20 active:scale-95">
-              <span className={`material-symbols-outlined text-[18px] ${loading ? 'animate-spin' : ''}`}>refresh</span>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => refresh()}
+              isLoading={loading}
+              icon="refresh"
+              className="w-10 h-10 md:w-auto p-0 md:px-5"
+            >
               <span className="hidden md:inline">Atualizar</span>
-            </button>
+            </Button>
           </div>
         </div>
 
         {/* Collapsible Filters Area */}
         {showFilters && (
           <div className="bg-[#111a22] border border-surface-border rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end animate-in fade-in slide-in-from-top-4">
-
-            {/* School Filter */}
             <div className="flex flex-col gap-1.5 w-full">
               <label className="text-text-secondary text-xs font-semibold uppercase tracking-wider">Escola</label>
               {user.schoolId ? (
@@ -135,25 +101,31 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
                   {availableOptions.schools.find(s => s.id === user.schoolId)?.name || 'Minha Escola'}
                 </div>
               ) : (
-                <select
-                  title="Filtrar por Escola"
-                  value={filters.schoolId}
-                  onChange={(e) => setFilters(prev => ({ ...prev, schoolId: e.target.value }))}
-                  className="bg-background-dark text-white border border-border-dark rounded-lg px-3 py-2 text-xs focus:border-primary outline-none"
-                >
-                  <option value="">Todas as Escolas</option>
-                  {accessibleSchools.map(s => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
+                <>
+                  <label htmlFor="dash_school_filter" className="text-text-secondary text-xs font-semibold uppercase tracking-wider">Escola</label>
+                  <select
+                    id="dash_school_filter"
+                    title="Filtrar por Escola"
+                    aria-label="Filtrar por Escola"
+                    value={filters.schoolId}
+                    onChange={(e) => setFilters(prev => ({ ...prev, schoolId: e.target.value }))}
+                    className="bg-background-dark text-white border border-border-dark rounded-lg px-3 py-2 text-xs focus:border-primary outline-none"
+                  >
+                    <option value="">Todas as Escolas</option>
+                    {accessibleSchools.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </>
               )}
             </div>
 
-            {/* Account/Program Filter */}
             <div className="flex flex-col gap-1.5 w-full">
-              <label className="text-text-secondary text-xs font-semibold uppercase tracking-wider">Conta / Programa</label>
+              <label htmlFor="dash_program_filter" className="text-text-secondary text-xs font-semibold uppercase tracking-wider">Conta / Programa</label>
               <select
+                id="dash_program_filter"
                 title="Filtrar por Conta/Programa"
+                aria-label="Filtrar por Conta/Programa"
                 value={filters.program}
                 onChange={(e) => setFilters(prev => ({ ...prev, program: e.target.value, rubric: '' }))}
                 className="bg-background-dark text-white border border-border-dark rounded-lg px-3 py-2 text-xs focus:border-primary outline-none"
@@ -165,11 +137,12 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
               </select>
             </div>
 
-            {/* Rubric Filter */}
             <div className="flex flex-col gap-1.5 w-full">
-              <label className="text-text-secondary text-xs font-semibold uppercase tracking-wider">Rubrica</label>
+              <label htmlFor="dash_rubric_filter" className="text-text-secondary text-xs font-semibold uppercase tracking-wider">Rubrica</label>
               <select
+                id="dash_rubric_filter"
                 title="Filtrar por Rubrica"
+                aria-label="Filtrar por Rubrica"
                 value={filters.rubric}
                 onChange={(e) => setFilters(prev => ({ ...prev, rubric: e.target.value }))}
                 className="bg-background-dark text-white border border-border-dark rounded-lg px-3 py-2 text-xs focus:border-primary outline-none"
@@ -184,11 +157,12 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
               </select>
             </div>
 
-            {/* Natureza Filter */}
             <div className="flex flex-col gap-1.5 w-full">
-              <label className="text-text-secondary text-xs font-semibold uppercase tracking-wider">Natureza</label>
+              <label htmlFor="dash_nature_filter" className="text-text-secondary text-xs font-semibold uppercase tracking-wider">Natureza</label>
               <select
+                id="dash_nature_filter"
                 title="Filtrar por Natureza"
+                aria-label="Filtrar por Natureza"
                 value={filters.nature}
                 onChange={(e) => setFilters(prev => ({ ...prev, nature: e.target.value }))}
                 className="bg-background-dark text-white border border-border-dark rounded-lg px-3 py-2 text-xs focus:border-primary outline-none"
@@ -199,357 +173,30 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
               </select>
             </div>
 
-            {/* Supplier Filter */}
-            <div className="flex flex-col gap-1.5 w-full">
-              <label className="text-text-secondary text-xs font-semibold uppercase tracking-wider">Fornecedor</label>
-              <select
-                title="Filtrar por Fornecedor"
-                value={filters.supplier}
-                onChange={(e) => setFilters(prev => ({ ...prev, supplier: e.target.value }))}
-                className="bg-background-dark text-white border border-border-dark rounded-lg px-3 py-2 text-xs focus:border-primary outline-none"
-              >
-                <option value="">Todos</option>
-                {availableOptions.suppliers.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            </div>
-
             <div className="flex items-center gap-2">
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-full text-xs"
                 onClick={() => setFilters({ schoolId: user.schoolId || '', program: '', rubric: '', nature: '', supplier: '' })}
-                className="w-full bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-tighter h-9 rounded-lg hover:bg-white/10 transition-colors"
               >
                 Limpar Filtros
-              </button>
+              </Button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Stats Cards */}
-      {loading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-card-dark border border-white/5 rounded-2xl md:rounded-3xl p-4 md:p-6 h-28 md:h-32 animate-pulse flex flex-col gap-4">
-              <div className="h-2 w-24 bg-white/5 rounded"></div>
-              <div className="h-6 w-32 bg-white/5 rounded"></div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-          {[
-            {
-              label: 'Saldo Total',
-              value: formatCurrency(stats.totalDisponivel),
-              subtitle: `Sendo ${formatCurrency(stats.reprogramado)} reprogramado`,
-              icon: 'account_balance',
-              color: 'text-blue-400',
-              bg: 'bg-blue-500/5',
-              border: 'border-blue-500/20'
-            },
-            {
-              label: 'Novos Repasses',
-              value: formatCurrency(stats.repasses),
-              subtitle: 'Recebimentos no período',
-              icon: 'trending_up',
-              color: 'text-emerald-400',
-              bg: 'bg-emerald-500/5',
-              border: 'border-emerald-500/20'
-            },
-            {
-              label: 'Reserva & Rend.',
-              value: formatCurrency(stats.reprogramado + stats.rendimentos),
-              subtitle: 'Saldo anterior + Juros',
-              icon: 'savings',
-              color: 'text-orange-400',
-              bg: 'bg-orange-500/5',
-              border: 'border-orange-500/20'
-            },
-            {
-              label: 'Execução (Saídas)',
-              value: formatCurrency(stats.despesa),
-              subtitle: `Tarifas: ${formatCurrency(stats.tarifas)}${stats.impostosDevolucoes > 0 ? ` + Imp/Dev: ${formatCurrency(stats.impostosDevolucoes)}` : ''}`,
-              icon: 'trending_down',
-              color: 'text-red-400',
-              bg: 'bg-red-500/5',
-              border: 'border-red-500/20'
-            }
-          ].map((stat, i) => (
-            <div key={i} className={`bg-card-dark border ${stat.border} ${stat.bg} rounded-2xl md:rounded-3xl p-4 md:p-6 flex flex-col gap-1 relative overflow-hidden group transition-all hover:scale-[1.02] shadow-xl`}>
-              <div className={`absolute -right-2 -bottom-2 opacity-10 group-hover:opacity-20 transition-opacity`}>
-                <span className={`material-symbols-outlined text-6xl md:text-8xl ${stat.color}`}>{stat.icon}</span>
-              </div>
-              <p className="text-slate-500 text-[8px] md:text-[10px] font-black uppercase tracking-widest truncate">{stat.label}</p>
-              <div className="flex flex-col mt-1">
-                <h3 className="text-white text-base sm:text-lg md:text-3xl font-black tracking-tight">{stat.value}</h3>
-                <span className="text-[8px] md:text-[10px] text-slate-400 font-bold mt-1 uppercase line-clamp-1">
-                  {stat.subtitle}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <DashboardStats stats={stats} loading={loading} />
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-card-dark border border-border-dark rounded-xl p-6 flex flex-col min-h-[400px]">
-          <div className="mb-6">
-            <h3 className="text-white font-bold text-lg">Fluxo de Caixa</h3>
-            <p className="text-text-secondary text-sm">Comparativo Receita vs Despesa (Mensal)</p>
-          </div>
-          <div className="flex-1 w-full min-h-[300px]">
-            {flowData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={flowData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2d3f52" vertical={false} />
-                  <XAxis dataKey="name" stroke="#92adc9" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#92adc9" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `R$${value / 1000}k`} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#1c2936', borderColor: '#2d3f52', borderRadius: '8px', color: '#fff' }}
-                    itemStyle={{ color: '#fff' }}
-                  />
-                  <Legend iconType="circle" />
-                  <Bar dataKey="receita" fill="#10b981" radius={[4, 4, 0, 0]} name="Receita" />
-                  <Bar dataKey="despesa" fill="#ef4444" radius={[4, 4, 0, 0]} name="Despesa" />
-                  <Line type="monotone" dataKey="saldoAcumulado" stroke="#3b82f6" strokeWidth={3} name="Saldo em Conta" dot={{ r: 4 }} />
-                </ComposedChart>
-              </ResponsiveContainer>
-            ) : (
-              <ChartEmptyState
-                message="Não encontramos lançamentos financeiros com os filtros aplicados para gerar o comparativo mensal."
-                icon="bar_chart_4_bars"
-              />
-            )}
-          </div>
-        </div>
+      <DashboardCharts flowData={flowData} pieData={pieData} />
 
-        <div className="bg-card-dark border border-border-dark rounded-xl p-6 flex flex-col min-h-[400px]">
-          <div className="mb-6">
-            <h3 className="text-white font-bold text-lg">Resumo</h3>
-            <p className="text-text-secondary text-sm">Distribuição Estimada</p>
-          </div>
-          <div className="flex-1 w-full flex items-center justify-center min-h-[300px]">
-            {pieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {pieData.map((_entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#1c2936', border: 'none', borderRadius: '8px' }}
-                    itemStyle={{ color: '#fff' }}
-                  />
-                  <Legend verticalAlign="bottom" height={36} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <ChartEmptyState
-                message="A distribuição por natureza de despesa será exibida assim que houverem pagamentos registrados."
-                icon="pie_chart"
-              />
-            )}
-          </div>
-        </div>
-      </div>
+      <DashboardAlerts
+        alerts={alerts}
+        selectedAlert={selectedAlert}
+        setSelectedAlert={setSelectedAlert}
+      />
 
-      {/* Alerts & Logs Area */}
-      <section className="bg-card-dark border border-border-dark rounded-xl flex flex-col overflow-hidden min-h-[300px]">
-        <div className="flex flex-col sm:flex-row border-b border-border-dark bg-[#111a22]">
-          <div className="px-6 py-4 flex items-center gap-2 border-r border-border-dark/50">
-            <span className="material-symbols-outlined text-primary text-[20px]">notification_important</span>
-            <span className="text-sm font-bold text-white uppercase tracking-widest whitespace-nowrap">Alertas do Sistema</span>
-          </div>
-
-          <div className="flex-1 flex overflow-x-auto scrollbar-hide border-r border-border-dark/50">
-            {(['Tudo', 'Auditoria', 'Gestão', 'Financeiro', 'Sistema'] as const).map(tab => {
-              const count = tab === 'Tudo' ? alerts.length : alerts.filter((a: any) => a.category === tab).length;
-              return (
-                <button
-                  key={tab}
-                  onClick={() => setActiveAlertTab(tab)}
-                  className={`px-6 py-4 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all border-b-2 whitespace-nowrap ${activeAlertTab === tab
-                    ? 'text-primary border-primary bg-primary/5'
-                    : 'text-slate-500 border-transparent hover:text-slate-300'
-                    }`}
-                >
-                  {tab}
-                  {count > 0 && (
-                    <span className={`px-1.5 py-0.5 rounded-full text-[9px] ${tab === 'Auditoria' || tab === 'Gestão' ? 'bg-red-500 text-white' : 'bg-slate-700 text-slate-300'
-                      }`}>
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="px-4 py-2 flex items-center gap-2 bg-white/[0.02]">
-            <span className="material-symbols-outlined text-slate-500 text-sm">search</span>
-            <input
-              type="text"
-              placeholder="BUSCAR ESCOLA..."
-              value={alertSchoolSearch}
-              onChange={e => setAlertSchoolSearch(e.target.value.toUpperCase())}
-              className="bg-transparent border-none outline-none text-[10px] font-black text-white placeholder:text-slate-600 w-32 md:w-48 tracking-widest"
-            />
-          </div>
-        </div>
-
-        <div className="p-6">
-          {alerts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-slate-500 opacity-60">
-              <span className="material-symbols-outlined text-5xl mb-4">check_circle</span>
-              <p className="font-bold uppercase tracking-widest text-[10px]">Tudo azul! Nenhum alerta pendente.</p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-8">
-              {(() => {
-                let filtered = activeAlertTab === 'Tudo' ? alerts : alerts.filter((a: any) => a.category === activeAlertTab);
-
-                if (alertSchoolSearch) {
-                  filtered = filtered.filter((a: any) =>
-                    (a.schoolName || '').toUpperCase().includes(alertSchoolSearch.toUpperCase())
-                  );
-                }
-
-                // Group by School
-                const groups: Record<string, any[]> = {};
-                filtered.forEach((a: any) => {
-                  const key = a.schoolName || 'Geral';
-                  if (!groups[key]) groups[key] = [];
-                  groups[key].push(a);
-                });
-
-                if (Object.keys(groups).length === 0) {
-                  return (
-                    <div className="flex flex-col items-center justify-center py-10 text-slate-500 animate-in fade-in">
-                      <span className="material-symbols-outlined text-3xl mb-2">search_off</span>
-                      <p className="text-[10px] font-black uppercase tracking-widest">Nenhuma escola encontrada com este alerta.</p>
-                    </div>
-                  );
-                }
-
-                return Object.entries(groups).map(([schoolName, schoolAlerts]) => (
-                  <div key={schoolName} className="flex flex-col gap-4 animate-in fade-in slide-in-from-left-4">
-                    <div className="flex items-center gap-3 px-2">
-                      <div className="w-1 h-4 bg-primary rounded-full" />
-                      <span className="text-xs font-black text-white uppercase tracking-widest">{schoolName}</span>
-                      <span className="text-[10px] text-slate-500 font-bold bg-white/5 px-2 py-0.5 rounded-full">{schoolAlerts.length}</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {schoolAlerts.map(alert => (
-                        <button
-                          key={alert.id}
-                          onClick={() => setSelectedAlert(alert)}
-                          className={`bg-card-dark border rounded-2xl p-5 flex flex-col gap-4 hover:bg-background-dark/30 transition-all shadow-lg text-left group animate-in fade-in zoom-in duration-300 h-full ${alert.severity === 'Crítico' ? 'border-red-500/20 hover:border-red-500/50' : 'border-orange-500/20 hover:border-orange-500/50'
-                            }`}
-                        >
-                          <div className="flex items-center justify-between gap-4">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${alert.severity === 'Crítico' ? 'bg-red-500/10 text-red-500' : 'bg-orange-500/10 text-orange-500'
-                              }`}>
-                              <span className="material-symbols-outlined">{alert.severity === 'Crítico' ? 'error' : 'warning'}</span>
-                            </div>
-                            <div className="flex flex-col items-end">
-                              <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${alert.severity === 'Crítico' ? 'text-red-400 bg-red-400/5 border-red-400/20' : 'text-orange-400 bg-orange-400/5 border-orange-400/20'
-                                }`}>
-                                {alert.severity}
-                              </span>
-                              <span className="text-[8px] text-slate-600 font-mono mt-1">
-                                {new Date(alert.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            </div>
-                          </div>
-                          <div>
-                            <h4 className="text-white font-bold text-sm leading-tight line-clamp-2 group-hover:text-primary transition-colors">{alert.title}</h4>
-                            <p className="text-slate-500 text-[11px] mt-2 leading-relaxed line-clamp-2">{alert.description}</p>
-                          </div>
-                          <div className="pt-2 border-t border-border-dark/30 flex items-center justify-end mt-auto opacity-0 group-hover:opacity-100 transition-opacity">
-                            <span className="text-[10px] text-primary font-black uppercase tracking-tighter flex items-center gap-1">
-                              Resolver
-                              <span className="material-symbols-outlined text-xs">chevron_right</span>
-                            </span>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ));
-              })()}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Alert Detail Modal */}
-      {selectedAlert && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-[#1e293b] border border-[#334155] w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-            <div className={`h-2 w-full ${selectedAlert.severity === 'Crítico' ? 'bg-red-500' : 'bg-orange-500'}`}></div>
-            <div className="p-8">
-              <div className="flex justify-between items-start mb-6">
-                <div className={`p-4 rounded-2xl ${selectedAlert.severity === 'Crítico' ? 'bg-red-500/10 text-red-500' : 'bg-orange-500/10 text-orange-500'}`}>
-                  <span className="material-symbols-outlined text-3xl">{selectedAlert.severity === 'Crítico' ? 'error' : 'warning'}</span>
-                </div>
-                <button onClick={() => setSelectedAlert(null)} className="p-2 hover:bg-white/5 rounded-full text-slate-500 hover:text-white transition-all">
-                  <span className="material-symbols-outlined">close</span>
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${selectedAlert.severity === 'Crítico' ? 'text-red-400 border-red-400/30' : 'text-orange-400 border-orange-400/30'
-                    }`}>
-                    Alerta {selectedAlert.severity}
-                  </span>
-                  <span className="text-slate-500 text-xs font-mono">{new Date(selectedAlert.timestamp).toLocaleString('pt-BR')}</span>
-                </div>
-
-                <h3 className="text-2xl font-black text-white leading-tight">
-                  {selectedAlert.title}
-                </h3>
-
-                <p className="text-slate-400 text-sm leading-relaxed bg-[#0f172a]/50 p-6 rounded-3xl border border-[#334155]/50 italic">
-                  "{selectedAlert.description}"
-                </p>
-
-                <div className="pt-6 flex flex-col gap-3">
-                  <button
-                    onClick={() => {
-                      setSelectedAlert(null);
-                      window.dispatchEvent(new CustomEvent('changePage', { detail: 'notifications' }));
-                    }}
-                    className="w-full bg-primary hover:bg-blue-600 text-white font-bold py-4 rounded-2xl transition-all shadow-xl shadow-blue-500/20 flex items-center justify-center gap-3"
-                  >
-                    <span className="material-symbols-outlined">notifications</span>
-                    Ir para Central de Notificações
-                  </button>
-                  <button
-                    onClick={() => setSelectedAlert(null)}
-                    className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-4 rounded-2xl transition-all"
-                  >
-                    Fechar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
       {/* Broadcast Modal */}
       {showBroadcast && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
@@ -564,9 +211,11 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
 
             <div className="p-8 flex flex-col gap-6">
               <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Público Alvo</label>
+                <label htmlFor="broadcast_target" className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Público Alvo</label>
                 <select
+                  id="broadcast_target"
                   title="Selecionar público alvo do comunicado"
+                  aria-label="Selecionar público alvo do comunicado"
                   value={broadcastForm.targetRole}
                   onChange={e => setBroadcastForm({ ...broadcastForm, targetRole: e.target.value })}
                   className="bg-background-dark text-white border border-border-dark rounded-xl px-4 py-3 text-sm focus:border-primary outline-none"
@@ -598,19 +247,19 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
                 />
               </div>
 
-              <button
-                onClick={handleSendBroadcast}
-                disabled={isSendingBroadcast}
-                className="w-full bg-primary hover:bg-primary-hover text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-50"
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={() => sendBroadcast()}
+                isLoading={isSendingBroadcast}
+                icon="send"
               >
-                {isSendingBroadcast ? <span className="material-symbols-outlined animate-spin">sync</span> : <span className="material-symbols-outlined text-sm">send</span>}
                 Disparar Mensagem Agora
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 };

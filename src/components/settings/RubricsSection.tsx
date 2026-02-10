@@ -53,6 +53,8 @@ const RubricsSection: React.FC<RubricsSectionProps> = ({
                         <div className="flex flex-col gap-1">
                             <label htmlFor="rubric_program" className="text-xs text-slate-400 font-bold uppercase">Conta / Programa</label>
                             <select
+                                title="Selecione a Conta / Programa"
+                                aria-label="Selecione a Conta / Programa"
                                 id="rubric_program"
                                 value={newRubric.program_id}
                                 onChange={e => setNewRubric({ ...newRubric, program_id: e.target.value })}
@@ -65,6 +67,8 @@ const RubricsSection: React.FC<RubricsSectionProps> = ({
                         <div className="flex flex-col gap-1">
                             <label htmlFor="rubric_school" className="text-xs text-slate-400 font-bold uppercase">Vincular a Escola (Opcional)</label>
                             <select
+                                title="Selecione a Escola"
+                                aria-label="Selecione a Escola"
                                 id="rubric_school"
                                 value={newRubric.school_id}
                                 onChange={e => setNewRubric({ ...newRubric, school_id: e.target.value })}
@@ -117,6 +121,7 @@ const RubricsSection: React.FC<RubricsSectionProps> = ({
                     </div>
                     <div className="w-full md:w-56">
                         <select
+                            title="Filtrar por Programa"
                             aria-label="Filtrar por Programa"
                             value={filterProgram}
                             onChange={e => setFilterProgram(e.target.value)}
@@ -128,6 +133,7 @@ const RubricsSection: React.FC<RubricsSectionProps> = ({
                     </div>
                     <div className="w-full md:w-56">
                         <select
+                            title="Filtrar por Escola"
                             aria-label="Filtrar por Escola"
                             value={filterSchool}
                             onChange={e => setFilterSchool(e.target.value)}

@@ -128,6 +128,8 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
         <div className="col-span-2 lg:col-span-1">
           <label htmlFor="filter_school" className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-widest">Escola</label>
           <select
+            title="Selecione a Escola"
+            aria-label="Selecione a Escola"
             id="filter_school"
             value={filters.schoolId}
             onChange={e => setFilters({ ...filters, schoolId: e.target.value })}
@@ -140,6 +142,8 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
         <div className="col-span-1">
           <label htmlFor="filter_program" className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-widest">Programa</label>
           <select
+            title="Selecione o Programa"
+            aria-label="Selecione o Programa"
             id="filter_program"
             value={filters.programId}
             onChange={e => setFilters({ ...filters, programId: e.target.value })}
@@ -152,6 +156,8 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
         <div className="col-span-1">
           <label htmlFor="filter_status" className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-widest">Status</label>
           <select
+            title="Selecione o Status"
+            aria-label="Selecione o Status"
             id="filter_status"
             value={filters.status}
             onChange={e => setFilters({ ...filters, status: e.target.value })}
