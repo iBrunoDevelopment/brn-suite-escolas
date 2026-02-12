@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { User, StatementUpload } from '../types';
+import { User, StatementUpload, TransactionStatus } from '../types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '../context/ToastContext';
 
@@ -12,7 +12,7 @@ export interface BankTransaction {
     type: 'C' | 'D'; // Credit or Debit
     fitid: string;  // Bank unique transaction ID
     matched_entry_id?: string;
-    status: 'pending' | 'matched' | 'new';
+    status: 'pending' | 'matched' | 'new' | 'reconciled';
     extract_type: 'Conta Corrente' | 'Conta Investimento';
 }
 
@@ -34,13 +34,14 @@ export const useBankReconciliation = (user: User) => {
     const [showHelp, setShowHelp] = useState(false);
     const [showReport, setShowReport] = useState(false);
     const [showCapaModal, setShowCapaModal] = useState(false);
+    const [showHistory, setShowHistory] = useState(false);
 
     const [quickCreateBT, setQuickCreateBT] = useState<BankTransaction | null>(null);
     const [manualMatchBT, setManualMatchBT] = useState<BankTransaction | null>(null);
     const [pendingFile, setPendingFile] = useState<File | null>(null);
     const [manualSearch, setManualSearch] = useState('');
     const [capaForm, setCapaForm] = useState({ revenue: 0, taxes: 0, balance: 0 });
-    const [quickForm, setQuickForm] = useState({ program_id: '', rubric_id: '', supplier_id: '', description: '', nature: 'Custeio' });
+    const [quickForm, setQuickForm] = useState({ program_id: '', rubric_id: '', supplier_id: '', description: '', nature: 'Custeio', category: 'Compras e Serviços' });
 
     // Queries
     const { data: auxData = {
@@ -72,17 +73,40 @@ export const useBankReconciliation = (user: User) => {
 
     const { schools, bankAccounts, programs, rubrics, suppliers } = auxData;
 
+    // Auto-select bank account if only one exists for the school
+    useEffect(() => {
+        if (selectedSchoolId && !selectedBankAccountId && bankAccounts.length > 0) {
+            const relevantAccounts = bankAccounts.filter((acc: any) => acc.school_id === selectedSchoolId);
+            if (relevantAccounts.length === 1) {
+                setSelectedBankAccountId(relevantAccounts[0].id);
+            }
+        }
+    }, [selectedSchoolId, bankAccounts, selectedBankAccountId]);
+
     const { data: systemEntries = [], isLoading: isLoadingSystem, refetch: fetchSystemEntries } = useQuery({
         queryKey: ['system_entries', selectedSchoolId, selectedBankAccountId],
         queryFn: async () => {
             if (!selectedSchoolId) return [];
+
+            // Fetch entries that:
+            // 1. Are NOT reconciled OR were reconciled via bank statement (have bank_transaction_ref)
+            // 2. Belong to the selected school
+            // 3. Either have NO bank account assigned OR match the selected bank account
+            // We fetch a larger set to ensure we can match even if the user just created the entry.
             let query = supabase.from('financial_entries')
                 .select('*')
-                .eq('is_reconciled', false)
-                .eq('school_id', selectedSchoolId);
+                .eq('school_id', selectedSchoolId)
+                .order('date', { ascending: false })
+                .limit(300);
 
             if (selectedBankAccountId) {
-                query = query.eq('bank_account_id', selectedBankAccountId);
+                // Return entries that:
+                // (is_reconciled = false OR bank_transaction_ref IS NOT NULL)
+                // AND (bank_account_id = selected OR bank_account_id IS NULL)
+                query = query.or(`is_reconciled.eq.false,bank_transaction_ref.not.is.null`);
+                query = query.or(`bank_account_id.eq.${selectedBankAccountId},bank_account_id.is.null`);
+            } else {
+                query = query.eq('is_reconciled', false);
             }
 
             const { data, error } = await query;
@@ -91,6 +115,18 @@ export const useBankReconciliation = (user: User) => {
         },
         enabled: !!selectedSchoolId
     });
+
+    // Reactive Matching: Whenever system entries or transactions change, re-run matching logic.
+    // This ensures that Quick Create results are reflected immediately.
+    useEffect(() => {
+        if (transactions.length > 0 && !isLoadingSystem) {
+            const matched = autoMatch(transactions, systemEntries);
+            const hasChanges = JSON.stringify(matched) !== JSON.stringify(transactions);
+            if (hasChanges) {
+                setTransactions(matched);
+            }
+        }
+    }, [systemEntries, isLoadingSystem, transactions.length]); // Include length to trigger on upload
 
     // Mutations
     const reconcileMutation = useMutation({
@@ -101,7 +137,8 @@ export const useBankReconciliation = (user: User) => {
                     is_reconciled: true,
                     reconciled_at: new Date().toISOString(),
                     bank_transaction_ref: bt.fitid,
-                    status: 'Pago'
+                    bank_account_id: selectedBankAccountId, // Ensure account is linked
+                    status: TransactionStatus.CONCILIADO
                 })
                 .eq('id', entryId);
 
@@ -124,7 +161,8 @@ export const useBankReconciliation = (user: User) => {
                         is_reconciled: true,
                         reconciled_at: new Date().toISOString(),
                         bank_transaction_ref: bt.fitid,
-                        status: 'Pago'
+                        bank_account_id: selectedBankAccountId, // Ensure account is linked
+                        status: TransactionStatus.CONCILIADO
                     })
                     .eq('id', bt.matched_entry_id)
             );
@@ -150,10 +188,11 @@ export const useBankReconciliation = (user: User) => {
                 value: bt.value,
                 type: bt.type === 'C' ? 'Entrada' : 'Saída',
                 nature: form.nature,
-                program_id: form.program_id,
-                rubric_id: form.rubric_id,
+                program_id: form.program_id || null,
+                rubric_id: form.rubric_id || null,
                 supplier_id: form.supplier_id || null,
-                status: 'Pago',
+                category: form.category || 'Compras e Serviços',
+                status: TransactionStatus.CONCILIADO,
                 is_reconciled: true,
                 reconciled_at: new Date().toISOString(),
                 bank_transaction_ref: bt.fitid
@@ -174,16 +213,26 @@ export const useBankReconciliation = (user: User) => {
         }) => {
             const fileExt = file.name.split('.').pop();
             const fileName = `${schoolId}/${year}/${month}/${accountType.replace(' ', '_')}_${isPdf ? 'DOC' : 'DATA'}_${Date.now()}.${fileExt}`;
-            const filePath = `statements/${fileName}`;
+            const filePath = fileName;
 
-            // 1. Upload to Storage
+            // 1. Upload to Storage (Using the 'statements' bucket as per db_schema)
             const { error: uploadError } = await supabase.storage.from('statements').upload(filePath, file);
             if (uploadError) throw uploadError;
 
             const { data: { publicUrl } } = supabase.storage.from('statements').getPublicUrl(filePath);
 
-            // 2. Prepare payload for upsert
+            // 2. Fetch existing to merge (avoid losing PDF if uploading data OR vice versa)
+            const { data: existing } = await supabase
+                .from('bank_statement_uploads')
+                .select('*')
+                .eq('bank_account_id', bankAccountId)
+                .eq('month', month)
+                .eq('year', year)
+                .eq('account_type', accountType)
+                .maybeSingle();
+
             const payload: any = {
+                ...(existing || {}),
                 school_id: schoolId,
                 bank_account_id: bankAccountId,
                 month,
@@ -212,42 +261,92 @@ export const useBankReconciliation = (user: User) => {
             });
 
             if (dbError) throw dbError;
+
+            return { publicUrl };
         }
     });
 
     // Parsing Logic
-    const parseOFX = (text: string, uploadTypeShort: 'Conta Corrente' | 'Conta Investimento') => {
+    const parseOFX = (text: string, fileName: string, uploadTypeShort: 'Conta Corrente' | 'Conta Investimento') => {
         const newTransactions: BankTransaction[] = [];
-        const stmtRows = text.split('<STMTTRN>');
-        stmtRows.shift();
+        // Split by <STMTTRN> (case insensitive)
+        const blocks = text.split(/<STMTTRN>/i);
+        blocks.shift(); // Remove content before first <STMTTRN>
 
-        stmtRows.forEach((row, index) => {
-            const trntype = row.match(/<TRNTYPE>(.*)/)?.[1]?.trim();
-            const dtposted = row.match(/<DTPOSTED>(.*)/)?.[1]?.trim();
-            const trnamt = row.match(/<TRNAMT>(.*)/)?.[1]?.trim();
-            const fitid = row.match(/<FITID>(.*)/)?.[1]?.trim() || `idx-${index}`;
-            const memo = row.match(/<MEMO>(.*)/)?.[1]?.trim() || row.match(/<NAME>(.*)/)?.[1]?.trim() || 'Sem descrição';
+        blocks.forEach((block, index) => {
+            // Helper to get value of a tag
+            const getTagValue = (tag: string) => {
+                const regex = new RegExp(`<${tag}>([^<\\r\\n]*)`, 'i');
+                const match = block.match(regex);
+                return match ? match[1].trim() : null;
+            };
+
+            const dtposted = getTagValue('DTPOSTED');
+            const trnamt = getTagValue('TRNAMT');
+            const rawFitid = getTagValue('FITID') || `fit-${index}`;
+            const memo = getTagValue('MEMO') || getTagValue('NAME') || 'Sem descrição';
 
             if (dtposted && trnamt) {
+                // Parse date (YYYYMMDD...) -> Convert to YYYY-MM-DD for system compatibility
                 const year = dtposted.substring(0, 4);
                 const month = dtposted.substring(4, 6);
                 const day = dtposted.substring(6, 8);
                 const date = `${year}-${month}-${day}`;
-                const value = parseFloat(trnamt.replace(',', '.'));
+
+                // Parse amount (support both . and , as decimal separator)
+                const amountValue = parseFloat(trnamt.replace(',', '.'));
+
+                // Skip invalid or zero-value transactions
+                if (isNaN(amountValue) || amountValue === 0) return;
+
+                // Create a truly unique FITID for internal tracking to handle cases where 
+                // a transaction and its fee share the same bank document ID/FITID.
+                const uniqueFitid = `${rawFitid}_${Math.abs(amountValue)}_${index}`;
 
                 newTransactions.push({
-                    id: Math.random().toString(36).substr(2, 9),
+                    id: Math.random().toString(36).substring(2, 11),
                     date,
-                    description: memo,
-                    value: Math.abs(value),
-                    type: value > 0 ? 'C' : 'D',
-                    fitid: uploadTypeShort === 'Conta Investimento' ? `INV-${fitid}` : fitid,
-                    status: 'pending',
+                    description: memo.toUpperCase(),
+                    value: Math.abs(amountValue),
+                    type: amountValue > 0 ? 'C' : 'D',
+                    fitid: uniqueFitid, // Using the unique version
+                    status: 'new',
                     extract_type: uploadTypeShort
                 });
             }
         });
-        return newTransactions;
+
+        // Filter out internal transfers (Automated investments/redemptions)
+        // BUT ALWAYS KEEP anything that might be a bank fee/charge
+        return newTransactions.filter(t => {
+            const desc = t.description.toUpperCase();
+
+            // Comprehensive fee/tax detection - we don't want to hide anything that costs money
+            const isFee =
+                desc.includes('TAR ') ||
+                desc.includes('TARIFA') ||
+                desc.includes('TAR.') ||
+                desc.includes('PIX') ||
+                desc.includes('IMPOSTO') ||
+                desc.includes('IOF') ||
+                desc.includes('CPMF') ||
+                desc.includes('JUROS') ||
+                desc.includes('COMISS') ||
+                desc.includes('MANUTEN');
+
+            if (isFee) return true;
+
+            // Identify internal transfers to filter out from the noise
+            const isInternal =
+                desc.includes('RESGATE AUTOMAT') ||
+                desc.includes('APLICACAO AUTOMAT') ||
+                desc.includes('APLIC AUTOMAT') ||
+                desc.includes('RESG AUTOMAT') ||
+                desc.includes('SALDO DIA') ||
+                desc.includes('SDO CTA/APL');
+
+            return !isInternal;
+        });
     };
 
     const parseCSV = (text: string, fileName: string, uploadTypeShort: 'Conta Corrente' | 'Conta Investimento') => {
@@ -293,12 +392,25 @@ export const useBankReconciliation = (user: User) => {
 
     const autoMatch = (parsedDocs: BankTransaction[], currentSystemEntries: any[]) => {
         return parsedDocs.map(bt => {
+            // Priority 1: Exact FITID Match (Already processed)
+            const exactMatch = currentSystemEntries.find(se => se.bank_transaction_ref === bt.fitid);
+            if (exactMatch) {
+                return {
+                    ...bt,
+                    matched_entry_id: exactMatch.id,
+                    status: exactMatch.is_reconciled ? 'reconciled' : 'matched' as any
+                };
+            }
+
+            // Priority 2: Date + Value Match
             const match = currentSystemEntries.find(se => {
+                if (se.is_reconciled) return false; // Don't auto-match already reconciled if no FITID
                 const dateDiff = Math.abs(new Date(se.date).getTime() - new Date(bt.date).getTime()) / (1000 * 60 * 60 * 24);
                 const valueMatch = Math.abs(Number(se.value)) === bt.value;
                 const typeMatch = (bt.type === 'C' && se.type === 'Entrada') || (bt.type === 'D' && se.type === 'Saída');
                 return dateDiff <= 3 && valueMatch && typeMatch;
             });
+
             return match ? { ...bt, matched_entry_id: match.id, status: 'matched' as const } : bt;
         });
     };
@@ -342,7 +454,7 @@ export const useBankReconciliation = (user: User) => {
             // 2. Parse for conciliation (for data files)
             const text = await file.text();
             let newBatch: BankTransaction[] = [];
-            if (lowName.endsWith('.ofx') || lowName.endsWith('.ofc')) newBatch = parseOFX(text, uploadType);
+            if (lowName.endsWith('.ofx') || lowName.endsWith('.ofc')) newBatch = parseOFX(text, file.name, uploadType);
             else if (lowName.endsWith('.csv')) newBatch = parseCSV(text, file.name, uploadType);
             else return addToast('Para processar dados, use os formatos .OFX, .OFC ou .CSV.', 'error');
 
@@ -365,15 +477,63 @@ export const useBankReconciliation = (user: User) => {
 
         try {
             const [year, month] = filterMonth.split('-').map(Number);
-            await recordUploadMutation.mutateAsync({
+
+            // 1. Record the upload and get the public URL
+            const { publicUrl } = await recordUploadMutation.mutateAsync({
                 file: pendingFile,
                 schoolId: selectedSchoolId,
                 bankAccountId: selectedBankAccountId,
                 month,
                 year,
                 accountType: uploadType,
-                capaData: capaForm
+                capaData: capaForm,
+                isPdf: true
             });
+
+            // 2. Automate Net Income Entry
+            const netIncome = (capaForm.revenue || 0) - (capaForm.taxes || 0);
+
+            if (netIncome > 0) {
+                // Determine the last day of the month for the entry
+                const lastDay = new Date(year, month, 0).getDate();
+                const entryDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+                // Get program from bank account for fallback
+                const bankAcc = auxData.bankAccounts.find((a: any) => a.id === selectedBankAccountId);
+
+                // Seek a default rubric for "Rendimento" if possible
+                const rendimentoRubric = auxData.rubrics.find((r: any) =>
+                    r.name.toLowerCase().includes('rendimento') ||
+                    r.name.toLowerCase().includes('aplicação')
+                );
+
+                await supabase.from('financial_entries').insert({
+                    school_id: selectedSchoolId,
+                    bank_account_id: selectedBankAccountId,
+                    date: entryDate,
+                    description: `Rendimento Líquido Aplicação - ${new Date(year, month - 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}`,
+                    value: netIncome,
+                    type: 'Entrada',
+                    nature: 'Custeio',
+                    program_id: rendimentoRubric?.program_id || bankAcc?.program_id || null,
+                    rubric_id: rendimentoRubric?.id || null,
+                    payment_method_id: null, // Rendimento não tem tipo de pagamento
+                    category: 'Rendimento de Aplicação',
+                    status: TransactionStatus.CONCILIADO,
+                    is_reconciled: true,
+                    reconciled_at: new Date().toISOString(),
+                    attachments: [{
+                        id: Math.random().toString(),
+                        name: pendingFile.name,
+                        url: publicUrl,
+                        type: 'pdf',
+                        uploaded_at: new Date().toISOString()
+                    }]
+                });
+
+                addToast('Rendimento líquido lançado e conciliado!', 'success');
+                queryClient.invalidateQueries({ queryKey: ['system_entries'] });
+            }
 
             addToast('Extrato de Investimento vinculado com sucesso!', 'success');
             setShowCapaModal(false);
@@ -406,25 +566,28 @@ export const useBankReconciliation = (user: User) => {
     const handleQuickCreateStart = (bt: BankTransaction) => {
         const desc = bt.description.toUpperCase();
         let suggestedProgramId = '', suggestedRubricId = '', suggestedNature = 'Custeio';
-
         const findRubric = (term: string) => rubrics.find((r: any) => r.name.toUpperCase().includes(term));
 
+        let suggestedCategory = 'Compras e Serviços';
+
         if (bt.extract_type === 'Conta Investimento' || desc.includes('RENDIMENTO') || desc.includes('APLIC') || desc.includes('INVEST')) {
+            suggestedCategory = 'Rendimento de Aplicação';
             const r = findRubric('RENDIMENTO') || findRubric('APLICAÇÃO');
             if (r) {
                 suggestedRubricId = r.id;
                 suggestedProgramId = r.program_id;
                 if ((r as any).default_nature) suggestedNature = (r as any).default_nature;
             }
-        } else if (desc.includes('TARIFA') || desc.includes('CESTA') || desc.includes('MAN CC') || desc.includes('ENCARGO') || desc.includes('TAXA')) {
+        } else if (desc.includes('TARIFA') || desc.includes('CESTA') || desc.includes('MAN CC') || desc.includes('ENCARGO') || desc.includes('TAXA') || desc.includes('TAR PIX')) {
+            suggestedCategory = 'Tarifa Bancária';
             const r = findRubric('TARIFA') || findRubric('SERVIÇO') || findRubric('BANCO');
             if (r) {
                 suggestedRubricId = r.id;
                 suggestedProgramId = r.program_id;
                 if ((r as any).default_nature) suggestedNature = (r as any).default_nature;
             }
-        } else if (desc.includes('RESG') || desc.includes('DEVOL') || desc.includes('CRED OB')) {
-            // Let user decide for credits, but maybe suggest a general rubrics
+        } else if (desc.includes('REPASSE') || desc.includes('CRED OB') || desc.includes('DEPOSITO') || desc.includes('TED') || desc.includes('DOC') || desc.includes('CRED PIX')) {
+            if (bt.type === 'C') suggestedCategory = 'Repasse / Crédito';
         }
 
         setQuickCreateBT(bt);
@@ -432,6 +595,7 @@ export const useBankReconciliation = (user: User) => {
             program_id: suggestedProgramId,
             rubric_id: suggestedRubricId,
             supplier_id: '',
+            category: suggestedCategory,
             description: bt.description,
             nature: suggestedNature as any
         });
@@ -467,6 +631,7 @@ export const useBankReconciliation = (user: User) => {
         manualSearch, setManualSearch,
         quickForm, setQuickForm,
         capaForm, setCapaForm,
+        showHistory, setShowHistory,
         handleFileUpload,
         handleConfirmCapa,
         handleConfirmMatch,

@@ -100,7 +100,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
             if (editingBatchId) {
                 const { data: entries, error } = await supabase
                     .from('financial_entries')
-                    .select('*, schools(name), programs(name), suppliers(name), bank_accounts(name, agency)')
+                    .select('*, schools(name), programs(name), suppliers(name), bank_accounts(name, agency, account_number)')
                     .eq('batch_id', editingBatchId);
 
                 if (error) throw error;
@@ -131,11 +131,12 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                     })));
                     const total = entries.reduce((acc: number, e: any) => acc + Math.abs(e.value), 0);
                     setTotalValue(total.toString());
+                    fetchLinkedStatement(first.bank_account_id, first.date);
                 }
             } else if (editingId) {
                 const { data, error } = await supabase
                     .from('financial_entries')
-                    .select('*, schools(name), programs(name), suppliers(name), bank_accounts(name, agency)')
+                    .select('*, schools(name), programs(name), suppliers(name), bank_accounts(name, agency, account_number)')
                     .eq('id', editingId)
                     .single();
 
@@ -159,15 +160,22 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                     setAttachments(data.attachments || []);
                     setSingleRubricId(data.rubric_id || '');
                     setSingleNature(data.nature);
+                    fetchLinkedStatement(data.bank_account_id, data.date);
                 }
             }
             fetchLogs();
             fetchTechnicalProcess();
-            fetchLinkedStatement();
         } catch (error: any) {
             addToast(`Erro ao carregar dados: ${error.message}`, 'error');
         }
     };
+
+    // Re-fetch linked statement if account or date changes during editing
+    React.useEffect(() => {
+        if (isOpen && selectedBankAccountId && date) {
+            fetchLinkedStatement();
+        }
+    }, [selectedBankAccountId, date]);
 
     const fetchLogs = async () => {
         const id = editingId || (editingBatchId ? editingBatchId : null);
@@ -203,16 +211,35 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
         }
     };
 
-    const fetchLinkedStatement = async () => {
-        const id = editingId;
-        if (!id) return;
+    const fetchLinkedStatement = async (accId?: string, entryDateStr?: string) => {
+        const targetAccId = accId || selectedBankAccountId;
+        const targetDate = entryDateStr || date;
+
+        if (!targetAccId || !targetDate) {
+            setLinkedStatement(null);
+            return;
+        }
+
         try {
+            // Get month and year from the date string (YYYY-MM-DD or similar)
+            // Using split to avoid timezone shifts of new Date()
+            const parts = targetDate.split('-');
+            if (parts.length < 2) return;
+
+            const year = parseInt(parts[0]);
+            const month = parseInt(parts[1]);
+
             const { data, error } = await supabase
-                .from('bank_statements')
+                .from('bank_statement_uploads')
                 .select('*')
-                .eq('linked_entry_id', id)
-                .single();
-            if (error && error.code !== 'PGRST116') throw error;
+                .eq('bank_account_id', targetAccId)
+                .eq('month', month)
+                .eq('year', year)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (error) throw error;
             setLinkedStatement(data);
         } catch (error) {
             console.error('Erro ao buscar extrato vinculado:', error);
@@ -353,7 +380,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
     const schoolOptions = React.useMemo(() => accessibleSchools.map(s => <option key={s.id} value={s.id}>{s.name}</option>), [accessibleSchools]);
     const programOptions = React.useMemo(() => programs.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>), [programs]);
     const supplierOptions = React.useMemo(() => suppliers.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>), [suppliers]);
-    const bankAccountOptions = React.useMemo(() => bankAccounts.filter((b: any) => b.school_id === selectedSchoolId && b.program_id === selectedProgramId).map((b: any) => (<option key={b.id} value={b.id}>{b.name} (Ag: {b.agency})</option>)), [bankAccounts, selectedSchoolId, selectedProgramId]);
+    const bankAccountOptions = React.useMemo(() => bankAccounts.filter((b: any) => b.school_id === selectedSchoolId && b.program_id === selectedProgramId).map((b: any) => (<option key={b.id} value={b.id}>{b.name} ({b.account_number})</option>)), [bankAccounts, selectedSchoolId, selectedProgramId]);
     const paymentMethodOptions = React.useMemo(() => paymentMethods.map((pm: any) => <option key={pm.id} value={pm.id}>{pm.name}</option>), [paymentMethods]);
 
     if (!isOpen) return null;

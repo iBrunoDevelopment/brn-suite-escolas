@@ -95,7 +95,12 @@ const FinancialTable: React.FC<FinancialTableProps> = ({
                                     <div className={`text-base font-black tracking-tight ${entry.type === 'Entrada' ? 'text-green-400' : 'text-red-400'}`}>
                                         {entry.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                     </div>
-                                    <StatusBadge s={entry.status} />
+                                    <div className="flex items-center gap-2">
+                                        <StatusBadge s={entry.status} />
+                                        {entry.is_reconciled && (
+                                            <span className="material-symbols-outlined text-[14px] text-emerald-500" title="Verificado pelo Banco">verified</span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
@@ -238,7 +243,12 @@ const FinancialTable: React.FC<FinancialTableProps> = ({
                                     </td>
                                     <td className="p-5 text-center">
                                         <div className="flex flex-col items-center gap-1.5">
-                                            <StatusBadge s={entry.status} />
+                                            <div className="flex items-center gap-1.5">
+                                                <StatusBadge s={entry.status} />
+                                                {entry.is_reconciled && (
+                                                    <span className="material-symbols-outlined text-[16px] text-emerald-500" title="Auditado: Conciliado com extrato bancário">verified</span>
+                                                )}
+                                            </div>
                                             {canEdit && entry.type === 'Saída' && (
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); onConciliate(entry.id, entry.status); }}

@@ -77,8 +77,8 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex flex-col gap-1">
                                             <span className="text-xs text-white font-mono">{new Date(bt.date).toLocaleDateString('pt-BR')}</span>
-                                            <span className={`text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md w-fit ${bt.extract_type === 'corrente' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'}`}>
-                                                {bt.extract_type === 'corrente' ? 'C. Corrente' : 'Investimento'}
+                                            <span className={`text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md w-fit ${bt.extract_type === 'Conta Corrente' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'}`}>
+                                                {bt.extract_type === 'Conta Corrente' ? 'C. Corrente' : 'Investimento'}
                                             </span>
                                         </div>
                                     </td>
@@ -92,7 +92,20 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
-                                        {bt.status === 'matched' && matchedEntry ? (
+                                        {bt.status === 'reconciled' && matchedEntry ? (
+                                            <div className="flex flex-col gap-2 bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-2xl relative group/card overflow-hidden">
+                                                <div className="absolute top-0 right-0 p-1 bg-emerald-500/20 text-[8px] font-black text-emerald-400 uppercase tracking-tighter rounded-bl-lg">Conciliado</div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-6 h-6 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                                                        <span className="material-symbols-outlined text-[14px]">verified</span>
+                                                    </div>
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span className="text-[10px] text-white font-black truncate max-w-[150px]">{matchedEntry.description}</span>
+                                                        <span className="text-[8px] text-emerald-500/60 font-black uppercase tracking-widest mt-0.5">Lançamento no Sistema</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : bt.status === 'matched' && matchedEntry ? (
                                             <div className="flex flex-col gap-2 bg-emerald-500/5 border border-emerald-500/20 p-3 rounded-2xl relative group/card overflow-hidden">
                                                 <div className="absolute top-0 right-0 p-1 bg-emerald-500 text-[8px] font-black text-white uppercase tracking-tighter rounded-bl-lg transform translate-x-1 -translate-y-1 group-hover/card:translate-x-0 group-hover/card:translate-y-0 transition-transform">95% Match</div>
                                                 <div className="flex items-center gap-2">
@@ -120,27 +133,36 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex flex-col gap-1">
-                                            {bt.status === 'matched' ? (
-                                                <button
-                                                    onClick={() => onConfirmMatch(bt)}
-                                                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 whitespace-nowrap"
-                                                >
-                                                    Confirmar Lançamento
-                                                </button>
+                                            {bt.status === 'reconciled' ? (
+                                                <div className="flex items-center justify-end gap-2 text-emerald-500 p-2">
+                                                    <span className="text-[10px] font-black uppercase">Conciliado</span>
+                                                    <span className="material-symbols-outlined text-lg">check_circle</span>
+                                                </div>
                                             ) : (
-                                                <button
-                                                    onClick={() => onQuickCreateStart(bt)}
-                                                    className="px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500 hover:text-white text-indigo-400 border border-indigo-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap"
-                                                >
-                                                    Criar Novo Lançamento
-                                                </button>
+                                                <>
+                                                    {bt.status === 'matched' ? (
+                                                        <button
+                                                            onClick={() => onConfirmMatch(bt)}
+                                                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 whitespace-nowrap"
+                                                        >
+                                                            Confirmar Lançamento
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => onQuickCreateStart(bt)}
+                                                            className="px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500 hover:text-white text-indigo-400 border border-indigo-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap"
+                                                        >
+                                                            Criar Novo Lançamento
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={() => onManualMatchStart(bt)}
+                                                        className="px-4 py-1 text-slate-500 hover:text-white text-[9px] font-black uppercase tracking-widest transition-all"
+                                                    >
+                                                        Vincular Manualmente
+                                                    </button>
+                                                </>
                                             )}
-                                            <button
-                                                onClick={() => onManualMatchStart(bt)}
-                                                className="px-4 py-1 text-slate-500 hover:text-white text-[9px] font-black uppercase tracking-widest transition-all"
-                                            >
-                                                Vincular Manualmente
-                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -159,8 +181,8 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                             <div className="flex justify-between items-start">
                                 <div className="flex flex-col">
                                     <span className="text-xs text-white font-mono">{new Date(bt.date).toLocaleDateString('pt-BR')}</span>
-                                    <span className={`text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md w-fit mt-1 ${bt.extract_type === 'corrente' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'}`}>
-                                        {bt.extract_type === 'corrente' ? 'C. Corrente' : 'Investimento'}
+                                    <span className={`text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md w-fit mt-1 ${bt.extract_type === 'Conta Corrente' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'}`}>
+                                        {bt.extract_type === 'Conta Corrente' ? 'C. Corrente' : 'Investimento'}
                                     </span>
                                 </div>
                                 <span className={`text-sm font-black p-2 rounded-xl bg-black/40 ${bt.type === 'C' ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -175,7 +197,19 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
 
                             {/* Matching Section */}
                             <div className="pt-2">
-                                {bt.status === 'matched' && matchedEntry ? (
+                                {bt.status === 'reconciled' && matchedEntry ? (
+                                    <div className="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                                                <span className="material-symbols-outlined text-[18px]">verified</span>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <span className="text-[10px] text-white font-bold uppercase truncate block">{matchedEntry.description}</span>
+                                                <span className="text-[9px] text-emerald-500/60 font-medium">Lançamento Conciliado</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : bt.status === 'matched' && matchedEntry ? (
                                     <div className="bg-emerald-500/5 border border-emerald-500/20 p-3 rounded-xl relative overflow-hidden">
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
@@ -200,27 +234,36 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
 
                             {/* Actions */}
                             <div className="flex flex-col gap-2 pt-2 border-t border-white/5">
-                                {bt.status === 'matched' ? (
-                                    <button
-                                        onClick={() => onConfirmMatch(bt)}
-                                        className="w-full h-11 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
-                                    >
-                                        Confirmar Lançamento
-                                    </button>
+                                {bt.status === 'reconciled' ? (
+                                    <div className="w-full py-3 bg-emerald-500/10 text-emerald-500 rounded-xl text-[10px] font-black uppercase tracking-widest text-center border border-emerald-500/20 flex items-center justify-center gap-2">
+                                        <span className="material-symbols-outlined text-base">check_circle</span>
+                                        Conciliado
+                                    </div>
                                 ) : (
-                                    <button
-                                        onClick={() => onQuickCreateStart(bt)}
-                                        className="w-full h-11 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
-                                    >
-                                        Criar Novo Lançamento
-                                    </button>
+                                    <>
+                                        {bt.status === 'matched' ? (
+                                            <button
+                                                onClick={() => onConfirmMatch(bt)}
+                                                className="w-full h-11 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                                            >
+                                                Confirmar Lançamento
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => onQuickCreateStart(bt)}
+                                                className="w-full h-11 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                                            >
+                                                Criar Novo Lançamento
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => onManualMatchStart(bt)}
+                                            className="w-full py-2 text-slate-500 text-[9px] font-black uppercase tracking-widest"
+                                        >
+                                            Vincular Manualmente
+                                        </button>
+                                    </>
                                 )}
-                                <button
-                                    onClick={() => onManualMatchStart(bt)}
-                                    className="w-full py-2 text-slate-500 text-[9px] font-black uppercase tracking-widest"
-                                >
-                                    Vincular Manualmente
-                                </button>
                             </div>
                         </div>
                     );

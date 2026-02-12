@@ -13,6 +13,7 @@ interface ReconciliationFiltersProps {
     filterMonth: string;
     setFilterMonth: (m: string) => void;
     onShowHelp: () => void;
+    onShowHistory: () => void;
 }
 
 const ReconciliationFilters: React.FC<ReconciliationFiltersProps> = ({
@@ -20,7 +21,7 @@ const ReconciliationFilters: React.FC<ReconciliationFiltersProps> = ({
     selectedSchoolId, setSelectedSchoolId,
     selectedBankAccountId, setSelectedBankAccountId,
     filterMonth, setFilterMonth,
-    onShowHelp
+    onShowHelp, onShowHistory
 }) => {
     return (
         <div className="flex flex-wrap items-center gap-3 md:gap-4 bg-card-dark/30 p-4 md:p-6 rounded-3xl border border-white/5 shadow-xl">
@@ -30,6 +31,14 @@ const ReconciliationFilters: React.FC<ReconciliationFiltersProps> = ({
             >
                 <span className="material-symbols-outlined text-sm">help</span>
                 Como pedir os arquivos?
+            </button>
+
+            <button
+                onClick={onShowHistory}
+                className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all w-full md:w-auto justify-center border border-white/5"
+            >
+                <span className="material-symbols-outlined text-sm">history</span>
+                Histórico
             </button>
 
             {/* School Filter */}

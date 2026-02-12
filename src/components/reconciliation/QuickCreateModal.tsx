@@ -104,17 +104,40 @@ const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
                     </div>
 
                     <div className="flex flex-col gap-1">
-                        <label htmlFor="qc-supplier" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Fornecedor (Opcional)</label>
-                        <select title="Selecione o Fornecedor" aria-label="Selecione o Fornecedor"
-                            id="qc-supplier"
-                            value={quickForm.supplier_id}
-                            onChange={e => setQuickForm({ ...quickForm, supplier_id: e.target.value })}
+                        <label htmlFor="qc-category" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Tipo de Lançamento (Categoria)</label>
+                        <select title="Selecione a Categoria" aria-label="Selecione a Categoria"
+                            id="qc-category"
+                            value={quickForm.category}
+                            onChange={e => setQuickForm({ ...quickForm, category: e.target.value })}
                             className="bg-card-dark border border-white/10 rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-indigo-500"
                         >
-                            <option value="">Selecione o Fornecedor</option>
-                            {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            <option value="Compras e Serviços">Compras e Serviços</option>
+                            <option value="Tarifa Bancária">Tarifa Bancária</option>
+                            <option value="Rendimento de Aplicação">Rendimento de Aplicação</option>
+                            <option value="Repasse / Crédito">Repasse / Crédito</option>
+                            <option value="Impostos / Tributos">Impostos / Tributos</option>
+                            <option value="Devolução de Recurso (FNDE/Estado)">Devolução de Recurso (FNDE/Estado)</option>
                         </select>
                     </div>
+
+                    {quickForm.category !== 'Tarifa Bancária' && quickForm.category !== 'Rendimento de Aplicação' ? (
+                        <div className="flex flex-col gap-1">
+                            <label htmlFor="qc-supplier" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Fornecedor (Opcional)</label>
+                            <select title="Selecione o Fornecedor" aria-label="Selecione o Fornecedor"
+                                id="qc-supplier"
+                                value={quickForm.supplier_id}
+                                onChange={e => setQuickForm({ ...quickForm, supplier_id: e.target.value })}
+                                className="bg-card-dark border border-white/10 rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-indigo-500"
+                            >
+                                <option value="">Selecione o Fornecedor</option>
+                                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </select>
+                        </div>
+                    ) : (
+                        <div className="bg-white/5 border border-white/5 rounded-xl px-4 py-3 text-[10px] text-slate-400 italic">
+                            Fornecedor não obrigatório para {quickForm.category.toLowerCase()}.
+                        </div>
+                    )}
 
                     <button
                         onClick={onConfirm}

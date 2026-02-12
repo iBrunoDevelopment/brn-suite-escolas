@@ -68,6 +68,24 @@ const FilterBar: React.FC<FilterBarProps> = ({
                 >
                     Alto Valor (± R$ 1k)
                 </button>
+                <button
+                    onClick={() => setQuickFilter('repasses')}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${quickFilter === 'repasses' ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-emerald-500/5 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/10'}`}
+                >
+                    Repasses
+                </button>
+                <button
+                    onClick={() => setQuickFilter('tarifas')}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${quickFilter === 'tarifas' ? 'bg-amber-600 text-white border-amber-600' : 'bg-amber-600/5 text-amber-600 border-amber-600/20 hover:bg-amber-600/10'}`}
+                >
+                    Tarifas
+                </button>
+                <button
+                    onClick={() => setQuickFilter('rendimentos')}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${quickFilter === 'rendimentos' ? 'bg-orange-500 text-white border-orange-500' : 'bg-orange-500/5 text-orange-400 border-orange-500/20 hover:bg-orange-500/10'}`}
+                >
+                    Rendimentos
+                </button>
 
                 <div className="flex-1"></div>
 

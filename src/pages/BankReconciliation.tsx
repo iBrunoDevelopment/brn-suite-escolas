@@ -12,6 +12,7 @@ import ManualMatchModal from '../components/reconciliation/ManualMatchModal';
 import HelpModal from '../components/reconciliation/HelpModal';
 import ReconciliationReport from '../components/reconciliation/ReconciliationReport';
 import CapaModal from '../components/reconciliation/CapaModal';
+import ReconciliationHistoryModal from '../components/reconciliation/ReconciliationHistoryModal';
 
 const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
     const recon = useBankReconciliation(user);
@@ -40,6 +41,7 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
                 filterMonth={recon.filterMonth}
                 setFilterMonth={recon.setFilterMonth}
                 onShowHelp={() => recon.setShowHelp(true)}
+                onShowHistory={() => recon.setShowHistory(true)}
             />
 
             {recon.transactions.length === 0 ? (
@@ -50,6 +52,8 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
                     setUploadType={recon.setUploadType}
                     onFileUpload={recon.handleFileUpload}
                     filterMonth={recon.filterMonth}
+                    selectedSchoolId={recon.selectedSchoolId}
+                    selectedBankAccountId={recon.selectedBankAccountId}
                 />
             ) : (
                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 pb-20">
@@ -124,6 +128,14 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
                     monthYear={new Date(recon.filterMonth + '-02').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
                 />
             )}
+
+            <ReconciliationHistoryModal
+                isOpen={recon.showHistory}
+                onClose={() => recon.setShowHistory(false)}
+                user={user}
+                schoolId={recon.selectedSchoolId}
+                bankAccountId={recon.selectedBankAccountId}
+            />
         </div>
     );
 };

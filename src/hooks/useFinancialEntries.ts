@@ -29,6 +29,8 @@ export interface FinancialEntryExtended {
     document_number?: string;
     auth_number?: string;
     attachments?: any[];
+    is_reconciled: boolean;
+    bank_transaction_ref?: string;
 }
 
 export function useFinancialEntries(user: User, filters: any = {}) {
@@ -126,6 +128,9 @@ export function useFinancialEntries(user: User, filters: any = {}) {
 
             if (filters.quick === 'pending') q = q.eq('status', TransactionStatus.PENDENTE);
             if (filters.quick === 'paid') q = q.eq('status', TransactionStatus.PAGO);
+            if (filters.quick === 'repasses') q = q.eq('category', 'Repasse / Crédito');
+            if (filters.quick === 'tarifas') q = q.eq('category', 'Tarifa Bancária');
+            if (filters.quick === 'rendimentos') q = q.eq('category', 'Rendimento de Aplicação');
 
             const { data, error } = await q;
             if (error) throw error;
@@ -140,7 +145,9 @@ export function useFinancialEntries(user: User, filters: any = {}) {
                     supplier: i.suppliers?.name || 'Não Informado',
                     bank_account: ba ? `Ag: ${ba.agency || 'N/A'} / Cc: ${ba.account_number || 'N/A'}` : '-',
                     payment_method: i.payment_methods?.name || '-',
-                    value: Number(i.value)
+                    value: Number(i.value),
+                    is_reconciled: i.is_reconciled,
+                    bank_transaction_ref: i.bank_transaction_ref
                 };
             }) as FinancialEntryExtended[];
         },

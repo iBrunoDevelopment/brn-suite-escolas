@@ -55,9 +55,17 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
                     <span className="material-symbols-outlined text-orange-500 text-[20px] opacity-50 group-hover:opacity-100">savings</span>
                 </div>
                 <div className="text-2xl font-black text-orange-400">{reservesAndEarnings.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-                <div className="mt-2 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase">Saldo Anterior + Juros</span>
+                <div className="mt-2 flex flex-col gap-1">
+                    <div className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase">Reprogramado: {stats.reprogrammed.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                    </div>
+                    {stats.rendimentos > 0 && (
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>
+                            <span className="text-[10px] text-slate-400 font-bold uppercase">Rendimentos: {stats.rendimentos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                        </div>
+                    )}
                 </div>
             </div>
 

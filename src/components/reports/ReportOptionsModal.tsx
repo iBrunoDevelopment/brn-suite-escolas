@@ -27,7 +27,8 @@ const ReportOptionsModal: React.FC<ReportOptionsModalProps> = ({ isOpen, onClose
         filterSchool: currentFilters.school || '',
         filterProgram: currentFilters.program || '',
         filterStartDate: currentFilters.startDate || '',
-        filterEndDate: currentFilters.endDate || ''
+        filterEndDate: currentFilters.endDate || '',
+        reportMode: 'gerencial'
     });
 
     // Update internal state when external filters change and modal opens
@@ -199,6 +200,31 @@ const ReportOptionsModal: React.FC<ReportOptionsModalProps> = ({ isOpen, onClose
                                 </select>
                                 <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none text-xl">expand_more</span>
                             </div>
+                        </div>
+
+                        <div className="flex flex-col gap-2 pt-2">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Modelo de Relatório</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    onClick={() => setOptions({ ...options, reportMode: 'gerencial' })}
+                                    className={`h-12 rounded-2xl font-black text-[9px] uppercase transition-all flex items-center justify-center gap-2 border ${options.reportMode === 'gerencial' || !options.reportMode ? 'bg-primary/10 border-primary text-primary' : 'bg-[#0f172a] text-slate-500 border-white/5 hover:bg-white/5'}`}
+                                >
+                                    <span className="material-symbols-outlined text-lg">dashboard</span>
+                                    Modo Gerencial
+                                </button>
+                                <button
+                                    onClick={() => setOptions({ ...options, reportMode: 'livro_caixa', groupReport: 'program' })}
+                                    className={`h-12 rounded-2xl font-black text-[9px] uppercase transition-all flex items-center justify-center gap-2 border ${options.reportMode === 'livro_caixa' ? 'bg-amber-500/10 border-amber-500 text-amber-500' : 'bg-[#0f172a] text-slate-500 border-white/5 hover:bg-white/5'}`}
+                                >
+                                    <span className="material-symbols-outlined text-lg">menu_book</span>
+                                    Livro Caixa
+                                </button>
+                            </div>
+                            <p className="text-[8px] text-slate-500 italic pl-1 leading-tight">
+                                {options.reportMode === 'livro_caixa'
+                                    ? 'O Modo Livro Caixa utiliza colunas de Entrada, Saída e Saldo Progressivo, ideal para prestação de contas formal.'
+                                    : 'O Modo Gerencial foca em análise de gastos, natureza de recurso e badges de status.'}
+                            </p>
                         </div>
 
                         <div className="flex flex-col gap-2 pt-2">

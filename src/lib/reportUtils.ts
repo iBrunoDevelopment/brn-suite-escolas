@@ -12,6 +12,7 @@ export interface ReportOptions {
     filterProgram?: string;
     filterStartDate?: string;
     filterEndDate?: string;
+    reportMode?: 'gerencial' | 'livro_caixa';
 }
 
 /**
@@ -28,21 +29,21 @@ export const generateRelatorioGerencialHTML = async (entries: any[], stats: any,
     const now = new Date();
     const reportDate = now.toLocaleDateString('pt-BR');
     const reportTime = now.toLocaleTimeString('pt-BR');
-    let reportTitle = 'Relatório de Movimentação';
+    const isLivroCaixa = options.reportMode === 'livro_caixa';
+    let reportTitle = isLivroCaixa ? 'Livro Caixa - Prestação de Contas' : 'Relatório de Movimentação';
+
     if (options.filterSchool) {
-        // Try to find school name in entries if possible, otherwise use a generic label
         const schoolName = entries.find(e => e.school_id === options.filterSchool)?.school || 'Unidade Específica';
-        reportTitle = `Relatório: ${schoolName}`;
+        reportTitle = isLivroCaixa ? `Livro Caixa: ${schoolName}` : `Relatório: ${schoolName}`;
     } else if (options.filterProgram) {
         const programName = entries.find(e => e.program_id === options.filterProgram)?.program || 'Programa Específico';
-        reportTitle = `Relatório Conexo: ${programName}`;
+        reportTitle = isLivroCaixa ? `Livro Caixa: ${programName}` : `Relatório Conexo: ${programName}`;
     }
 
     const periodText = (options.filterStartDate && options.filterEndDate)
         ? `Período: ${new Date(options.filterStartDate + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(options.filterEndDate + 'T00:00:00').toLocaleDateString('pt-BR')}`
         : 'Período: Completo / Todos os Lançamentos';
 
-    // 1. Data Structure Aggregation
     interface ProgramData {
         previousBalance: number;
         credits: number;
@@ -71,7 +72,6 @@ export const generateRelatorioGerencialHTML = async (entries: any[], stats: any,
         return dataBySchool[schoolName].programs[programName];
     };
 
-    // Process Reprogrammed
     reprogrammed.forEach(r => {
         const schoolName = r.schools?.name || 'Escola Desconhecida';
         const progName = r.programs?.name || 'Sem Programa';
@@ -81,7 +81,6 @@ export const generateRelatorioGerencialHTML = async (entries: any[], stats: any,
         dataBySchool[schoolName].previousBalance += val;
     });
 
-    // Process Entries
     entries.forEach(e => {
         const schoolName = e.school || 'Escola não Identificada';
         const progName = e.program || 'Sem Programa';
@@ -108,19 +107,21 @@ export const generateRelatorioGerencialHTML = async (entries: any[], stats: any,
     const totalCusteio = Object.values(dataBySchool).reduce((acc, s) => acc + s.custeio, 0);
     const totalCapital = Object.values(dataBySchool).reduce((acc, s) => acc + s.capital, 0);
 
-    // Simple Progress Bar Calculation for Custeio vs Capital
     const totalNat = totalCusteio + totalCapital || 1;
     const custeioPerc = (totalCusteio / totalNat) * 100;
     const capitalPerc = (totalCapital / totalNat) * 100;
+
+    const docHash = await generateDocHash(reportDate + totalCred + totalDeb + entries.length + 'brn-suite-v5');
 
     return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Relatório Executivo Premium - BRN Suite</title>
+    <title>${reportTitle} - BRN Suite</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=block" />
     <style>
         @media print {
             body { background-color: white !important; margin: 0; padding: 0; }
@@ -156,7 +157,6 @@ export const generateRelatorioGerencialHTML = async (entries: any[], stats: any,
 <body class="p-4 md:p-12">
     <div class="print-container bg-white max-w-[210mm] mx-auto p-12 shadow-[0_0_50px_rgba(0,0,0,0.1)] border border-slate-100 min-h-[297mm] relative overflow-hidden">
         
-        <!-- Decorative Element -->
         <div class="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full -mr-32 -mt-32 z-0 opacity-50"></div>
 
         <header class="relative z-10 flex justify-between items-start mb-10 pb-6 border-b border-slate-100">
@@ -165,7 +165,7 @@ export const generateRelatorioGerencialHTML = async (entries: any[], stats: any,
                     <span class="text-[9px] font-black uppercase tracking-widest">Premium Intelligence System</span>
                 </div>
                 <h1 class="text-4xl font-black text-slate-900 tracking-tight">${reportTitle}</h1>
-                <p class="text-slate-400 font-bold uppercase text-[10px] tracking-[0.3em] mt-2">Dashboard Executivo de Prestação de Contas</p>
+                <p class="text-slate-400 font-bold uppercase text-[10px] tracking-[0.3em] mt-2">${isLivroCaixa ? 'Registro Formal de Movimentação Financeira' : 'Dashboard Executivo de Prestação de Contas'}</p>
             </div>
             <div class="text-right">
                 <p class="text-[9px] font-black uppercase text-slate-400 mb-1">Emissão em</p>
@@ -176,10 +176,8 @@ export const generateRelatorioGerencialHTML = async (entries: any[], stats: any,
         </header>
 
         ${options.showSummary ? `
-        <!-- Global Stats Section -->
         <section class="mb-10 no-break relative z-10">
             <div class="grid grid-cols-3 gap-6">
-                <!-- Main Balance -->
                 <div class="col-span-1 p-6 bg-slate-50 border border-slate-100 rounded-3xl overflow-hidden shadow-sm">
                     <span class="block text-[10px] font-black uppercase text-slate-400 mb-4 tracking-tighter">Saldo Geral Consolidado</span>
                     <div class="whitespace-nowrap pb-2">
@@ -191,7 +189,6 @@ export const generateRelatorioGerencialHTML = async (entries: any[], stats: any,
                     </div>
                 </div>
 
-                <!-- Chart & Nature Summary -->
                 <div class="col-span-2 p-6 bg-slate-900 rounded-3xl text-white shadow-xl shadow-slate-900/20">
                     <div class="flex justify-between items-start mb-6">
                         <div>
@@ -254,6 +251,9 @@ export const generateRelatorioGerencialHTML = async (entries: any[], stats: any,
                 <div class="space-y-12">
                     ${Object.entries(school.programs).map(([progName, progData]) => {
             const progBal = progData.previousBalance + progData.credits - progData.debits;
+            let currentRollingBalance = progData.previousBalance;
+            const sortedEntries = [...progData.entries].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
             return `
                         <div class="no-break group">
                             <div class="flex items-center gap-3 mb-6">
@@ -270,13 +270,35 @@ export const generateRelatorioGerencialHTML = async (entries: any[], stats: any,
                                     <thead>
                                         <tr class="bg-slate-50/50 text-slate-400 uppercase font-black text-[9px] tracking-[0.15em] border-b border-slate-100">
                                             <th class="px-6 py-4">Data</th>
-                                            <th class="px-4 py-4">Ficha / Fornecedor / Rubrica</th>
-                                            <th class="px-4 py-4">Natureza</th>
-                                            <th class="px-6 py-4 text-right">Valor</th>
+                                            <th class="px-4 py-4">${isLivroCaixa ? 'Histórico / Documento' : 'Ficha / Fornecedor / Rubrica'}</th>
+                                            ${isLivroCaixa ? `
+                                                <th class="px-4 py-4 text-right">Entradas</th>
+                                                <th class="px-4 py-4 text-right">Saídas</th>
+                                                <th class="px-6 py-4 text-right">Saldo</th>
+                                            ` : `
+                                                <th class="px-4 py-4">Natureza</th>
+                                                <th class="px-6 py-4 text-right">Valor</th>
+                                            `}
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-slate-50">
-                                        ${progData.entries.map(e => `
+                                        ${isLivroCaixa ? `
+                                            <tr class="bg-slate-50/20 italic">
+                                                <td class="px-6 py-4 text-slate-400 font-bold">-</td>
+                                                <td class="px-4 py-4 font-black text-slate-600">SALDO ANTERIOR / REPROGRAMADO</td>
+                                                <td class="px-4 py-4 text-right">-</td>
+                                                <td class="px-4 py-4 text-right">-</td>
+                                                <td class="px-6 py-4 text-right font-black text-slate-900">${formatCurrency(progData.previousBalance)}</td>
+                                            </tr>
+                                        ` : ''}
+                                        ${sortedEntries.map(e => {
+                const val = Math.abs(Number(e.value));
+                if (isLivroCaixa) {
+                    if (e.type === 'Entrada') currentRollingBalance += val;
+                    else currentRollingBalance -= val;
+                }
+
+                return `
                                             <tr class="hover:bg-slate-50/30 transition-colors">
                                                 <td class="px-6 py-5 font-bold text-slate-400 whitespace-nowrap">${new Date(e.date).toLocaleDateString('pt-BR')}</td>
                                                 <td class="px-4 py-5">
@@ -290,49 +312,55 @@ export const generateRelatorioGerencialHTML = async (entries: any[], stats: any,
                                                     </div>
                                                     <div class="mt-1 flex gap-2">
                                                         <span class="text-[9px] text-slate-400 font-bold uppercase italic">${e.supplier || 'Geral'}</span>
+                                                        ${e.document_number ? `
+                                                            <span class="text-[10px] text-slate-300">|</span>
+                                                            <span class="text-[9px] font-black text-primary uppercase">Doc: ${e.document_number}</span>
+                                                        ` : ''}
                                                         <span class="text-[10px] text-slate-300">|</span>
                                                         <span class="text-[9px] text-slate-400 font-medium">${e.rubric || 'Recurso Direto'}</span>
                                                     </div>
-                                                    ${e.attachments && e.attachments.length > 0 ? `
-                                                    <div class="mt-2 flex flex-wrap gap-1.5">
-                                                        ${e.attachments.map((a: any) => `
-                                                            <a href="${a.url}" target="_blank" class="no-underline">
-                                                                <span style="font-size: 8px; font-weight: 800; text-transform: uppercase; background: #f1f5f9; color: #475569; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0; display: inline-flex; align-items: center; gap: 3px;">
-                                                                    <svg viewBox="0 0 24 24" width="8" height="8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
-                                                                    ${a.category || 'DOC'}
-                                                                </span>
-                                                            </a>
-                                                        `).join('')}
-                                                    </div>
-                                                    ` : ''}
                                                 </td>
-                                                <td class="px-4 py-5 font-bold uppercase text-[9px] tracking-widest">
-                                                    <span class="${e.nature === 'Capital' ? 'text-orange-600' : 'text-blue-600'}">${e.nature}</span>
-                                                </td>
-                                                <td class="px-6 py-5 text-right font-black ${e.type === 'Entrada' ? 'text-emerald-600' : 'text-red-600 bg-red-50/50'}">
-                                                    ${e.type === 'Entrada' ? '+' : '-'} ${formatCurrency(Math.abs(e.value))}
-                                                </td>
+                                                ${isLivroCaixa ? `
+                                                    <td class="px-4 py-5 text-right font-black ${e.type === 'Entrada' ? 'text-emerald-600' : 'text-slate-300'} whitespace-nowrap">
+                                                        ${e.type === 'Entrada' ? formatCurrency(val) : '<span class="opacity-20">-</span>'}
+                                                    </td>
+                                                    <td class="px-4 py-5 text-right font-black ${e.type === 'Saída' ? 'text-red-600' : 'text-slate-300'} whitespace-nowrap">
+                                                        ${e.type === 'Saída' ? formatCurrency(val) : '<span class="opacity-20">-</span>'}
+                                                    </td>
+                                                    <td class="px-6 py-5 text-right font-black text-slate-900 underline decoration-slate-200 decoration-2 underline-offset-4 whitespace-nowrap">
+                                                        ${formatCurrency(currentRollingBalance)}
+                                                    </td>
+                                                ` : `
+                                                    <td class="px-4 py-5 font-bold uppercase text-[9px] tracking-widest">
+                                                        <span class="${e.nature === 'Capital' ? 'text-orange-600' : 'text-blue-600'}">${e.nature}</span>
+                                                    </td>
+                                                    <td class="px-6 py-5 text-right font-black ${e.type === 'Entrada' ? 'text-emerald-600' : 'text-red-600 bg-red-50/20'} whitespace-nowrap">
+                                                        <div class="flex items-center justify-end gap-1">
+                                                            <span class="text-[10px] opacity-70 mb-0.5">${e.type === 'Entrada' ? '+' : '-'}</span>
+                                                            <span>${formatCurrency(val)}</span>
+                                                        </div>
+                                                    </td>
+                                                `}
                                             </tr>
-                                        `).join('')}
+                                            `;
+            }).join('')}
                                     </tbody>
                                 </table>
                             </div>
                         </div>
-                    `;
+                        `;
         }).join('')}
                 </div>
             </div>
             `;
     }).join('')}
 
-        <!-- Authenticity Stamp & Digital Signature -->
         <footer class="mt-20 pt-10 border-t-[3px] border-slate-900 no-break">
             <div class="flex justify-between items-start gap-10">
                 <div class="flex items-start gap-6 w-2/3">
-                    <!-- QR Code Validation -->
                     <div class="bg-white p-2 border border-slate-200 rounded-xl shadow-sm">
                         <img 
-                            src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(window.location.origin + '/validate?t=' + (await generateDocHash(reportDate + totalCred + totalDeb + entries.length)))}" 
+                            src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(docHash)}" 
                             alt="QR Code de Autenticidade"
                             style="width: 80px; height: 80px;"
                         />
@@ -342,15 +370,15 @@ export const generateRelatorioGerencialHTML = async (entries: any[], stats: any,
                         <div>
                             <p class="text-[10px] font-black uppercase text-slate-900 tracking-tighter mb-1 flex items-center gap-2">
                                 <span class="material-symbols-outlined text-[12px] text-emerald-600">verified_user</span>
-                                Doc Digital Signature (SHA-256)
+                                Digital Signature Audit Hash
                             </p>
                             <p class="text-[9px] text-slate-400 font-mono break-all bg-slate-50 p-2 rounded-lg border border-slate-100">
-                                ${await generateDocHash(reportDate + totalCred + totalDeb + entries.length + 'brn-suite-v5')}
+                                ${docHash}
                             </p>
                         </div>
                         <div class="flex gap-4">
-                            <div class="px-3 py-1 bg-slate-900 text-white rounded text-[8px] font-bold uppercase tracking-widest">Original Doc</div>
-                            <div class="px-3 py-1 border border-slate-200 text-slate-400 rounded text-[8px] font-bold uppercase tracking-widest">No-Repudiation Guaranteed</div>
+                            <div class="px-3 py-1 bg-slate-900 text-white rounded text-[8px] font-bold uppercase tracking-widest">Original Document</div>
+                            <div class="px-3 py-1 border border-slate-200 text-slate-400 rounded text-[8px] font-bold uppercase tracking-widest">Accountability Verified</div>
                         </div>
                     </div>
                 </div>
@@ -358,24 +386,23 @@ export const generateRelatorioGerencialHTML = async (entries: any[], stats: any,
                 <div class="w-1/3 text-right">
                     <div class="mb-4 h-px bg-slate-200"></div>
                     <p class="text-[10px] font-black uppercase text-slate-900">Responsável Financeiro</p>
-                    <p class="text-[8px] text-slate-400 uppercase tracking-widest mb-4">Unidade Executora</p>
-                    <p class="text-[8px] text-slate-400 font-bold uppercase tracking-[0.4em]">BRN Suite Escolas • v5.0</p>
+                    <p class="text-[8px] text-slate-400 uppercase tracking-widest mb-4">Assinatura / Carimbo</p>
+                    <p class="text-[8px] text-slate-400 font-bold uppercase tracking-[0.4em]">BRN Suite • v5.0</p>
                 </div>
             </div>
             
-            <div class="mt-10 flex justify-center opacity-10 grayscale">
-                <p class="text-[10px] font-black uppercase text-slate-900 opacity-20 tracking-[1em]">Documento Processado Digitalmente</p>
+            <div class="mt-10 flex justify-center opacity-10">
+                <p class="text-[10px] font-black uppercase text-slate-900 tracking-[1em]">Documento Processado Digitalmente</p>
             </div>
         </footer>
     </div>
 
-    <!-- Print Control for Preview (Visible only on web preview before print) -->
-    <div class="no-print mt-8 flex justify-center gap-4">
-        <button onclick="window.print()" class="bg-slate-900 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-slate-900/20 flex items-center gap-2">
+    <div class="no-print mt-8 flex justify-center gap-4 pb-20">
+        <button onclick="window.print()" class="bg-slate-900 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl flex items-center gap-2">
             <span class="material-symbols-outlined">print</span>
-            Imprimir Agora
+            Imprimir Livro Caixa
         </button>
-        <button onclick="window.close()" class="bg-white text-slate-500 px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all border border-slate-100 flex items-center gap-2">
+        <button onclick="window.close()" class="bg-red-600 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-500/20 flex items-center gap-2">
             <span class="material-symbols-outlined">close</span>
             Fechar Visualização
         </button>
@@ -384,28 +411,12 @@ export const generateRelatorioGerencialHTML = async (entries: any[], stats: any,
 </html>`;
 };
 
-/**
- * Generates a real CSV file for Excel
- */
 export const generateCSV = (entries: any[]) => {
-    // Header
-    const headers = [
-        'Data',
-        'Descrição',
-        'Escola',
-        'Programa',
-        'Rubrica',
-        'Fornecedor',
-        'Natureza',
-        'Tipo',
-        'Status',
-        'Valor (R$)'
-    ];
-
-    // Rows
+    const headers = ['Data', 'Descrição', 'Doc/NF', 'Escola', 'Programa', 'Rubrica', 'Fornecedor', 'Natureza', 'Tipo', 'Status', 'Valor (R$)'];
     const rows = entries.map(e => [
         new Date(e.date).toLocaleDateString('pt-BR'),
         `"${e.description.replace(/"/g, '""')}"`,
+        `"${e.document_number || ''}"`,
         `"${e.school}"`,
         `"${e.program}"`,
         `"${e.rubric}"`,
@@ -413,24 +424,18 @@ export const generateCSV = (entries: any[]) => {
         e.nature,
         e.type,
         e.status,
-        e.value.toString().replace('.', ',') // Excel friendly decimal
+        e.value.toString().replace('.', ',')
     ]);
 
     const csvContent = [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
-
-    // Add BOM for UTF-8 in Excel
     const BOM = '\uFEFF';
     const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-
-    // Link for download
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `lancamentos_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `relatorio_financeiro_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 };
-
-
