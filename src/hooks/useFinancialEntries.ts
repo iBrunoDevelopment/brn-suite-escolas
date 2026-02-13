@@ -31,6 +31,7 @@ export interface FinancialEntryExtended {
     attachments?: any[];
     is_reconciled: boolean;
     bank_transaction_ref?: string;
+    payment_date?: string;
 }
 
 export function useFinancialEntries(user: User, filters: any = {}) {

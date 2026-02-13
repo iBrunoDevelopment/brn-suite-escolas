@@ -49,6 +49,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
     const [selectedSupplierId, setSelectedSupplierId] = React.useState('');
     const [status, setStatus] = React.useState<TransactionStatus>(TransactionStatus.PENDENTE);
     const [invoiceDate, setInvoiceDate] = React.useState('');
+    const [paymentDate, setPaymentDate] = React.useState('');
     const [selectedBankAccountId, setSelectedBankAccountId] = React.useState('');
     const [selectedPaymentMethodId, setSelectedPaymentMethodId] = React.useState('');
     const [documentNumber, setDocumentNumber] = React.useState('');
@@ -116,6 +117,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
         setTotalValue(''); setMainDescription(''); setSelectedSupplierId(''); setSelectedSchoolId(user.schoolId || '');
         setSelectedProgramId(''); setStatus(TransactionStatus.PENDENTE); setInvoiceDate('');
         setSelectedBankAccountId(''); setSelectedPaymentMethodId(''); setDocumentNumber(''); setAuthNumber('');
+        setPaymentDate('');
         setAttachments([]); setTechnicalProcess(null); setLinkedStatement(null); setIsSplitMode(false); setSplitItems([]);
         setSingleRubricId(''); setSingleNature(TransactionNature.CUSTEIO); setActiveTab('dados');
     };
@@ -143,6 +145,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                     setSelectedPaymentMethodId(first.payment_method_id || '');
                     setDocumentNumber(first.document_number || '');
                     setAuthNumber(first.auth_number || '');
+                    setPaymentDate(first.payment_date || '');
                     setAttachments(first.attachments || []);
                     const descParts = first.description.split(' - ');
                     setMainDescription(descParts[0]);
@@ -182,6 +185,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                     setSelectedPaymentMethodId(data.payment_method_id || '');
                     setDocumentNumber(data.document_number || '');
                     setAuthNumber(data.auth_number || '');
+                    setPaymentDate(data.payment_date || '');
                     setAttachments(data.attachments || []);
                     setSingleRubricId(data.rubric_id || '');
                     setSingleNature(data.nature);
@@ -357,6 +361,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                     supplier_id: selectedSupplierId || null, bank_account_id: selectedBankAccountId || null,
                     payment_method_id: selectedPaymentMethodId || null, invoice_date: invoiceDate || null,
                     document_number: documentNumber || null, auth_number: authNumber || null,
+                    payment_date: paymentDate || null,
                     attachments, batch_id: batchId
                 }));
                 const { data: savedEntries, error } = await supabase.from('financial_entries').insert(entriesToSave).select();
@@ -374,7 +379,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                     rubric_id: singleRubricId || null, supplier_id: selectedSupplierId || null,
                     bank_account_id: selectedBankAccountId || null, payment_method_id: selectedPaymentMethodId || null,
                     invoice_date: invoiceDate || null, document_number: documentNumber || null,
-                    auth_number: authNumber || null, attachments, batch_id: null
+                    auth_number: authNumber || null, payment_date: paymentDate || null,
+                    attachments, batch_id: null
                 };
                 const { data: savedData, error } = editingId
                     ? await supabase.from('financial_entries').update(payload).eq('id', editingId).select().single()
@@ -384,7 +390,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                 if (savedId) {
                     const changes: any = {};
                     if (editingId && originalData) {
-                        const fields = ['description', 'value', 'status', 'date', 'category', 'nature', 'rubric_id', 'supplier_id', 'bank_account_id', 'payment_method_id', 'invoice_date', 'document_number', 'auth_number'];
+                        const fields = ['description', 'value', 'status', 'date', 'category', 'nature', 'rubric_id', 'supplier_id', 'bank_account_id', 'payment_method_id', 'invoice_date', 'document_number', 'auth_number', 'payment_date'];
                         fields.forEach(f => { if (JSON.stringify(originalData[f]) !== JSON.stringify(payload[f as keyof typeof payload])) { changes[f] = { old: originalData[f], new: (payload as any)[f] }; } });
                     }
                     await supabase.from('audit_logs').insert({
@@ -571,20 +577,28 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                             </select>
                         </div>
                         {!isSimplified && (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="flex flex-col gap-2">
-                                    <label htmlFor="document_number" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Nº Documento</label>
-                                    <input id="document_number" type="text" value={documentNumber} onChange={e => setDocumentNumber(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" />
+                            <>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="flex flex-col gap-2">
+                                        <label htmlFor="document_number" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Nº Documento</label>
+                                        <input id="document_number" type="text" value={documentNumber} onChange={e => setDocumentNumber(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" />
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <label htmlFor="auth_number" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Nº Autenticação</label>
+                                        <input id="auth_number" type="text" value={authNumber} onChange={e => setAuthNumber(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" />
+                                    </div>
                                 </div>
-                                <div className="flex flex-col gap-2">
-                                    <label htmlFor="auth_number" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Nº Autenticação</label>
-                                    <input id="auth_number" type="text" value={authNumber} onChange={e => setAuthNumber(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="flex flex-col gap-2">
+                                        <label htmlFor="invoice_date" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Data da Nota</label>
+                                        <input id="invoice_date" type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" />
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <label htmlFor="payment_date" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Data do Pagamento</label>
+                                        <input id="payment_date" type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" />
+                                    </div>
                                 </div>
-                                <div className="flex flex-col gap-2">
-                                    <label htmlFor="invoice_date" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Data da Nota</label>
-                                    <input id="invoice_date" type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white outline-none border border-white/5 focus:border-primary" />
-                                </div>
-                            </div>
+                            </>
                         )}
 
                         <div className="flex flex-col gap-4 border-t border-white/5 pt-6">
