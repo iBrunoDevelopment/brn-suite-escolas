@@ -831,14 +831,21 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                                                     setSelectedProgramId(contract.program_id);
                                                     setSingleRubricId(contract.rubric_id || '');
                                                     setTotalValue(Math.abs(contract.monthly_value).toString());
-                                                    setMainDescription(contract.description);
+
+                                                    // Format: 03/2025 - DESCRIPTION
+                                                    const identifier = contract.contract_number
+                                                        ? `${contract.contract_number} - ${contract.description}`
+                                                        : contract.description;
+                                                    setMainDescription(identifier.toUpperCase());
                                                 }
                                             }}
                                             className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 px-5 pr-12 text-white text-sm focus:border-primary outline-none transition-all appearance-none font-bold"
                                         >
                                             <option value="">Nenhum Contrato Selecionado</option>
                                             {schoolContracts.map(c => (
-                                                <option key={c.id} value={c.id}>{c.description.substring(0, 40)}... ({formatCurrency(c.monthly_value)}/mês)</option>
+                                                <option key={c.id} value={c.id}>
+                                                    {c.contract_number ? `${c.contract_number} - ` : ''}{c.description.substring(0, 60)}{c.description.length > 60 ? '...' : ''} ({formatCurrency(c.monthly_value)}/mês)
+                                                </option>
                                             ))}
                                         </select>
                                         <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-primary pointer-events-none">expand_more</span>
@@ -860,15 +867,15 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                                                                 <p className="text-xs font-black text-white">{formatCurrency(executed)} <span className="opacity-40">/ {formatCurrency(total)}</span></p>
                                                             </div>
                                                             <p className={`text-xs font-black transition-colors duration-500 ${progress < 30 ? 'text-red-500' :
-                                                                    progress < 60 ? 'text-yellow-500' :
-                                                                        progress < 90 ? 'text-orange-500' : 'text-green-500'
+                                                                progress < 60 ? 'text-yellow-500' :
+                                                                    progress < 90 ? 'text-orange-500' : 'text-green-500'
                                                                 }`}>{progress.toFixed(1)}%</p>
                                                         </div>
                                                         <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden border border-white/5">
                                                             <div
                                                                 className={`h-full transition-all duration-500 ${progress < 30 ? 'bg-red-500' :
-                                                                        progress < 60 ? 'bg-yellow-500' :
-                                                                            progress < 90 ? 'bg-orange-500' : 'bg-green-500'
+                                                                    progress < 60 ? 'bg-yellow-500' :
+                                                                        progress < 90 ? 'bg-orange-500' : 'bg-green-500'
                                                                     }`}
                                                                 style={{ width: `${Math.min(100, progress)}%` }}
                                                             ></div>
