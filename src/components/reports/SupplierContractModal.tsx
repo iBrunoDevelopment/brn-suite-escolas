@@ -54,6 +54,8 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({
     const [w2Rg, setW2Rg] = useState('');
 
     const [rubrics, setRubrics] = useState<any[]>([]);
+    const [supplierSearch, setSupplierSearch] = useState('');
+    const [schoolSearch, setSchoolSearch] = useState('');
 
     useEffect(() => {
         if (isOpen) {
@@ -302,29 +304,63 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({
                                 )}
                                 <div>
                                     <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest mb-2 block">Fornecedor (CONTRATADA)</label>
-                                    <select
-                                        value={supplierId}
-                                        onChange={e => setSupplierId(e.target.value)}
-                                        aria-label="Selecionar Fornecedor"
-                                        className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 px-5 text-white outline-none focus:border-primary transition-all appearance-none"
-                                    >
-                                        <option value="">Selecionar Fornecedor...</option>
-                                        {auxData.suppliers.map(s => <option key={s.id} value={s.id}>{s.name} ({s.cnpj})</option>)}
-                                    </select>
+                                    <div className="space-y-2">
+                                        <div className="relative group">
+                                            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm group-focus-within:text-primary transition-colors">search</span>
+                                            <input
+                                                type="text"
+                                                placeholder="Filtrar fornecedor por nome ou CNPJ..."
+                                                className="w-full bg-black/40 border border-white/5 rounded-xl h-10 pl-11 pr-4 text-[10px] text-white outline-none focus:border-primary/30 transition-all font-bold"
+                                                value={supplierSearch}
+                                                onChange={e => setSupplierSearch(e.target.value)}
+                                            />
+                                        </div>
+                                        <select
+                                            value={supplierId}
+                                            onChange={e => setSupplierId(e.target.value)}
+                                            aria-label="Selecionar Fornecedor"
+                                            className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 px-5 text-white outline-none focus:border-primary transition-all appearance-none"
+                                        >
+                                            <option value="">Selecionar Fornecedor...</option>
+                                            {auxData.suppliers
+                                                .filter(s =>
+                                                    !supplierSearch ||
+                                                    s.name.toLowerCase().includes(supplierSearch.toLowerCase()) ||
+                                                    (s.cnpj && s.cnpj.includes(supplierSearch))
+                                                )
+                                                .map(s => <option key={s.id} value={s.id}>{s.name} ({s.cnpj})</option>)
+                                            }
+                                        </select>
+                                    </div>
                                 </div>
 
                                 {!user.schoolId && (
                                     <div>
                                         <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest mb-2 block">Unidade Escolar (CONTRATANTE)</label>
-                                        <select
-                                            value={schoolId}
-                                            onChange={e => setSchoolId(e.target.value)}
-                                            aria-label="Selecionar Unidade Escolar"
-                                            className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 px-5 text-white outline-none focus:border-primary transition-all appearance-none border-dashed border-primary/30"
-                                        >
-                                            <option value="">Selecionar Unidade...</option>
-                                            {auxData.schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                        </select>
+                                        <div className="space-y-2">
+                                            <div className="relative group">
+                                                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm group-focus-within:text-primary transition-colors">search</span>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Filtrar escola por nome..."
+                                                    className="w-full bg-black/40 border border-white/5 rounded-xl h-10 pl-11 pr-4 text-[10px] text-white outline-none focus:border-primary/30 transition-all font-bold"
+                                                    value={schoolSearch}
+                                                    onChange={e => setSchoolSearch(e.target.value)}
+                                                />
+                                            </div>
+                                            <select
+                                                value={schoolId}
+                                                onChange={e => setSchoolId(e.target.value)}
+                                                aria-label="Selecionar Unidade Escolar"
+                                                className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 px-5 text-white outline-none focus:border-primary transition-all appearance-none border-dashed border-primary/30"
+                                            >
+                                                <option value="">Selecionar Unidade...</option>
+                                                {auxData.schools
+                                                    .filter(s => !schoolSearch || s.name.toLowerCase().includes(schoolSearch.toLowerCase()))
+                                                    .map(s => <option key={s.id} value={s.id}>{s.name}</option>)
+                                                }
+                                            </select>
+                                        </div>
                                     </div>
                                 )}
 
@@ -384,10 +420,14 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({
                                             value={rubricId}
                                             onChange={e => setRubricId(e.target.value)}
                                             aria-label="Selecionar Rubrica"
-                                            className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 px-5 text-white outline-none focus:border-primary transition-all appearance-none"
+                                            disabled={!programId}
+                                            className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 px-5 text-white outline-none focus:border-primary transition-all appearance-none disabled:opacity-20"
                                         >
                                             <option value="">Rubrica...</option>
-                                            {rubrics.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                                            {rubrics
+                                                .filter(r => r.program_id === programId)
+                                                .map(r => <option key={r.id} value={r.id}>{r.name}</option>)
+                                            }
                                         </select>
                                     </div>
                                 </div>
