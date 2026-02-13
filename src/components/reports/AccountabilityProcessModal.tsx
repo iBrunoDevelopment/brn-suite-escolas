@@ -876,13 +876,24 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                         <div className="p-6 flex flex-col gap-4 overflow-hidden">
                             <input aria-label="Buscar lançamento" placeholder="Buscar lançamento..." className="w-full bg-black/40 border border-white/10 rounded-xl h-12 px-5 text-white outline-none focus:border-primary transition-all" value={entrySearch} onChange={e => setEntrySearch(e.target.value)} autoFocus />
                             <div className="overflow-y-auto space-y-2 custom-scrollbar">
-                                {auxData.availableEntries.filter(e => e.description.toLowerCase().includes(entrySearch.toLowerCase())).map(e => (
+                                {auxData.availableEntries.filter(e =>
+                                    e.description.toLowerCase().includes(entrySearch.toLowerCase()) ||
+                                    (e as any).programs?.name?.toLowerCase().includes(entrySearch.toLowerCase()) ||
+                                    (e as any).suppliers?.name?.toLowerCase().includes(entrySearch.toLowerCase())
+                                ).map(e => (
                                     <button key={e.id} onClick={() => { setSelectedEntry(e); setCompetitorQuotes([{ supplier_id: '', supplier_name: '', supplier_cnpj: '', items: items.map(it => ({ ...it, unit_price: 0 })) }, { supplier_id: '', supplier_name: '', supplier_cnpj: '', items: items.map(it => ({ ...it, unit_price: 0 })) }]); setShowEntryModal(false); setEntrySearch(''); }} className="w-full p-4 bg-white/5 border border-white/5 rounded-2xl flex justify-between items-center hover:bg-primary/10 transition-all text-left">
-                                        <div>
-                                            <span className="text-sm font-bold text-white block">{e.description}</span>
-                                            <span className="text-[10px] text-slate-500 uppercase">{(e as any).suppliers?.name} • {(e as any).schools?.name}</span>
+                                        <div className="flex-1 truncate pr-4">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="text-sm font-bold text-white truncate">{e.description}</span>
+                                                <span className="bg-primary/20 text-primary text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter shrink-0">
+                                                    {(e as any).programs?.name || (e as any).program || 'SEM PROGRAMA'}
+                                                </span>
+                                            </div>
+                                            <span className="text-[10px] text-slate-500 uppercase block truncate">
+                                                {(e as any).suppliers?.name || (e as any).supplier || 'SEM FORNECEDOR'} • {(e as any).schools?.name || (e as any).school}
+                                            </span>
                                         </div>
-                                        <div className="text-right">
+                                        <div className="text-right shrink-0">
                                             <span className="text-sm font-black text-white">{formatCurrency(Math.abs(e.value))}</span>
                                             <span className="text-[10px] text-slate-500 block">{new Date(e.date).toLocaleDateString('pt-BR')}</span>
                                         </div>

@@ -61,13 +61,19 @@ const ManualMatchModal: React.FC<ManualMatchModalProps> = ({
                                         onClick={() => onConfirmMatch(bt, entry.id)}
                                         className="w-full text-left p-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl flex justify-between items-center transition-all group"
                                     >
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-xs text-white font-bold group-hover:text-indigo-400 transition-colors uppercase">{entry.description}</span>
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-[10px] text-slate-500 font-mono">{new Date(entry.date).toLocaleDateString('pt-BR')}</span>
-                                                <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 text-slate-400 font-black uppercase tracking-tighter">
+                                        <div className="flex flex-col gap-1 items-start">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs text-white font-bold group-hover:text-indigo-400 transition-colors uppercase">{entry.description}</span>
+                                                <span className="bg-indigo-500/10 text-indigo-400 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter">
                                                     {entry.program}
                                                 </span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                                                <span>{new Date(entry.date).toLocaleDateString('pt-BR')}</span>
+                                                <span>•</span>
+                                                <span className="uppercase">{entry.supplier}</span>
+                                                <span>•</span>
+                                                <span className="uppercase">{entry.school}</span>
                                             </div>
                                         </div>
                                         <div className="flex flex-col items-end gap-1">
