@@ -159,7 +159,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                     })));
                     const total = entries.reduce((acc: number, e: any) => acc + Math.abs(e.value), 0);
                     setTotalValue(total.toString());
-                    fetchLinkedStatement(first.bank_account_id, first.date);
+                    fetchLinkedStatement(first.bank_account_id, first.payment_date || first.date);
                 }
             } else if (editingId) {
                 const { data, error } = await supabase
@@ -189,7 +189,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                     setAttachments(data.attachments || []);
                     setSingleRubricId(data.rubric_id || '');
                     setSingleNature(data.nature);
-                    fetchLinkedStatement(data.bank_account_id, data.date);
+                    fetchLinkedStatement(data.bank_account_id, data.payment_date || data.date);
                 }
             }
             fetchLogs();
@@ -201,10 +201,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
 
     // Re-fetch linked statement if account or date changes during editing
     React.useEffect(() => {
-        if (isOpen && selectedBankAccountId && date) {
+        if (isOpen && selectedBankAccountId && (paymentDate || date)) {
             fetchLinkedStatement();
         }
-    }, [selectedBankAccountId, date]);
+    }, [selectedBankAccountId, date, paymentDate]);
 
     const fetchLogs = async () => {
         const id = editingId || (editingBatchId ? editingBatchId : null);
@@ -242,7 +242,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
 
     const fetchLinkedStatement = async (accId?: string, entryDateStr?: string) => {
         const targetAccId = accId || selectedBankAccountId;
-        const targetDate = entryDateStr || date;
+        const targetDate = entryDateStr || paymentDate || date;
 
         if (!targetAccId || !targetDate) {
             setLinkedStatement(null);
