@@ -2,9 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { User, FinancialEntry, AccountabilityProcess, AccountabilityItem, AccountabilityQuoteItem, Supplier, UserRole } from '../../types';
-import { formatCurrency } from '../../lib/printUtils';
+import { formatCurrency, formatCNPJ } from '../../lib/printUtils';
 import { useToast } from '../../context/ToastContext';
 import { compressImage } from '../../lib/imageUtils';
+import { generateContratoServicoHTML } from '../../lib/documentTemplates';
+import { printDocument } from '../../lib/printUtils';
 
 interface AccountabilityProcessModalProps {
     isOpen: boolean;
@@ -32,6 +34,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
     const [loading, setLoading] = useState(false);
     const [selectedEntry, setSelectedEntry] = useState<FinancialEntry | null>(null);
     const [processStatus, setProcessStatus] = useState<'Em Andamento' | 'Concluído'>('Em Andamento');
+    const [isContractBased, setIsContractBased] = useState(false);
     const [discount, setDiscount] = useState(0);
     const [checklist, setChecklist] = useState<{ id: string, label: string, checked: boolean }[]>([
         { id: 'quotations', label: '3 Orçamentos anexados', checked: false },
@@ -91,6 +94,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
     const resetForm = () => {
         setSelectedEntry(null);
         setProcessStatus('Em Andamento');
+        setIsContractBased(false);
         setDiscount(0);
         setProcessAttachments([]);
         setChecklist([
@@ -123,12 +127,14 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
             const entry = process.financial_entries;
             setSelectedEntry(entry);
             setProcessStatus(process.status);
+            setIsContractBased(process.is_contract_based || false);
             setDiscount(process.discount || 0);
             setProcessAttachments(process.attachments || []);
             if (process.checklist) setChecklist(process.checklist);
 
             const docItems = process.accountability_items || [];
             setItems(docItems);
+            setIsContractBased(process.is_contract_based || false);
 
             const competitors = (process.accountability_quotes || [])
                 .filter((q: any) => !q.is_winner)
@@ -190,8 +196,8 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
 
     const handleSave = async () => {
         if (!selectedEntry) return;
-        if (competitorQuotes.some(q => !q.supplier_id)) {
-            return addToast('Selecione os 2 fornecedores proponentes.', 'warning');
+        if (!isContractBased && competitorQuotes.some(q => !q.supplier_id)) {
+            return addToast('Selecione os 2 fornecedores proponentes (ou ative Serviço sob Contrato).', 'warning');
         }
 
         const subtotal = items.reduce((acc, it) => acc + ((it.quantity || 0) * (it.winner_unit_price || 0)), 0);
@@ -209,6 +215,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
             if (editingId) {
                 await supabase.from('accountability_processes').update({
                     status: processStatus,
+                    is_contract_based: isContractBased,
                     discount,
                     checklist,
                     attachments: processAttachments,
@@ -222,6 +229,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                     financial_entry_id: selectedEntry.id,
                     school_id: selectedEntry.school_id,
                     status: processStatus,
+                    is_contract_based: isContractBased,
                     discount,
                     checklist,
                     attachments: processAttachments
@@ -247,24 +255,26 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                 total_value: subtotal
             });
 
-            for (const comp of competitorQuotes) {
-                const totalVal = comp.items.reduce((acc, curr) => acc + ((curr.quantity || 0) * (curr.unit_price || 0)), 0);
-                const { data: q, error: qe } = await supabase.from('accountability_quotes').insert({
-                    process_id: processId,
-                    supplier_id: comp.supplier_id || null,
-                    supplier_name: comp.supplier_name,
-                    supplier_cnpj: comp.supplier_cnpj,
-                    is_winner: false,
-                    total_value: totalVal
-                }).select().single();
+            if (!isContractBased) {
+                for (const comp of competitorQuotes) {
+                    const totalVal = comp.items.reduce((acc, curr) => acc + ((curr.quantity || 0) * (curr.unit_price || 0)), 0);
+                    const { data: q, error: qe } = await supabase.from('accountability_quotes').insert({
+                        process_id: processId,
+                        supplier_id: comp.supplier_id || null,
+                        supplier_name: comp.supplier_name,
+                        supplier_cnpj: comp.supplier_cnpj,
+                        is_winner: false,
+                        total_value: totalVal
+                    }).select().single();
 
-                if (qe) throw qe;
+                    if (qe) throw qe;
 
-                const qItems = comp.items.map(it => {
-                    const { id, ...rest } = it as any;
-                    return { quote_id: q.id, description: rest.description, quantity: rest.quantity, unit: rest.unit, unit_price: rest.unit_price };
-                });
-                await supabase.from('accountability_quote_items').insert(qItems);
+                    const qItems = comp.items.map(it => {
+                        const { id, ...rest } = it as any;
+                        return { quote_id: q.id, description: rest.description, quantity: rest.quantity, unit: rest.unit, unit_price: rest.unit_price };
+                    });
+                    await supabase.from('accountability_quote_items').insert(qItems);
+                }
             }
 
             if (processStatus === 'Concluído') {
@@ -579,20 +589,58 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                                         </div>
                                     </div>
                                 </div>
+
+                                <div className="flex items-center gap-3 p-4 bg-primary/5 border border-white/5 rounded-2xl cursor-pointer hover:bg-primary/10 transition-all mt-4" onClick={() => setIsContractBased(!isContractBased)}>
+                                    <div className={`w-10 h-5 rounded-full relative transition-all ${isContractBased ? 'bg-primary shadow-[0_0_15px_rgba(var(--primary-rgb),0.5)]' : 'bg-slate-700'}`}>
+                                        <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${isContractBased ? 'left-6' : 'left-1'}`} />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-black text-white uppercase tracking-widest leading-none mb-1">Serviço Recorrente (Contrato)</span>
+                                        <span className="text-[8px] text-slate-500 font-bold uppercase">Dispensar cotações mensais para este fornecedor</span>
+                                    </div>
+                                </div>
+
+                                {isContractBased && selectedEntry && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const html = generateContratoServicoHTML({
+                                                id: editingId || 'NOVO',
+                                                financial_entries: selectedEntry,
+                                                items: items,
+                                                discount: discount
+                                            });
+                                            printDocument(html);
+                                        }}
+                                        className="w-full h-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center gap-3 text-white text-[10px] font-black uppercase tracking-widest hover:bg-primary/20 hover:border-primary/40 transition-all mt-4"
+                                    >
+                                        <span className="material-symbols-outlined text-lg text-primary">description</span>
+                                        Gerar Contrato de Prestação de Serviço
+                                    </button>
+                                )}
                             </section>
 
                             <section className="bg-white/[0.02] p-5 md:p-8 rounded-2xl md:rounded-[36px] border border-white/5 shadow-2xl space-y-4 md:space-y-6">
                                 <label className="text-[8px] md:text-[10px] font-black uppercase text-primary tracking-widest md:tracking-[0.25em] mb-2 block opacity-60">3. Checklist</label>
                                 <div className="grid grid-cols-1 gap-2.5">
-                                    {checklist.map((item, idx) => (
-                                        <label key={item.id} className="flex items-center gap-3 p-3.5 md:p-4.5 bg-black/30 rounded-xl md:rounded-[24px] border border-white/5 cursor-pointer hover:bg-white/[0.04] transition-all group/check shrink-0">
-                                            <div className={`w-6 h-6 md:w-7 md:h-7 rounded-lg md:rounded-xl flex items-center justify-center border-2 transition-all shrink-0 ${item.checked ? 'bg-primary border-primary text-white' : 'border-white/10 group-hover/check:border-primary/40'}`}>
-                                                {item.checked && <span className="material-symbols-outlined text-sm md:text-[18px]">check_circle</span>}
-                                                <input type="checkbox" className="hidden" checked={item.checked} onChange={e => { const nc = [...checklist]; nc[idx].checked = e.target.checked; setChecklist(nc); }} />
-                                            </div>
-                                            <span className={`text-[9px] md:text-[11px] font-black uppercase tracking-widest ${item.checked ? 'text-white' : 'text-slate-600'}`}>{item.label}</span>
-                                        </label>
-                                    ))}
+                                    {checklist.map((item, idx) => {
+                                        if (isContractBased && item.id === 'quotations') return null;
+                                        return (
+                                            <label key={item.id} className="flex items-center gap-3 p-3.5 md:p-4.5 bg-black/30 rounded-xl md:rounded-[24px] border border-white/5 cursor-pointer hover:bg-white/[0.04] transition-all group/check shrink-0">
+                                                <div className={`w-6 h-6 md:w-7 md:h-7 rounded-lg md:rounded-xl flex items-center justify-center border-2 transition-all shrink-0 ${item.checked ? 'bg-primary border-primary text-white' : 'border-white/10 group-hover/check:border-primary/40'}`}>
+                                                    {item.checked && <span className="material-symbols-outlined text-sm md:text-[18px]">check_circle</span>}
+                                                    <input type="checkbox" className="hidden" checked={item.checked} onChange={e => { const nc = [...checklist]; nc[idx].checked = e.target.checked; setChecklist(nc); }} />
+                                                </div>
+                                                <span className={`text-[9px] md:text-[11px] font-black uppercase tracking-widest ${item.checked ? 'text-white' : 'text-slate-600'}`}>{item.label}</span>
+                                            </label>
+                                        );
+                                    })}
+                                    {isContractBased && (
+                                        <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3">
+                                            <span className="material-symbols-outlined text-emerald-500">contract</span>
+                                            <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Disposto sob Contrato Vigente</span>
+                                        </div>
+                                    )}
                                 </div>
                             </section>
                         </div>
@@ -660,21 +708,23 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 pt-4 md:pt-6 border-t border-white/5">
-                                            {competitorQuotes.map((q, qIdx) => (
-                                                <div key={qIdx} className="bg-black/30 p-3 md:p-5 rounded-xl md:rounded-2xl border border-white/5 space-y-3 md:space-y-4 relative group/quote">
-                                                    <div className="absolute -top-2.5 left-4 px-2 py-0.5 bg-amber-500 text-amber-950 rounded-full text-[7px] md:text-[8px] font-black uppercase">Concorrente {qIdx + 1}</div>
-                                                    <button onClick={() => setShowSupplierModal({ open: true, quoteIdx: qIdx })} className="w-full bg-black/40 p-3 rounded-lg md:rounded-xl border border-white/5 flex justify-between items-center hover:border-amber-500/40 transition-all outline-none">
-                                                        <span className={`text-[10px] md:text-[11px] uppercase truncate font-bold text-left ${q.supplier_name ? 'text-white' : 'text-slate-600 italic'}`}>{q.supplier_name || 'Vincular...'}</span>
-                                                        <span className="material-symbols-outlined text-amber-500 text-xs md:text-sm shrink-0 ml-2">search</span>
-                                                    </button>
-                                                    <div className="relative">
-                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-500/30 font-black text-[9px]">R$</span>
-                                                        <input aria-label={`Preço Unitário Concorrente ${qIdx + 1}`} type="number" step="any" value={q.items[idx].unit_price} onChange={e => { const cq = [...competitorQuotes]; cq[qIdx].items[idx].unit_price = Number(e.target.value); setCompetitorQuotes(cq); }} className="w-full bg-black/40 border border-white/10 rounded-lg md:rounded-xl h-10 pl-8 pr-3 text-[12px] md:text-[13px] text-amber-500 font-black focus:border-amber-500/50 outline-none transition-all" />
+                                        {!isContractBased && (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 pt-4 md:pt-6 border-t border-white/5">
+                                                {competitorQuotes.map((q, qIdx) => (
+                                                    <div key={qIdx} className="bg-black/30 p-3 md:p-5 rounded-xl md:rounded-2xl border border-white/5 space-y-3 md:space-y-4 relative group/quote">
+                                                        <div className="absolute -top-2.5 left-4 px-2 py-0.5 bg-amber-500 text-amber-950 rounded-full text-[7px] md:text-[8px] font-black uppercase">Concorrente {qIdx + 1}</div>
+                                                        <button onClick={() => setShowSupplierModal({ open: true, quoteIdx: qIdx })} className="w-full bg-black/40 p-3 rounded-lg md:rounded-xl border border-white/5 flex justify-between items-center hover:border-amber-500/40 transition-all outline-none">
+                                                            <span className={`text-[10px] md:text-[11px] uppercase truncate font-bold text-left ${q.supplier_name ? 'text-white' : 'text-slate-600 italic'}`}>{q.supplier_name || 'Vincular...'}</span>
+                                                            <span className="material-symbols-outlined text-amber-500 text-xs md:text-sm shrink-0 ml-2">search</span>
+                                                        </button>
+                                                        <div className="relative">
+                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-500/30 font-black text-[9px]">R$</span>
+                                                            <input aria-label={`Preço Unitário Concorrente ${qIdx + 1}`} type="number" step="any" value={q.items[idx]?.unit_price || 0} onChange={e => { const cq = [...competitorQuotes]; cq[qIdx].items[idx].unit_price = Number(e.target.value); setCompetitorQuotes(cq); }} className="w-full bg-black/40 border border-white/10 rounded-lg md:rounded-xl h-10 pl-8 pr-3 text-[12px] md:text-[13px] text-amber-500 font-black focus:border-amber-500/50 outline-none transition-all" />
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
-                                        </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>

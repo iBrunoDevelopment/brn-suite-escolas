@@ -170,6 +170,7 @@ export interface AccountabilityProcess {
     financial_entry_id: string;
     school_id: string;
     status: 'Em Andamento' | 'Concluído';
+    is_contract_based?: boolean;
     discount?: number;
     checklist?: { id: string, label: string, checked: boolean }[];
     attachments?: Attachment[];

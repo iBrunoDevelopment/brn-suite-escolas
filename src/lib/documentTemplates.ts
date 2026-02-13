@@ -653,3 +653,99 @@ export const generateCotacaoHTML = (process: any, supplierIdx: number = 0) => {
 
 
 
+export const generateContratoServicoHTML = (process: any) => {
+    let entry = process.financial_entries || process.financial_entry;
+    if (Array.isArray(entry)) entry = entry[0];
+
+    const school = entry?.schools || entry?.school;
+    const program = entry?.programs || entry?.program;
+    let quotes = process.quotes || process.accountability_quotes || process.accountability_quote || [];
+
+    // Fallback
+    if (quotes.length === 0 && entry?.suppliers) {
+        quotes = [{
+            supplier_name: entry.suppliers.name,
+            supplier_cnpj: entry.suppliers.cnpj,
+            total_value: Math.abs(entry.value || 0),
+            is_winner: true,
+            suppliers: entry.suppliers
+        }];
+    }
+
+    const winner = quotes.find((q: any) => q.is_winner);
+    const supplier = winner?.suppliers || winner?.supplier || entry?.suppliers || entry?.supplier;
+    const items = (process.items || process.accountability_items || []);
+    const totalValue = (winner?.total_value || 0) - (process.discount || 0);
+
+    const docDate = new Date();
+    const dateLong = docDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8"/>
+    <title>Contrato de Prestação de Serviços</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #ffffff; padding: 0; color: black; line-height: 1.5; }
+        .print-container { width: 210mm; margin: 0 auto; padding: 2.5cm 2cm; min-height: 297mm; }
+        .text-justified { text-align: justify; text-justify: inter-word; }
+        h1, h2, h3 { text-transform: uppercase; font-weight: bold; text-align: center; }
+        .clause { margin-top: 20px; font-weight: bold; }
+        @media print {
+            body { padding: 0 !important; margin: 0 !important; }
+            @page { size: A4; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-container text-[12px]">
+        <div class="text-center mb-10">
+            <h1 class="text-[16px]">CONTRATO DE PRESTAÇÃO DE SERVIÇOS</h1>
+        </div>
+
+        <div class="text-justified mb-6">
+            <p><strong>CONTRATANTE:</strong> ${school?.name?.toUpperCase()}, Unidade Executora Própria, inscrita no CNPJ sob o nº <strong>${formatCNPJ(school?.cnpj)}</strong>, com sede na ${school?.address?.toUpperCase()}, representada neste ato por seu Presidente, <strong>${school?.director?.toUpperCase() || '____________________'}</strong>.</p>
+            <br/>
+            <p><strong>CONTRATADA:</strong> ${supplier?.name?.toUpperCase() || '____________________'}, inscrita no CNPJ sob o nº <strong>${formatCNPJ(supplier?.cnpj)}</strong>, com sede na ${supplier?.address?.toUpperCase() || '____________________'}, doravante denominada simplesmente CONTRATADA.</p>
+        </div>
+
+        <p class="text-justified">As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Prestação de Serviços, que se regerá pelas cláusulas seguintes e pelas condições descritas abaixo:</p>
+
+        <div class="clause">CLÁUSULA PRIMEIRA - DO OBJETO</div>
+        <p class="text-justified">O presente contrato tem como objeto a prestação de serviços de <strong>${entry?.description?.toUpperCase()}</strong>, conforme as especificações e necessidades da CONTRATANTE.</p>
+
+        <div class="clause">CLÁUSULA SEGUNDA - DA EXECUÇÃO</div>
+        <p class="text-justified">A CONTRATADA se compromete a realizar os serviços com zelo e pontualidade, seguindo as normas técnicas vigentes e garantindo a qualidade do serviço prestado.</p>
+
+        <div class="clause">CLÁUSULA TERCEIRA - DO VALOR E DO PAGAMENTO</div>
+        <p class="text-justified">Pelo serviço prestado, a CONTRATANTE pagará à CONTRATADA o valor de <strong>${formatCurrency(totalValue)} (${numberToWords(totalValue).toUpperCase()})</strong>, mediante a apresentação da respectiva Nota Fiscal, devidamente atestada.</p>
+        <p class="text-justified"><strong>Parágrafo Único:</strong> O pagamento será realizado com recursos oriundos do programa <strong>${program?.name || 'PNAE/FNDE'}</strong>.</p>
+
+        <div class="clause">CLÁUSULA QUARTA - DA VIGÊNCIA</div>
+        <p class="text-justified">O presente contrato entrará em vigor na data de sua assinatura, podendo ser renovado mediante termo aditivo caso haja interesse comum entre as partes.</p>
+
+        <div class="clause">CLÁUSULA QUINTA - DAS OBRIGAÇÕES</div>
+        <p class="text-justified">A CONTRATADA obriga-se a manter, durante toda a execução do contrato, todas as condições de habilitação e qualificação exigidas na contratação, incluindo a regularidade fiscal.</p>
+
+        <div class="clause">CLÁUSULA SEXTA - DO FORO</div>
+        <p class="text-justified">Para dirimir quaisquer controvérsias oriundas do presente Contrato, as partes elegem o foro da Comarca de ${school?.city?.toUpperCase() || 'ALAGOAS'}/AL.</p>
+
+        <div class="mt-20 text-center">
+            ${school?.city?.toUpperCase() || 'ALAGOAS'}/AL, ${dateLong.toUpperCase()}
+        </div>
+
+        <div class="mt-24 grid grid-cols-2 gap-16 text-center">
+            <div class="border-t border-black pt-2">
+                <p class="font-bold">${school?.name?.toUpperCase()}</p>
+                <p>CONTRATANTE</p>
+            </div>
+            <div class="border-t border-black pt-2">
+                <p class="font-bold">${supplier?.name?.toUpperCase()}</p>
+                <p>CONTRATADA</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>`;
+};
