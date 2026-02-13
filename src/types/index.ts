@@ -98,6 +98,7 @@ export interface FinancialEntry {
     bank_account?: string; // Display name
     payment_method_id?: string;
     payment_method?: string; // Display name
+    contract_id?: string;
     is_reconciled?: boolean;
     reconciled_at?: string;
     bank_transaction_ref?: string;
@@ -171,6 +172,7 @@ export interface AccountabilityProcess {
     school_id: string;
     status: 'Em Andamento' | 'Concluído';
     is_contract_based?: boolean;
+    contract_id?: string;
     discount?: number;
     checklist?: { id: string, label: string, checked: boolean }[];
     attachments?: Attachment[];
@@ -246,6 +248,36 @@ export interface ReprogrammedBalance {
     nature: TransactionNature;
     period: string; // e.g. '2025'
     value: number;
+}
+
+export interface SupplierContract {
+    id: string;
+    school_id: string;
+    supplier_id: string;
+    program_id: string;
+    rubric_id?: string;
+    description: string;
+    monthly_value: number;
+    total_value?: number;
+    start_date: string;
+    end_date: string;
+    category?: 'INTERNET' | 'GÁS' | 'OUTROS';
+    status: 'Ativo' | 'Encerrado' | 'Suspenso';
+    contract_number?: string;
+    signing_date?: string;
+    terms_json?: {
+        index_type?: string;
+        sla_hours?: string;
+        internet_speed?: string;
+        witness_1_name?: string;
+        witness_1_cpf?: string;
+        witness_1_rg?: string;
+        witness_2_name?: string;
+        witness_2_cpf?: string;
+        witness_2_rg?: string;
+        [key: string]: any;
+    };
+    created_at?: string;
 }
 
 export interface ContractSignature {

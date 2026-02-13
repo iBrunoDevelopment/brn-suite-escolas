@@ -11,11 +11,16 @@ import { useToast } from '../context/ToastContext';
 // Subcomponents
 import ReportsTable from '../components/reports/ReportsTable';
 import AccountabilityProcessModal from '../components/reports/AccountabilityProcessModal';
+import SupplierContractModal from '../components/reports/SupplierContractModal';
+import ContractsTable from '../components/reports/ContractsTable';
 
 const Reports: React.FC<{ user: User }> = ({ user }) => {
   // UI State
   const [showNewProcessModal, setShowNewProcessModal] = useState(false);
+  const [showNewContractModal, setShowNewContractModal] = useState(false);
   const [editingProcessId, setEditingProcessId] = useState<string | null>(null);
+  const [editingContractId, setEditingContractId] = useState<string | null>(null);
+  const [view, setView] = useState<'processes' | 'contracts'>('processes');
   const { addToast } = useToast();
 
   // Filters
@@ -30,6 +35,7 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
   const {
     loading,
     processes,
+    contracts,
     availableEntries,
     suppliers,
     schools,
@@ -91,6 +97,19 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
     }
   };
 
+  const handleDeleteContract = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este contrato? Isso não excluirá os lançamentos vinculados.')) return;
+
+    const { error } = await supabase.from('supplier_contracts').delete().eq('id', id);
+
+    if (error) {
+      addToast('Erro ao excluir contrato: ' + error.message, 'error');
+    } else {
+      addToast('Contrato excluído com sucesso.', 'success');
+      refresh();
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6 w-full p-4 md:p-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-32">
       {/* Header Area */}
@@ -100,13 +119,41 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
           <p className="text-slate-400 text-sm">Controle de cotações, itens de nota e finalização documental.</p>
         </div>
         <div className="flex items-center gap-3">
-          {reportPerm.canCreate && user.role !== UserRole.DIRETOR && (
+          <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5 mr-4">
             <button
-              onClick={() => { setEditingProcessId(null); setShowNewProcessModal(true); }}
-              className="h-12 px-6 bg-primary hover:bg-primary-hover text-white rounded-xl font-bold shadow-lg shadow-primary/20 transition-all flex items-center gap-2"
+              onClick={() => setView('processes')}
+              className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${view === 'processes' ? 'bg-primary text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
             >
-              <span className="material-symbols-outlined">add_circle</span> Novo Processo
+              Prestações
             </button>
+            <button
+              onClick={() => setView('contracts')}
+              className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${view === 'contracts' ? 'bg-primary text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
+            >
+              Contratos
+            </button>
+          </div>
+          {reportPerm.canCreate && user.role !== UserRole.DIRETOR && (
+            <div className="flex gap-3 shrink-0">
+              <button
+                onClick={() => setShowNewContractModal(true)}
+                className="h-12 md:h-14 px-5 md:px-8 bg-white/5 hover:bg-white/10 text-white rounded-2xl md:rounded-3xl flex items-center gap-3 transition-all border border-white/10 group"
+              >
+                <span className="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">history_edu</span>
+                <span className="text-[10px] md:text-xs font-black uppercase tracking-widest hidden sm:inline">Novo Contrato</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setEditingProcessId(null);
+                  setShowNewProcessModal(true);
+                }}
+                className="h-12 md:h-14 px-5 md:px-8 bg-primary hover:bg-primary-hover text-white rounded-2xl md:rounded-3xl flex items-center gap-3 shadow-2xl shadow-primary/30 active:scale-95 transition-all group"
+              >
+                <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">add_circle</span>
+                <span className="text-[10px] md:text-xs font-black uppercase tracking-widest">Nova Prestação</span>
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -199,12 +246,18 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
             <div key={i} className="h-24 bg-surface-dark border border-surface-border rounded-2xl animate-pulse"></div>
           ))}
         </div>
-      ) : (
+      ) : view === 'processes' ? (
         <ReportsTable
           processes={processes}
           onEdit={(p) => { setEditingProcessId(p.id); setShowNewProcessModal(true); }}
           onDelete={handleDelete}
           onPrint={handlePrint}
+        />
+      ) : (
+        <ContractsTable
+          contracts={contracts}
+          onDelete={handleDeleteContract}
+          onEdit={(c) => { setEditingContractId(c.id); setShowNewContractModal(true); }}
         />
       )}
 
@@ -222,6 +275,15 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
           templateUrl,
           availableEntries
         }}
+      />
+
+      <SupplierContractModal
+        isOpen={showNewContractModal}
+        onClose={() => { setShowNewContractModal(false); setEditingContractId(null); }}
+        user={user}
+        auxData={{ schools, programs, suppliers }}
+        onSave={refresh}
+        editingId={editingContractId}
       />
     </div>
   );

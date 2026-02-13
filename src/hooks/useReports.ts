@@ -100,6 +100,46 @@ export const useReports = (user: User, filters: ReportsFilters) => {
         enabled: !!user.id
     });
 
+    const { data: contracts = [], isLoading: loadingContracts, refetch: refreshContracts } = useQuery({
+        queryKey: ['supplier_contracts', user.id, filters],
+        queryFn: async () => {
+            let query = supabase
+                .from('supplier_contracts')
+                .select(`
+                    *,
+                    schools(name),
+                    suppliers(name, cnpj),
+                    programs(name),
+                    financial_entries(value)
+                `)
+                .order('created_at', { ascending: false });
+
+            if (filters.schoolId) query = query.eq('school_id', filters.schoolId);
+            if (filters.programId) query = query.eq('program_id', filters.programId);
+            if (filters.search) query = query.ilike('description', `%${filters.search}%`);
+
+            if (user.role !== UserRole.ADMIN && user.role !== UserRole.OPERADOR) {
+                if (user.role === UserRole.DIRETOR || user.role === UserRole.CLIENTE) {
+                    query = query.eq('school_id', user.schoolId);
+                } else if (user.role === UserRole.TECNICO_GEE) {
+                    if (user.assignedSchools && user.assignedSchools.length > 0) {
+                        query = query.in('school_id', user.assignedSchools);
+                    } else return [];
+                }
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            // Calculate executed value for each contract
+            return (data || []).map((c: any) => {
+                const executed_value = (c.financial_entries || []).reduce((acc: number, entry: any) => acc + Math.abs(entry.value), 0);
+                return { ...c, executed_value };
+            });
+        },
+        enabled: !!user.id
+    });
+
     const deleteProcessMut = useMutation({
         mutationFn: async (id: string) => {
             const { error } = await supabase.from('accountability_processes').delete().eq('id', id);
@@ -114,14 +154,18 @@ export const useReports = (user: User, filters: ReportsFilters) => {
     const { schools, programs, templateUrl } = auxData;
 
     return {
-        loading: loadingProcesses || loadingEntries,
+        loading: loadingProcesses || loadingEntries || loadingContracts,
         processes,
+        contracts,
         availableEntries,
         suppliers,
         schools,
         programs,
         templateUrl,
-        refresh: refreshProcesses,
+        refresh: () => {
+            refreshProcesses();
+            refreshContracts();
+        },
         deleteProcess: deleteProcessMut.mutate
     };
 };

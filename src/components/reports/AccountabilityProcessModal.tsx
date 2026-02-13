@@ -5,7 +5,7 @@ import { User, FinancialEntry, AccountabilityProcess, AccountabilityItem, Accoun
 import { formatCurrency, formatCNPJ } from '../../lib/printUtils';
 import { useToast } from '../../context/ToastContext';
 import { compressImage } from '../../lib/imageUtils';
-import { generateContratoServicoHTML } from '../../lib/documentTemplates';
+import { generateContratoServicoHTML, generateAditivoHTML } from '../../lib/documentTemplates';
 import { printDocument } from '../../lib/printUtils';
 
 interface AccountabilityProcessModalProps {
@@ -61,6 +61,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
     const [showSupplierModal, setShowSupplierModal] = useState<{ open: boolean, quoteIdx: number }>({ open: false, quoteIdx: -1 });
     const [showEntryModal, setShowEntryModal] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
+    const [linkedContract, setLinkedContract] = useState<any | null>(null);
     const [checkingDocId, setCheckingDocId] = useState<string | null>(null);
     const [supplierSearch, setSupplierSearch] = useState('');
     const [entrySearch, setEntrySearch] = useState('');
@@ -147,6 +148,14 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                     return { supplier_id: q.supplier_id || '', supplier_name: q.supplier_name, supplier_cnpj: q.supplier_cnpj || '', items: alignedItems };
                 });
 
+            setCompetitorQuotes(competitors);
+
+            if (entry?.contract_id) {
+                const { data: contract } = await supabase.from('supplier_contracts').select('*').eq('id', entry.contract_id).single();
+                setLinkedContract(contract);
+                setIsContractBased(true);
+            }
+
             while (competitors.length < 2) {
                 competitors.push({ supplier_id: '', supplier_name: '', supplier_cnpj: '', items: docItems.map((it: any) => ({ ...it, unit_price: 0 })) });
             }
@@ -219,6 +228,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                     discount,
                     checklist,
                     attachments: processAttachments,
+                    contract_id: selectedEntry.contract_id || null,
                     updated_at: new Date().toISOString()
                 }).eq('id', editingId);
 
@@ -232,6 +242,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                     is_contract_based: isContractBased,
                     discount,
                     checklist,
+                    contract_id: selectedEntry.contract_id || null,
                     attachments: processAttachments
                 }).select().single();
                 if (pError) throw pError;
@@ -480,6 +491,21 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
         link.click();
     };
 
+    useEffect(() => {
+        if (selectedEntry?.contract_id) {
+            supabase.from('supplier_contracts')
+                .select('*')
+                .eq('id', selectedEntry.contract_id)
+                .single()
+                .then(({ data }) => {
+                    setLinkedContract(data);
+                    setIsContractBased(true);
+                });
+        } else {
+            setLinkedContract(null);
+        }
+    }, [selectedEntry]);
+
     const ValueCounter = () => {
         if (!selectedEntry) return null;
         const target = Math.abs(selectedEntry.value);
@@ -601,22 +627,36 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                                 </div>
 
                                 {isContractBased && selectedEntry && (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            const html = generateContratoServicoHTML({
-                                                id: editingId || 'NOVO',
-                                                financial_entries: selectedEntry,
-                                                items: items,
-                                                discount: discount
-                                            });
-                                            printDocument(html);
-                                        }}
-                                        className="w-full h-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center gap-3 text-white text-[10px] font-black uppercase tracking-widest hover:bg-primary/20 hover:border-primary/40 transition-all mt-4"
-                                    >
-                                        <span className="material-symbols-outlined text-lg text-primary">description</span>
-                                        Gerar Contrato de Prestação de Serviço
-                                    </button>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                                        <button
+                                            onClick={() => {
+                                                const printData = {
+                                                    financial_entry: selectedEntry,
+                                                    contract: linkedContract,
+                                                    discount: discount
+                                                };
+                                                printDocument(generateContratoServicoHTML(printData));
+                                            }}
+                                            className="w-full flex items-center justify-center gap-2 p-4 bg-white/5 border border-primary/20 hover:bg-primary/10 hover:border-primary/50 text-primary rounded-2xl transition-all font-black uppercase text-[10px] tracking-widest"
+                                        >
+                                            <span className="material-symbols-outlined text-sm">print</span>
+                                            Contrato Original
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                const printData = {
+                                                    financial_entry: selectedEntry,
+                                                    contract: linkedContract,
+                                                    discount: discount
+                                                };
+                                                printDocument(generateAditivoHTML(printData));
+                                            }}
+                                            className="w-full flex items-center justify-center gap-2 p-4 bg-white/5 border border-amber-500/20 hover:bg-amber-500/10 hover:border-amber-500/50 text-amber-500 rounded-2xl transition-all font-black uppercase text-[10px] tracking-widest"
+                                        >
+                                            <span className="material-symbols-outlined text-sm">history_edu</span>
+                                            Imprimir Aditivo
+                                        </button>
+                                    </div>
                                 )}
                             </section>
 

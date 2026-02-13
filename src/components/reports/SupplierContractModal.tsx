@@ -1,0 +1,526 @@
+
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabaseClient';
+import { User, Supplier } from '../../types';
+import { useToast } from '../../context/ToastContext';
+
+interface SupplierContractModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    user: User;
+    auxData: {
+        schools: any[];
+        programs: any[];
+        suppliers: Supplier[];
+    };
+    onSave: () => void;
+    editingId?: string | null;
+}
+
+const SupplierContractModal: React.FC<SupplierContractModalProps> = ({
+    isOpen,
+    onClose,
+    user,
+    auxData,
+    onSave,
+    editingId
+}) => {
+    const [loading, setLoading] = useState(false);
+    const { addToast } = useToast();
+
+    // Form State
+    const [schoolId, setSchoolId] = useState(user.schoolId || '');
+    const [supplierId, setSupplierId] = useState('');
+    const [programId, setProgramId] = useState('');
+    const [rubricId, setRubricId] = useState('');
+    const [contractNumber, setContractNumber] = useState('');
+    const [description, setDescription] = useState('');
+    const [monthlyValue, setMonthlyValue] = useState('');
+    const [totalValue, setTotalValue] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [category, setCategory] = useState<'INTERNET' | 'GÁS' | 'OUTROS'>('INTERNET');
+    const [status, setStatus] = useState<'Ativo' | 'Encerrado' | 'Suspenso'>('Ativo');
+    const [creationMode, setCreationMode] = useState<'NEW' | 'ADITIVO'>('NEW');
+    const [parentContractId, setParentContractId] = useState('');
+    const [existingContracts, setExistingContracts] = useState<any[]>([]);
+
+    // Witnesses (terms_json)
+    const [w1Name, setW1Name] = useState('');
+    const [w1Cpf, setW1Cpf] = useState('');
+    const [w1Rg, setW1Rg] = useState('');
+    const [w2Name, setW2Name] = useState('');
+    const [w2Cpf, setW2Cpf] = useState('');
+    const [w2Rg, setW2Rg] = useState('');
+
+    const [rubrics, setRubrics] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (isOpen) {
+            fetchRubrics();
+            if (editingId) {
+                fetchContract();
+            } else {
+                resetForm();
+                fetchExistingContracts();
+                if (user.schoolId) setSchoolId(user.schoolId);
+            }
+        }
+    }, [isOpen, editingId, user.schoolId]);
+
+    const fetchExistingContracts = async () => {
+        if (!schoolId) return;
+        const { data } = await supabase
+            .from('supplier_contracts')
+            .select('*, suppliers(name)')
+            .eq('school_id', schoolId)
+            .eq('status', 'Ativo')
+            .order('created_at', { ascending: false });
+        setExistingContracts(data || []);
+    };
+
+    useEffect(() => {
+        if (schoolId) fetchExistingContracts();
+    }, [schoolId]);
+
+    const handleSelectParent = (id: string) => {
+        const parent = existingContracts.find(c => c.id === id);
+        if (parent) {
+            setParentContractId(id);
+            setSupplierId(parent.supplier_id);
+            setProgramId(parent.program_id);
+            setRubricId(parent.rubric_id || '');
+            setCategory(parent.category);
+            setContractNumber(`${parent.contract_number}/ADITIVO`);
+            setDescription(`TERMO ADITIVO AO CONTRATO Nº ${parent.contract_number} - ${parent.description}`);
+
+            const terms = parent.terms_json || {};
+            setW1Name(terms.witness_1_name || '');
+            setW1Cpf(terms.witness_1_cpf || '');
+            setW1Rg(terms.witness_1_rg || '');
+            setW2Name(terms.witness_2_name || '');
+            setW2Cpf(terms.witness_2_cpf || '');
+            setW2Rg(terms.witness_2_rg || '');
+        }
+    };
+
+    const fetchContract = async () => {
+        const { data, error } = await supabase
+            .from('supplier_contracts')
+            .select('*')
+            .eq('id', editingId)
+            .single();
+
+        if (data && !error) {
+            setSchoolId(data.school_id);
+            setSupplierId(data.supplier_id);
+            setProgramId(data.program_id);
+            setRubricId(data.rubric_id || '');
+            setContractNumber(data.contract_number || '');
+            setDescription(data.description);
+            setMonthlyValue(data.monthly_value.toString());
+            setTotalValue(data.total_value ? data.total_value.toString() : '');
+            setStartDate(data.start_date);
+            setEndDate(data.end_date);
+            setCategory(data.category);
+            setStatus(data.status);
+
+            const terms = data.terms_json || {};
+            setW1Name(terms.witness_1_name || '');
+            setW1Cpf(terms.witness_1_cpf || '');
+            setW1Rg(terms.witness_1_rg || '');
+            setW2Name(terms.witness_2_name || '');
+            setW2Cpf(terms.witness_2_cpf || '');
+            setW2Rg(terms.witness_2_rg || '');
+        }
+    };
+
+    const fetchRubrics = async () => {
+        const { data } = await supabase.from('rubrics').select('*').order('name');
+        setRubrics(data || []);
+    };
+
+    const handleSave = async () => {
+        if (!schoolId || !supplierId || !programId || !description || !monthlyValue || !startDate || !endDate) {
+            addToast('Por favor, preencha todos os campos obrigatórios.', 'warning');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const payload = {
+                school_id: schoolId,
+                supplier_id: supplierId,
+                program_id: programId,
+                rubric_id: rubricId || null,
+                contract_number: contractNumber,
+                description: description.toUpperCase(),
+                monthly_value: parseFloat(monthlyValue),
+                total_value: parseFloat(totalValue) || 0,
+                start_date: startDate,
+                end_date: endDate,
+                category,
+                status,
+                terms_json: {
+                    is_aditivo: creationMode === 'ADITIVO',
+                    parent_contract_id: parentContractId || null,
+                    witness_1_name: w1Name,
+                    witness_1_cpf: w1Cpf,
+                    witness_1_rg: w1Rg,
+                    witness_2_name: w2Name,
+                    witness_2_cpf: w2Cpf,
+                    witness_2_rg: w2Rg
+                }
+            };
+
+            if (editingId) {
+                const { error } = await supabase.from('supplier_contracts').update(payload).eq('id', editingId);
+                if (error) throw error;
+                addToast('Contrato atualizado com sucesso!', 'success');
+            } else {
+                const { error } = await supabase.from('supplier_contracts').insert([payload]);
+                if (error) throw error;
+                addToast('Contrato registrado com sucesso!', 'success');
+            }
+            onSave();
+            onClose();
+            resetForm();
+        } catch (err: any) {
+            addToast('Erro ao salvar contrato: ' + err.message, 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const resetForm = () => {
+        if (!user.schoolId) setSchoolId('');
+        setSupplierId('');
+        setProgramId('');
+        setRubricId('');
+        setContractNumber('');
+        setDescription('');
+        setMonthlyValue('');
+        setTotalValue('');
+        setStartDate('');
+        setEndDate('');
+        setW1Name('');
+        setW1Cpf('');
+        setW1Rg('');
+        setW2Name('');
+        setW2Cpf('');
+        setW2Rg('');
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-0 md:p-4 bg-black/95 backdrop-blur-md">
+            <div className="w-full max-w-4xl bg-[#0a0f14] border-x md:border border-white/10 rounded-none md:rounded-[32px] shadow-2xl flex flex-col h-full md:h-auto md:max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className={`p-6 md:p-8 border-b border-white/5 flex flex-col ${editingId ? 'gap-0' : 'gap-6 md:gap-8'} bg-[#0d1218] rounded-t-none md:rounded-t-[32px] shrink-0 z-20`}>
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3 md:gap-4">
+                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/20 shrink-0">
+                                <span className="material-symbols-outlined text-xl md:text-2xl">history_edu</span>
+                            </div>
+                            <div>
+                                <h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-tight leading-none mb-1">{editingId ? 'Editar Contrato' : 'Novo Contrato'}</h3>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none">Serviços Recorrentes</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {!editingId && (
+                                <div className="hidden lg:flex bg-black/40 p-1 rounded-xl border border-white/5 mr-4">
+                                    <button
+                                        onClick={() => { setCreationMode('NEW'); resetForm(); }}
+                                        className={`px-6 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all gap-2 flex items-center ${creationMode === 'NEW' ? 'bg-primary text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
+                                    >
+                                        <span className="material-symbols-outlined text-sm">add_circle</span>
+                                        Novo
+                                    </button>
+                                    <button
+                                        onClick={() => setCreationMode('ADITIVO')}
+                                        className={`px-6 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all gap-2 flex items-center ${creationMode === 'ADITIVO' ? 'bg-amber-500 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
+                                    >
+                                        <span className="material-symbols-outlined text-sm">history_edu</span>
+                                        Aditivo
+                                    </button>
+                                </div>
+                            )}
+                            <button onClick={onClose} className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center text-slate-400 hover:bg-white/5 hover:text-white transition-all shrink-0">
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Mobile Tabs */}
+                    {!editingId && (
+                        <div className="lg:hidden flex bg-black/40 p-1 rounded-xl border border-white/5 w-full">
+                            <button
+                                onClick={() => { setCreationMode('NEW'); resetForm(); }}
+                                className={`flex-1 py-3 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all gap-2 flex items-center justify-center ${creationMode === 'NEW' ? 'bg-primary text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
+                            >
+                                <span className="material-symbols-outlined text-sm">add_circle</span> Novo
+                            </button>
+                            <button
+                                onClick={() => setCreationMode('ADITIVO')}
+                                className={`flex-1 py-3 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all gap-2 flex items-center justify-center ${creationMode === 'ADITIVO' ? 'bg-amber-500 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
+                            >
+                                <span className="material-symbols-outlined text-sm">history_edu</span> Aditivo
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14">
+                        {/* Seção 1: Dados do Contrato */}
+                        <section className="space-y-8">
+                            <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] border-b border-primary/10 pb-3 flex items-center gap-2">
+                                <span className="material-symbols-outlined text-sm">{creationMode === 'ADITIVO' ? 'history_edu' : 'description'}</span>
+                                {creationMode === 'ADITIVO' ? '1. Contrato Original e Aditivo' : '1. Objeto e Fornecedor'}
+                            </h4>
+
+                            <div className="space-y-5">
+                                {creationMode === 'ADITIVO' && !editingId && (
+                                    <div className="p-5 bg-amber-500/5 border border-amber-500/20 rounded-2xl animate-in slide-in-from-top-2 duration-300">
+                                        <label className="text-[8px] font-black uppercase text-amber-500/70 tracking-widest mb-2 block">Selecionar Contrato para Aditar</label>
+                                        <select
+                                            value={parentContractId}
+                                            onChange={e => handleSelectParent(e.target.value)}
+                                            aria-label="Selecionar Contrato Original"
+                                            className="w-full bg-black/40 border border-amber-500/20 rounded-xl h-12 px-4 text-white outline-none focus:border-amber-500 transition-all appearance-none text-xs"
+                                        >
+                                            <option value="">Escolher contrato ativo...</option>
+                                            {existingContracts.map(c => (
+                                                <option key={c.id} value={c.id}>
+                                                    {c.contract_number} - {c.suppliers?.name} ({c.description.substring(0, 30)}...)
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <p className="text-[9px] text-amber-500/50 mt-2 font-bold uppercase italic">* Ao selecionar, os dados do fornecedor e testemunhas serão importados.</p>
+                                    </div>
+                                )}
+                                <div>
+                                    <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest mb-2 block">Fornecedor (CONTRATADA)</label>
+                                    <select
+                                        value={supplierId}
+                                        onChange={e => setSupplierId(e.target.value)}
+                                        aria-label="Selecionar Fornecedor"
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 px-5 text-white outline-none focus:border-primary transition-all appearance-none"
+                                    >
+                                        <option value="">Selecionar Fornecedor...</option>
+                                        {auxData.suppliers.map(s => <option key={s.id} value={s.id}>{s.name} ({s.cnpj})</option>)}
+                                    </select>
+                                </div>
+
+                                {!user.schoolId && (
+                                    <div>
+                                        <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest mb-2 block">Unidade Escolar (CONTRATANTE)</label>
+                                        <select
+                                            value={schoolId}
+                                            onChange={e => setSchoolId(e.target.value)}
+                                            aria-label="Selecionar Unidade Escolar"
+                                            className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 px-5 text-white outline-none focus:border-primary transition-all appearance-none border-dashed border-primary/30"
+                                        >
+                                            <option value="">Selecionar Unidade...</option>
+                                            {auxData.schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                        </select>
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest mb-2 block">Tipo de Contrato</label>
+                                        <select
+                                            value={category}
+                                            onChange={e => setCategory(e.target.value as any)}
+                                            aria-label="Tipo de Contrato"
+                                            className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 px-5 text-white outline-none focus:border-primary transition-all appearance-none text-primary font-bold"
+                                        >
+                                            <option value="INTERNET">INTERNET</option>
+                                            <option value="GÁS">GÁS</option>
+                                            <option value="OUTROS">OUTROS</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest mb-2 block">Nº Contrato</label>
+                                        <input
+                                            placeholder="Ex: 04/2025"
+                                            aria-label="Número do Contrato"
+                                            className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 px-5 text-white outline-none focus:border-primary transition-all uppercase"
+                                            value={contractNumber}
+                                            onChange={e => setContractNumber(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest mb-2 block">Descrição (Objeto detalhado)</label>
+                                    <textarea
+                                        placeholder="Ex: PRESTAÇÃO DE SERVIÇOS DE INTERNET BANDA LARGA COM VELOCIDADE DE 500MBPS..."
+                                        aria-label="Descrição do Contrato"
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-5 text-white outline-none focus:border-primary transition-all min-h-[100px] text-xs resize-none"
+                                        value={description}
+                                        onChange={e => setDescription(e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest mb-2 block">Programa</label>
+                                        <select
+                                            value={programId}
+                                            onChange={e => setProgramId(e.target.value)}
+                                            aria-label="Selecionar Programa"
+                                            className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 px-5 text-white outline-none focus:border-primary transition-all appearance-none"
+                                        >
+                                            <option value="">Programa...</option>
+                                            {auxData.programs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest mb-2 block">Rubrica</label>
+                                        <select
+                                            value={rubricId}
+                                            onChange={e => setRubricId(e.target.value)}
+                                            aria-label="Selecionar Rubrica"
+                                            className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 px-5 text-white outline-none focus:border-primary transition-all appearance-none"
+                                        >
+                                            <option value="">Rubrica...</option>
+                                            {rubrics.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest mb-2 block">Valor Mensal (R$)</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            placeholder="0,00"
+                                            aria-label="Valor Mensal"
+                                            className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 px-5 text-white outline-none focus:border-primary transition-all font-black text-lg"
+                                            value={monthlyValue}
+                                            onChange={e => setMonthlyValue(e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest mb-2 block">Valor Total do Contrato (R$)</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            placeholder="0,00"
+                                            aria-label="Valor Total"
+                                            className="w-full bg-primary/5 border border-primary/20 rounded-2xl h-14 px-5 text-primary outline-none focus:border-primary transition-all font-black text-lg"
+                                            value={totalValue}
+                                            onChange={e => setTotalValue(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest mb-2 block">Data Início</label>
+                                        <input
+                                            type="date"
+                                            aria-label="Data de Início"
+                                            className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 px-5 text-white outline-none focus:border-primary transition-all"
+                                            value={startDate}
+                                            onChange={e => setStartDate(e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest mb-2 block">Data Término</label>
+                                        <input
+                                            type="date"
+                                            aria-label="Data de Término"
+                                            className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 px-5 text-white outline-none focus:border-primary transition-all"
+                                            value={endDate}
+                                            onChange={e => setEndDate(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Seção 2: Testemunhas */}
+                        <section className="space-y-8">
+                            <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] border-b border-primary/10 pb-3 flex items-center gap-2">
+                                <span className="material-symbols-outlined text-sm">groups</span> 2. Testemunhas e Assinaturas
+                            </h4>
+
+                            <div className="p-8 bg-white/[0.02] border border-white/5 rounded-[32px] space-y-8 shadow-inner">
+                                <div className="space-y-5">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-xs font-black">01</div>
+                                        <p className="text-[10px] font-black text-white uppercase tracking-widest">Testemunha 01</p>
+                                    </div>
+                                    <input
+                                        placeholder="Nome Completo"
+                                        aria-label="Nome Testemunha 1"
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl h-12 px-5 text-xs text-white outline-none focus:border-primary transition-all"
+                                        value={w1Name}
+                                        onChange={e => setW1Name(e.target.value)}
+                                    />
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="flex flex-col gap-1.5">
+                                            <input placeholder="CPF" aria-label="CPF Testemunha 1" className="bg-black/40 border border-white/10 rounded-xl h-12 px-5 text-xs text-white outline-none focus:border-primary transition-all" value={w1Cpf} onChange={e => setW1Cpf(e.target.value)} />
+                                        </div>
+                                        <div className="flex flex-col gap-1.5">
+                                            <input placeholder="RG / CNH" aria-label="RG Testemunha 1" className="bg-black/40 border border-white/10 rounded-xl h-12 px-5 text-xs text-white outline-none focus:border-primary transition-all" value={w1Rg} onChange={e => setW1Rg(e.target.value)} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="w-full h-px bg-white/5"></div>
+
+                                <div className="space-y-5">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-xs font-black">02</div>
+                                        <p className="text-[10px] font-black text-white uppercase tracking-widest">Testemunha 02</p>
+                                    </div>
+                                    <input
+                                        placeholder="Nome Completo"
+                                        aria-label="Nome Testemunha 2"
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl h-12 px-5 text-xs text-white outline-none focus:border-primary transition-all"
+                                        value={w2Name}
+                                        onChange={e => setW2Name(e.target.value)}
+                                    />
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="flex flex-col gap-1.5">
+                                            <input placeholder="CPF" aria-label="CPF Testemunha 2" className="bg-black/40 border border-white/10 rounded-xl h-12 px-5 text-xs text-white outline-none focus:border-primary transition-all" value={w2Cpf} onChange={e => setW2Cpf(e.target.value)} />
+                                        </div>
+                                        <div className="flex flex-col gap-1.5">
+                                            <input placeholder="RG / CNH" aria-label="RG Testemunha 2" className="bg-black/40 border border-white/10 rounded-xl h-12 px-5 text-xs text-white outline-none focus:border-primary transition-all" value={w2Rg} onChange={e => setW2Rg(e.target.value)} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-5 md:p-6 bg-primary/5 border border-primary/10 rounded-2xl md:rounded-3xl flex items-start gap-3 md:gap-4">
+                                <span className="material-symbols-outlined text-primary text-sm md:text-base">verified_user</span>
+                                <p className="text-[9px] md:text-[10px] text-slate-400 font-medium leading-relaxed">
+                                    Estes dados serão utilizados para preencher as cláusulas de assinaturas do contrato padrão SEEC/AL na geração do PDF.
+                                </p>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+
+                <div className="p-6 md:p-8 border-t border-white/5 flex flex-col sm:flex-row justify-end gap-3 bg-black/20 rounded-b-none md:rounded-b-[32px] sticky bottom-0 z-10 backdrop-blur-xl">
+                    <button onClick={onClose} className="w-full sm:w-auto px-8 py-3 rounded-2xl text-slate-400 font-bold uppercase text-[10px] tracking-widest hover:bg-white/5 transition-all">Cancelar</button>
+                    <button
+                        onClick={handleSave}
+                        disabled={loading}
+                        className="w-full sm:w-auto px-12 py-3 bg-primary hover:bg-primary-hover text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-2xl shadow-primary/30 active:scale-95 transition-all disabled:opacity-50"
+                    >
+                        {loading ? 'Sincronizando...' : editingId ? 'Salvar Alterações' : 'Concluir Registro'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default SupplierContractModal;

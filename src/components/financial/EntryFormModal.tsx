@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { TransactionStatus, TransactionNature, User, UserRole } from '../../types';
 import { useToast } from '../../context/ToastContext';
 import { compressImage } from '../../lib/imageUtils';
+import { formatCurrency } from '../../lib/printUtils';
 
 interface SplitItem {
     id: string; rubricId: string; rubricName: string; nature: TransactionNature; value: number; description: string;
@@ -20,7 +21,16 @@ interface EntryFormModalProps {
 }
 
 const ENTRY_CATEGORIES = ['Repasse / Crédito', 'Rendimento de Aplicação', 'Reembolso / Estorno', 'Doação', 'Outros'];
-const EXIT_CATEGORIES = ['Compra de Produtos', 'Contratação de Serviços', 'Tarifa Bancária', 'Impostos / Tributos', 'Devolução de Recurso (FNDE/Estado)', 'Outros'];
+const EXIT_CATEGORIES = [
+    'Compra de Produtos',
+    'Contratação de Serviços',
+    'CONTRATO DE SERVIÇOS DE INTERNET',
+    'CONTRATO DE AQUISIÇÃO DE GÁS DE COZINHA',
+    'Tarifa Bancária',
+    'Impostos / Tributos',
+    'Devolução de Recurso (FNDE/Estado)',
+    'Outros'
+];
 const ATTACHMENT_CATEGORIES = ['Nota Fiscal', 'Espelho da Nota', 'Comprovante', 'Extrato Bancário', 'CNPJ', 'Certidões', 'Certidão Municipal', 'Certidão Estadual', 'Certidão Federal', 'FGTS', 'Trabalhista', 'Outros'];
 
 const EntryFormModal: React.FC<EntryFormModalProps> = ({
@@ -58,6 +68,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
     const [technicalProcess, setTechnicalProcess] = React.useState<any>(null);
     const [entryLogs, setEntryLogs] = React.useState<any[]>([]);
     const [linkedStatement, setLinkedStatement] = React.useState<any>(null);
+    const [selectedContractId, setSelectedContractId] = React.useState('');
+    const [schoolContracts, setSchoolContracts] = React.useState<any[]>([]);
 
     const [isSplitMode, setIsSplitMode] = React.useState(false);
     const [splitItems, setSplitItems] = React.useState<SplitItem[]>([]);
@@ -112,6 +124,28 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
         }
     }, [type, isOpen]);
 
+    React.useEffect(() => {
+        if (!isOpen || !selectedSchoolId || !selectedSupplierId) {
+            setSchoolContracts([]);
+            return;
+        }
+        const fetchContracts = async () => {
+            const { data } = await supabase
+                .from('supplier_contracts')
+                .select('*, financial_entries(value)')
+                .eq('school_id', selectedSchoolId)
+                .eq('supplier_id', selectedSupplierId)
+                .eq('status', 'Ativo');
+
+            const processed = (data || []).map((c: any) => {
+                const executed_value = (c.financial_entries || []).reduce((acc: number, entry: any) => acc + Math.abs(entry.value), 0);
+                return { ...c, executed_value };
+            });
+            setSchoolContracts(processed);
+        };
+        fetchContracts();
+    }, [selectedSchoolId, selectedSupplierId, isOpen]);
+
     const resetForm = () => {
         setType('Saída'); setCategory('Compra de Produtos'); setDate(new Date().toISOString().split('T')[0]);
         setTotalValue(''); setMainDescription(''); setSelectedSupplierId(''); setSelectedSchoolId(user.schoolId || '');
@@ -120,6 +154,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
         setPaymentDate('');
         setAttachments([]); setTechnicalProcess(null); setLinkedStatement(null); setIsSplitMode(false); setSplitItems([]);
         setSingleRubricId(''); setSingleNature(TransactionNature.CUSTEIO); setActiveTab('dados');
+        setSelectedContractId('');
     };
 
     const fetchEntryData = async () => {
@@ -147,6 +182,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                     setAuthNumber(first.auth_number || '');
                     setPaymentDate(first.payment_date || '');
                     setAttachments(first.attachments || []);
+                    setSelectedContractId(first.contract_id || '');
                     const descParts = first.description.split(' - ');
                     setMainDescription(descParts[0]);
                     setSplitItems(entries.map((e: any) => ({
@@ -188,6 +224,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                     setPaymentDate(data.payment_date || '');
                     setAttachments(data.attachments || []);
                     setSingleRubricId(data.rubric_id || '');
+                    setSelectedContractId(data.contract_id || '');
                     setSingleNature(data.nature);
                     fetchLinkedStatement(data.bank_account_id, data.payment_date || data.date);
                 }
@@ -362,7 +399,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                     payment_method_id: selectedPaymentMethodId || null, invoice_date: invoiceDate || null,
                     document_number: documentNumber || null, auth_number: authNumber || null,
                     payment_date: paymentDate || null,
-                    attachments, batch_id: batchId
+                    attachments, batch_id: batchId,
+                    contract_id: selectedContractId || null
                 }));
                 const { data: savedEntries, error } = await supabase.from('financial_entries').insert(entriesToSave).select();
                 if (error) throw error;
@@ -380,7 +418,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                     bank_account_id: selectedBankAccountId || null, payment_method_id: selectedPaymentMethodId || null,
                     invoice_date: invoiceDate || null, document_number: documentNumber || null,
                     auth_number: authNumber || null, payment_date: paymentDate || null,
-                    attachments, batch_id: null
+                    attachments, batch_id: null,
+                    contract_id: selectedContractId || null
                 };
                 const { data: savedData, error } = editingId
                     ? await supabase.from('financial_entries').update(payload).eq('id', editingId).select().single()
@@ -773,16 +812,78 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                                         {attachments.length === 0 && (<div className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-white/[0.02] rounded-3xl"><span className="material-symbols-outlined text-3xl text-slate-700 mb-2">cloud_upload</span><p className="text-[10px] text-slate-600 font-bold uppercase">Nenhum documento anexado ainda</p></div>)}
                                     </div>
                                 </div>
-                                <div className="flex flex-col gap-4">
-                                    <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-3xl p-6 h-full">
-                                        <div className="flex items-center gap-3 mb-6"><div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400"><span className="material-symbols-outlined text-xl">verified_user</span></div><div><h4 className="text-white font-bold text-sm">Vínculo Técnico (RT)</h4><p className="text-[9px] text-indigo-400/70 font-black uppercase tracking-widest">Processo de Prestação</p></div></div>
-                                        <div className="space-y-2">
-                                            {technicalProcess?.attachments?.map((att: any) => (<div key={att.id} className="flex items-center justify-between p-3 bg-indigo-950/40 rounded-2xl border border-indigo-500/10 hover:border-indigo-500/40 transition-all group"><div className="flex items-center gap-3 min-w-0"><span className="material-symbols-outlined text-indigo-500/50 text-base">file_present</span><div className="min-w-0"><p className="text-[11px] text-indigo-100 font-bold truncate">{att.name}</p><p className="text-[8px] text-indigo-400 font-black uppercase tracking-tighter">{att.category || 'Documento Técnico'}</p></div></div><a href={att.url} target="_blank" className="w-8 h-8 flex items-center justify-center hover:bg-indigo-500/20 rounded-xl text-indigo-400 hover:text-white transition-all"><span className="material-symbols-outlined text-base">open_in_new</span></a></div>))}
-                                            {!technicalProcess && (<div className="flex flex-col items-center justify-center py-10 text-center"><span className="material-symbols-outlined text-3xl text-indigo-900 mb-2">inventory_2</span><p className="text-[10px] text-indigo-400/40 font-bold uppercase leading-relaxed">Aguardando vinculação de<br />processo técnico pela GEE</p></div>)}
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
+
+                            {schoolContracts.length > 0 && (
+                                <div className="mt-6 p-6 md:p-8 bg-primary/5 border border-primary/20 rounded-[32px] overflow-hidden relative">
+                                    <div className="absolute top-0 right-0 p-8 opacity-5">
+                                        <span className="material-symbols-outlined text-8xl">history_edu</span>
+                                    </div>
+                                    <label className="text-[10px] font-black uppercase text-primary tracking-[0.2em] mb-4 block leading-none">Contrato de Repasse de Serviços</label>
+                                    <div className="relative z-10">
+                                        <select
+                                            value={selectedContractId}
+                                            onChange={e => {
+                                                const contractId = e.target.value;
+                                                setSelectedContractId(contractId);
+                                                const contract = schoolContracts.find(c => c.id === contractId);
+                                                if (contract) {
+                                                    setSelectedProgramId(contract.program_id);
+                                                    setSingleRubricId(contract.rubric_id || '');
+                                                    setTotalValue(Math.abs(contract.monthly_value).toString());
+                                                    setMainDescription(contract.description);
+                                                }
+                                            }}
+                                            className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 px-5 pr-12 text-white text-sm focus:border-primary outline-none transition-all appearance-none font-bold"
+                                        >
+                                            <option value="">Nenhum Contrato Selecionado</option>
+                                            {schoolContracts.map(c => (
+                                                <option key={c.id} value={c.id}>{c.description.substring(0, 40)}... ({formatCurrency(c.monthly_value)}/mês)</option>
+                                            ))}
+                                        </select>
+                                        <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-primary pointer-events-none">expand_more</span>
+                                    </div>
+
+                                    {selectedContractId && (
+                                        <div className="mt-6 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            {(() => {
+                                                const c = schoolContracts.find(con => con.id === selectedContractId);
+                                                if (!c) return null;
+                                                const total = c.total_value || 0;
+                                                const executed = c.executed_value || 0;
+                                                const progress = total > 0 ? (executed / total) * 100 : 0;
+                                                return (
+                                                    <>
+                                                        <div className="flex justify-between items-end">
+                                                            <div>
+                                                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Execução do Contrato</p>
+                                                                <p className="text-xs font-black text-white">{formatCurrency(executed)} <span className="opacity-40">/ {formatCurrency(total)}</span></p>
+                                                            </div>
+                                                            <p className={`text-xs font-black transition-colors duration-500 ${progress < 30 ? 'text-red-500' :
+                                                                    progress < 60 ? 'text-yellow-500' :
+                                                                        progress < 90 ? 'text-orange-500' : 'text-green-500'
+                                                                }`}>{progress.toFixed(1)}%</p>
+                                                        </div>
+                                                        <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden border border-white/5">
+                                                            <div
+                                                                className={`h-full transition-all duration-500 ${progress < 30 ? 'bg-red-500' :
+                                                                        progress < 60 ? 'bg-yellow-500' :
+                                                                            progress < 90 ? 'bg-orange-500' : 'bg-green-500'
+                                                                    }`}
+                                                                style={{ width: `${Math.min(100, progress)}%` }}
+                                                            ></div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 pt-2 border-t border-white/5 mt-2">
+                                                            <span className="material-symbols-outlined text-[14px] text-emerald-500">check_circle</span>
+                                                            <p className="text-[9px] text-emerald-500 font-black uppercase tracking-widest">Saldo disponível para execução</p>
+                                                        </div>
+                                                    </>
+                                                );
+                                            })()}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 ) : (
