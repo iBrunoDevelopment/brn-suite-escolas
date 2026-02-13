@@ -72,8 +72,24 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
         return [];
     }, [selectedProgramId, allRubrics]);
 
-    const isSimplified = ['Tarifa Bancária', 'Rendimento de Aplicação', 'Devolução de Recurso (FNDE/Estado)'].includes(category);
-    const isBankOp = ['Tarifa Bancária', 'Rendimento de Aplicação'].includes(category);
+    const isSimplified = React.useMemo(() => {
+        const simplifiedCats = [
+            'Tarifa Bancária',
+            'Rendimento de Aplicação',
+            'Devolução de Recurso (FNDE/Estado)',
+            'Repasse / Crédito',
+            'Doação',
+            'Impostos / Tributos',
+            'Reembolso / Estorno'
+        ];
+        return simplifiedCats.some(cat => category?.trim().toUpperCase() === cat.trim().toUpperCase());
+    }, [category]);
+
+    const isBankOp = React.useMemo(() => {
+        const bankCats = ['Tarifa Bancária', 'Rendimento de Aplicação', 'Repasse / Crédito'];
+        return bankCats.some(cat => category?.trim().toUpperCase() === cat.trim().toUpperCase());
+    }, [category]);
+
     const attachLabel = type === 'Entrada' ? 'Anexar Comprovante de Crédito' : 'Anexar Documentos de Despesa';
 
     React.useEffect(() => {
@@ -85,6 +101,15 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
             }
         }
     }, [isOpen, editingId, editingBatchId]);
+
+    // Force valid category when type changes
+    React.useEffect(() => {
+        if (!isOpen) return;
+        const validCategories = type === 'Saída' ? EXIT_CATEGORIES : ENTRY_CATEGORIES;
+        if (!validCategories.includes(category)) {
+            setCategory(validCategories[0]);
+        }
+    }, [type, isOpen]);
 
     const resetForm = () => {
         setType('Saída'); setCategory('Compra de Produtos'); setDate(new Date().toISOString().split('T')[0]);
@@ -409,8 +434,18 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                 {activeTab === 'dados' ? (
                     <div className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col gap-6 custom-scrollbar">
                         <div className="flex gap-4">
-                            <button onClick={() => setType('Saída')} className={`flex-1 py-3 font-bold rounded-xl transition-all ${type === 'Saída' ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20' : 'bg-surface-dark text-slate-400'}`}>Saída</button>
-                            <button onClick={() => setType('Entrada')} className={`flex-1 py-3 font-bold rounded-xl transition-all ${type === 'Entrada' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20' : 'bg-surface-dark text-slate-400'}`}>Entrada</button>
+                            <button
+                                onClick={() => setType('Saída')}
+                                className={`flex-1 py-3 font-bold rounded-xl transition-all ${type === 'Saída' ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20' : 'bg-surface-dark text-slate-400'}`}
+                            >
+                                Saída
+                            </button>
+                            <button
+                                onClick={() => setType('Entrada')}
+                                className={`flex-1 py-3 font-bold rounded-xl transition-all ${type === 'Entrada' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20' : 'bg-surface-dark text-slate-400'}`}
+                            >
+                                Entrada
+                            </button>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="flex flex-col gap-2"><label htmlFor="totalValue" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Valor R$</label><input id="totalValue" type="number" value={totalValue} onChange={e => setTotalValue(e.target.value)} className="bg-[#1e293b] rounded-xl h-12 px-4 text-white text-lg font-mono outline-none border border-white/5 focus:border-primary" /></div>
@@ -665,10 +700,39 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                                 <div className="flex flex-col gap-4">
                                     <div className="flex flex-wrap gap-2">
                                         {(() => {
-                                            const isExtratoAllowed = ['Tarifa Bancária', 'Devolução de Recurso (FNDE/Estado)', 'Repasse / Crédito', 'Rendimento de Aplicação'].includes(category);
                                             const isImposto = category === 'Impostos / Tributos';
-                                            const isBankSpecial = ['Tarifa Bancária', 'Rendimento de Aplicação', 'Reembolso / Estorno', 'Repasse / Crédito'].includes(category);
-                                            const cats = [{ label: isImposto ? 'Guia (DARF/GPS)' : (isBankSpecial ? 'Documento' : 'Nota Fiscal'), icon: isImposto ? 'description' : (isBankSpecial ? 'history_edu' : 'receipt_long'), restricted: isBankSpecial && category !== 'Reembolso / Estorno' }, { label: 'Comprovante', icon: 'payments' }, { label: 'Espelho da Nota', icon: 'content_copy', restricted: isBankSpecial || isImposto }, { label: 'Extrato Bancário', icon: 'account_balance', restricted: !isExtratoAllowed }, { label: 'Certidões', icon: 'verified', restricted: isBankSpecial }].filter(c => !c.restricted);
+                                            const cats = [];
+
+                                            // Guia para Impostos (Substitui Nota Fiscal)
+                                            if (isImposto) {
+                                                cats.push({ label: 'Guia (DARF/GPS)', icon: 'description' });
+                                            }
+                                            // Nota Fiscal apenas se NÃO for simplificado
+                                            else if (!isSimplified) {
+                                                cats.push({ label: 'Nota Fiscal', icon: 'receipt_long' });
+                                                cats.push({ label: 'Espelho da Nota', icon: 'content_copy' });
+                                            }
+
+                                            // Comprovante: Obrigatório para Doação e Devolução, ou se não for simplificado
+                                            if (['Doação', 'Devolução de Recurso (FNDE/Estado)'].includes(category) || !isSimplified) {
+                                                cats.push({ label: 'Comprovante', icon: 'payments' });
+                                            }
+
+                                            // Extrato Bancário: Apenas para os simplificados (como solicitado: "só do extrato")
+                                            if (isSimplified) {
+                                                cats.push({ label: 'Extrato Bancário', icon: 'account_balance' });
+                                            }
+
+                                            // Certidões: Apenas se NÃO for simplificado
+                                            if (!isSimplified) {
+                                                cats.push({ label: 'Certidões', icon: 'verified' });
+                                            }
+
+                                            // Caso especial para Reembolso / Estorno (que não está no isSimplified mas pode precisar de extrato)
+                                            if (category === 'Reembolso / Estorno' && !isSimplified) {
+                                                cats.push({ label: 'Extrato Bancário', icon: 'account_balance' });
+                                            }
+
                                             return cats.map(c => (
                                                 <label key={c.label} className="cursor-pointer group flex flex-col items-center justify-center w-[calc(33.33%-8px)] aspect-square bg-white/5 border border-white/10 rounded-2xl hover:border-primary/50 hover:bg-primary/5 transition-all text-center p-2">
                                                     <span className="material-symbols-outlined text-slate-500 group-hover:text-primary transition-colors mb-1">{c.icon}</span>

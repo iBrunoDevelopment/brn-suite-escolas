@@ -171,8 +171,17 @@ export function useFinancialEntries(user: User, filters: any = {}) {
             const val = Math.abs(e.value);
             if (e.type === 'Entrada') {
                 inc += val;
-                if (e.category === 'Repasse / Crédito') rep += val;
-                if (e.category === 'Rendimento de Aplicação') rend += val;
+
+                const descUpper = (e.description || '').toUpperCase();
+                const catUpper = (e.category || '').toUpperCase();
+
+                const isRendimento = catUpper === 'RENDIMENTO DE APLICAÇÃO' || descUpper.includes('RENDIMENTO') || descUpper.includes('APLIC');
+                const isRepasse = catUpper === 'REPASSE / CRÉDITO' ||
+                    descUpper.includes('REPASSE') ||
+                    (!['RENDIMENTO DE APLICAÇÃO', 'DOAÇÃO', 'REEMBOLSO / ESTORNO'].includes(catUpper));
+
+                if (isRepasse && !isRendimento) rep += val;
+                if (isRendimento) rend += val;
             } else {
                 exp += val;
                 if (e.category === 'Tarifa Bancária') tar += val;

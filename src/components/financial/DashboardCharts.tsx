@@ -38,8 +38,15 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({ flowData, pieData }) 
                                 <XAxis dataKey="name" stroke="#92adc9" fontSize={12} tickLine={false} axisLine={false} />
                                 <YAxis stroke="#92adc9" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `R$${value / 1000}k`} />
                                 <Tooltip
-                                    contentStyle={{ backgroundColor: '#1c2936', borderColor: '#2d3f52', borderRadius: '8px', color: '#fff' }}
-                                    itemStyle={{ color: '#fff' }}
+                                    formatter={(value: number) =>
+                                        new Intl.NumberFormat('pt-BR', {
+                                            style: 'currency',
+                                            currency: 'BRL'
+                                        }).format(value)
+                                    }
+                                    contentStyle={{ backgroundColor: '#1c2936', borderColor: '#2d3f52', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)' }}
+                                    itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
+                                    labelStyle={{ color: '#94a3b8', fontSize: '10px', fontWeight: 'black', textTransform: 'uppercase', marginBottom: '4px' }}
                                 />
                                 <Legend iconType="circle" />
                                 <Bar dataKey="receita" fill="#10b981" radius={[4, 4, 0, 0]} name="Receita" />
@@ -79,8 +86,14 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({ flowData, pieData }) 
                                     ))}
                                 </Pie>
                                 <Tooltip
-                                    contentStyle={{ backgroundColor: '#1c2936', border: 'none', borderRadius: '8px' }}
-                                    itemStyle={{ color: '#fff' }}
+                                    formatter={(value: number) =>
+                                        new Intl.NumberFormat('pt-BR', {
+                                            style: 'currency',
+                                            currency: 'BRL'
+                                        }).format(value)
+                                    }
+                                    contentStyle={{ backgroundColor: '#1c2936', border: 'none', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)' }}
+                                    itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
                                 />
                                 <Legend verticalAlign="bottom" height={36} />
                             </PieChart>

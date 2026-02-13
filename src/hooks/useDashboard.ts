@@ -187,8 +187,18 @@ export const useDashboard = (user: User) => {
 
             if (e.type === 'Entrada') {
                 stats.receita += val;
-                if (e.category === 'Repasse / Crédito') stats.repasses += val;
-                if (e.category === 'Rendimento de Aplicação') stats.rendimentos += val;
+
+                // Flexible repasses identification
+                const descUpper = (e.description || '').toUpperCase();
+                const catUpper = (e.category || '').toUpperCase();
+
+                const isRendimento = catUpper === 'RENDIMENTO DE APLICAÇÃO' || descUpper.includes('RENDIMENTO') || descUpper.includes('APLIC');
+                const isRepasse = catUpper === 'REPASSE / CRÉDITO' ||
+                    descUpper.includes('REPASSE') ||
+                    (!['RENDIMENTO DE APLICAÇÃO', 'DOAÇÃO', 'REEMBOLSO / ESTORNO'].includes(catUpper));
+
+                if (isRepasse && !isRendimento) stats.repasses += absVal;
+                if (isRendimento) stats.rendimentos += absVal;
             } else {
                 stats.despesa += absVal;
                 if (e.category === 'Tarifa Bancária') stats.tarifas += absVal;
@@ -223,8 +233,13 @@ export const useDashboard = (user: User) => {
 
         let accBal = stats.reprogramado;
         const flowData = sortedMonths.map(m => {
-            accBal += (m.receita - m.despesa);
-            return { ...m, saldoAcumulado: accBal };
+            accBal = Number((accBal + (m.receita - m.despesa)).toFixed(2));
+            return {
+                name: m.name,
+                receita: Number(m.receita.toFixed(2)),
+                despesa: Number(m.despesa.toFixed(2)),
+                saldoAcumulado: accBal
+            };
         });
 
         const pieData = Object.entries(natureMap).map(([name, value]) => ({ name, value }));
@@ -427,9 +442,16 @@ export const useDashboard = (user: User) => {
 
         return {
             stats: {
-                ...stats,
-                saldo: stats.receita - stats.despesa,
-                totalDisponivel: (stats.receita - stats.despesa) + stats.reprogramado
+                receita: Number(stats.receita.toFixed(2)),
+                despesa: Number(stats.despesa.toFixed(2)),
+                repasses: Number(stats.repasses.toFixed(2)),
+                rendimentos: Number(stats.rendimentos.toFixed(2)),
+                tarifas: Number(stats.tarifas.toFixed(2)),
+                impostosDevolucoes: Number(stats.impostosDevolucoes.toFixed(2)),
+                pendencias: stats.pendencias,
+                reprogramado: Number(stats.reprogramado.toFixed(2)),
+                saldo: Number((stats.receita - stats.despesa).toFixed(2)),
+                totalDisponivel: Number(((stats.receita - stats.despesa) + stats.reprogramado).toFixed(2))
             },
             flowData,
             pieData,
