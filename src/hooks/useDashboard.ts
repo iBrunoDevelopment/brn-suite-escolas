@@ -188,17 +188,14 @@ export const useDashboard = (user: User) => {
             if (e.type === 'Entrada') {
                 stats.receita += val;
 
-                // Flexible repasses identification
-                const descUpper = (e.description || '').toUpperCase();
-                const catUpper = (e.category || '').toUpperCase();
+                // Strict Category-based identification
+                const catUpper = (e.category || '').toUpperCase().trim();
 
-                const isRendimento = catUpper === 'RENDIMENTO DE APLICAÇÃO' || descUpper.includes('RENDIMENTO') || descUpper.includes('APLIC');
-                const isRepasse = catUpper === 'REPASSE / CRÉDITO' ||
-                    descUpper.includes('REPASSE') ||
-                    (!['RENDIMENTO DE APLICAÇÃO', 'DOAÇÃO', 'REEMBOLSO / ESTORNO'].includes(catUpper));
-
-                if (isRepasse && !isRendimento) stats.repasses += absVal;
-                if (isRendimento) stats.rendimentos += absVal;
+                if (catUpper === 'RENDIMENTO DE APLICAÇÃO') {
+                    stats.rendimentos += absVal;
+                } else if (catUpper === 'REPASSE / CRÉDITO' || catUpper === 'OUTROS') {
+                    stats.repasses += absVal;
+                }
             } else {
                 stats.despesa += absVal;
                 if (e.category === 'Tarifa Bancária') stats.tarifas += absVal;

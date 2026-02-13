@@ -81,7 +81,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({
                                             {entry.type}
                                         </span>
                                         <span className="text-xs text-slate-400 font-bold bg-white/5 px-2 py-0.5 rounded-md">
-                                            {new Date(entry.date).toLocaleDateString('pt-BR')}
+                                            {new Date(entry.date + 'T12:00:00').toLocaleDateString('pt-BR')}
                                         </span>
                                     </div>
                                     <h4 className="text-sm text-white font-bold leading-tight mt-1 line-clamp-2 flex items-center gap-2">
@@ -196,7 +196,7 @@ const FinancialTable: React.FC<FinancialTableProps> = ({
                                                 {entry.type}
                                             </span>
                                             <span className="text-xs text-slate-300 font-mono mt-0.5">
-                                                {new Date(entry.date).toLocaleDateString('pt-BR')}
+                                                {new Date(entry.date + 'T12:00:00').toLocaleDateString('pt-BR')}
                                             </span>
                                         </div>
                                     </td>

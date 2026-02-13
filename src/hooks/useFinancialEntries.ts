@@ -172,16 +172,14 @@ export function useFinancialEntries(user: User, filters: any = {}) {
             if (e.type === 'Entrada') {
                 inc += val;
 
-                const descUpper = (e.description || '').toUpperCase();
-                const catUpper = (e.category || '').toUpperCase();
+                // Strict Category-based identification
+                const catUpper = (e.category || '').toUpperCase().trim();
 
-                const isRendimento = catUpper === 'RENDIMENTO DE APLICAÇÃO' || descUpper.includes('RENDIMENTO') || descUpper.includes('APLIC');
-                const isRepasse = catUpper === 'REPASSE / CRÉDITO' ||
-                    descUpper.includes('REPASSE') ||
-                    (!['RENDIMENTO DE APLICAÇÃO', 'DOAÇÃO', 'REEMBOLSO / ESTORNO'].includes(catUpper));
-
-                if (isRepasse && !isRendimento) rep += val;
-                if (isRendimento) rend += val;
+                if (catUpper === 'RENDIMENTO DE APLICAÇÃO') {
+                    rend += val;
+                } else if (catUpper === 'REPASSE / CRÉDITO' || catUpper === 'OUTROS') {
+                    rep += val;
+                }
             } else {
                 exp += val;
                 if (e.category === 'Tarifa Bancária') tar += val;
