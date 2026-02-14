@@ -42,6 +42,7 @@ export const useBankReconciliation = (user: User) => {
     const [manualSearch, setManualSearch] = useState('');
     const [capaForm, setCapaForm] = useState({ revenue: 0, taxes: 0, balance: 0 });
     const [quickForm, setQuickForm] = useState({ program_id: '', rubric_id: '', supplier_id: '', description: '', nature: 'Custeio', category: 'Compras e Serviços' });
+    const [showMonthStatus, setShowMonthStatus] = useState(false);
 
     // Queries
     const { data: auxData = {
@@ -83,28 +84,34 @@ export const useBankReconciliation = (user: User) => {
         }
     }, [selectedSchoolId, bankAccounts, selectedBankAccountId]);
 
+    useEffect(() => {
+        setShowMonthStatus(false);
+    }, [selectedSchoolId, selectedBankAccountId, filterMonth]);
+
     const { data: systemEntries = [], isLoading: isLoadingSystem, refetch: fetchSystemEntries } = useQuery({
-        queryKey: ['system_entries', selectedSchoolId, selectedBankAccountId],
+        queryKey: ['system_entries', selectedSchoolId, selectedBankAccountId, filterMonth],
         queryFn: async () => {
             if (!selectedSchoolId) return [];
 
-            // Fetch entries that:
-            // 1. Are NOT reconciled OR were reconciled via bank statement (have bank_transaction_ref)
-            // 2. Belong to the selected school
-            // 3. Either have NO bank account assigned OR match the selected bank account
-            // We fetch a larger set to ensure we can match even if the user just created the entry.
+            // Fetch entries for the selected month + 3 previous months to ensure we catch all pendings
+            const [year, month] = filterMonth.split('-').map(Number);
+            const startDate = new Date(year, month - 4, 1).toISOString().split('T')[0]; // Look back 3-4 months
+            const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+
             let query = supabase.from('financial_entries')
                 .select('*')
                 .eq('school_id', selectedSchoolId)
+                .gte('date', startDate)
+                .lte('date', endDate)
                 .order('date', { ascending: false })
-                .limit(300);
+                .limit(1000);
 
             if (selectedBankAccountId) {
                 // Return entries that:
-                // (is_reconciled = false OR bank_transaction_ref IS NOT NULL)
-                // AND (bank_account_id = selected OR bank_account_id IS NULL)
-                query = query.or(`is_reconciled.eq.false,bank_transaction_ref.not.is.null`);
+                // 1. Belong to this bank account OR have no account yet (NULL)
+                // AND (Are NOT reconciled OR were reconciled via bank statement)
                 query = query.or(`bank_account_id.eq.${selectedBankAccountId},bank_account_id.is.null`);
+                query = query.or(`is_reconciled.eq.false,bank_transaction_ref.not.is.null`);
             } else {
                 query = query.eq('is_reconciled', false);
             }
@@ -136,6 +143,7 @@ export const useBankReconciliation = (user: User) => {
                 .update({
                     is_reconciled: true,
                     reconciled_at: new Date().toISOString(),
+                    payment_date: bt.date, // Store the bank date as payment date
                     bank_transaction_ref: bt.fitid,
                     bank_account_id: selectedBankAccountId, // Ensure account is linked
                     status: TransactionStatus.CONCILIADO
@@ -160,6 +168,7 @@ export const useBankReconciliation = (user: User) => {
                     .update({
                         is_reconciled: true,
                         reconciled_at: new Date().toISOString(),
+                        payment_date: bt.date, // Store the bank date as payment date
                         bank_transaction_ref: bt.fitid,
                         bank_account_id: selectedBankAccountId, // Ensure account is linked
                         status: TransactionStatus.CONCILIADO
@@ -195,6 +204,7 @@ export const useBankReconciliation = (user: User) => {
                 status: TransactionStatus.CONCILIADO,
                 is_reconciled: true,
                 reconciled_at: new Date().toISOString(),
+                payment_date: bt.date, // Store the bank date as payment date
                 bank_transaction_ref: bt.fitid
             });
             if (error) throw error;
@@ -269,90 +279,102 @@ export const useBankReconciliation = (user: User) => {
     // Parsing Logic
     const parseOFX = (text: string, fileName: string, uploadTypeShort: 'Conta Corrente' | 'Conta Investimento') => {
         const newTransactions: BankTransaction[] = [];
-        // Split by <STMTTRN> (case insensitive)
-        const blocks = text.split(/<STMTTRN>/i);
-        blocks.shift(); // Remove content before first <STMTTRN>
 
-        blocks.forEach((block, index) => {
-            // Helper to get value of a tag
+        // Use a more robust regex to find all <STMTTRN> blocks
+        // It matches content starting with <STMTTRN> until the next <STMTTRN> or </STMTTRN> or end of file
+        const blockRegex = /<STMTTRN>([\s\S]*?)(?:<\/STMTTRN>|(?=<STMTTRN>)|$)/gi;
+        let match;
+        let blockIndex = 0;
+
+        while ((match = blockRegex.exec(text)) !== null) {
+            const block = match[1];
+
             const getTagValue = (tag: string) => {
                 const regex = new RegExp(`<${tag}>([^<\\r\\n]*)`, 'i');
-                const match = block.match(regex);
-                return match ? match[1].trim() : null;
+                const m = block.match(regex);
+                return m ? m[1].trim() : null;
             };
 
             const dtposted = getTagValue('DTPOSTED');
             const trnamt = getTagValue('TRNAMT');
-            const rawFitid = getTagValue('FITID') || `fit-${index}`;
-            const memo = getTagValue('MEMO') || getTagValue('NAME') || 'Sem descrição';
+            const rawFitid = getTagValue('FITID') || `fit-${blockIndex}`;
+            const memoSymbol = getTagValue('MEMO') || getTagValue('NAME') || getTagValue('PAYEEID') || 'Sem descrição';
 
             if (dtposted && trnamt) {
-                // Parse date (YYYYMMDD...) -> Convert to YYYY-MM-DD for system compatibility
+                // Parse date (YYYYMMDD...)
                 const year = dtposted.substring(0, 4);
                 const month = dtposted.substring(4, 6);
                 const day = dtposted.substring(6, 8);
                 const date = `${year}-${month}-${day}`;
 
-                // Parse amount (support both . and , as decimal separator)
+                // Parse amount (handle both . and ,)
                 const amountValue = parseFloat(trnamt.replace(',', '.'));
 
-                // Skip invalid or zero-value transactions
-                if (isNaN(amountValue) || amountValue === 0) return;
+                if (!isNaN(amountValue) && amountValue !== 0) {
+                    const uniqueFitid = `${rawFitid}_${Math.abs(amountValue)}_${blockIndex}`;
 
-                // Create a truly unique FITID for internal tracking to handle cases where 
-                // a transaction and its fee share the same bank document ID/FITID.
-                const uniqueFitid = `${rawFitid}_${Math.abs(amountValue)}_${index}`;
-
-                newTransactions.push({
-                    id: Math.random().toString(36).substring(2, 11),
-                    date,
-                    description: memo.toUpperCase(),
-                    value: Math.abs(amountValue),
-                    type: amountValue > 0 ? 'C' : 'D',
-                    fitid: uniqueFitid, // Using the unique version
-                    status: 'new',
-                    extract_type: uploadTypeShort
-                });
+                    newTransactions.push({
+                        id: Math.random().toString(36).substring(2, 11),
+                        date,
+                        description: memoSymbol.toUpperCase(),
+                        value: Math.abs(amountValue),
+                        type: amountValue > 0 ? 'C' : 'D',
+                        fitid: uniqueFitid,
+                        status: 'new',
+                        extract_type: uploadTypeShort
+                    });
+                }
             }
-        });
+            blockIndex++;
+        }
 
-        // Filter out internal transfers (Automated investments/redemptions)
-        // BUT ALWAYS KEEP anything that might be a bank fee/charge
+        // If block parsing failed, try a very permissive line-based split as fallback
+        if (newTransactions.length === 0) {
+            const legacyBlocks = text.split(/<STMTTRN>/i);
+            legacyBlocks.shift();
+            legacyBlocks.forEach((block, idx) => {
+                const getTagValue = (tag: string) => {
+                    const regex = new RegExp(`<${tag}>([^<\\r\\n]*)`, 'i');
+                    const m = block.match(regex);
+                    return m ? m[1].trim() : null;
+                };
+                const dt = getTagValue('DTPOSTED');
+                const amt = getTagValue('TRNAMT');
+                if (dt && amt) {
+                    const val = parseFloat(amt.replace(',', '.'));
+                    if (!isNaN(val)) {
+                        newTransactions.push({
+                            id: Math.random().toString(36).substring(2, 11),
+                            date: `${dt.substring(0, 4)}-${dt.substring(4, 6)}-${dt.substring(6, 8)}`,
+                            description: (getTagValue('MEMO') || getTagValue('NAME') || 'Sem descrição').toUpperCase(),
+                            value: Math.abs(val),
+                            type: val > 0 ? 'C' : 'D',
+                            fitid: `${getTagValue('FITID') || 'idx'}_${idx}`,
+                            status: 'new',
+                            extract_type: uploadTypeShort
+                        });
+                    }
+                }
+            });
+        }
+
+        // Filter out internal noise but keep everything else
         return newTransactions.filter(t => {
             const desc = t.description.toUpperCase();
-
-            // Comprehensive fee/tax detection - we don't want to hide anything that costs money
-            const isFee =
-                desc.includes('TAR ') ||
-                desc.includes('TARIFA') ||
-                desc.includes('TAR.') ||
-                desc.includes('PIX') ||
-                desc.includes('IMPOSTO') ||
-                desc.includes('IOF') ||
-                desc.includes('CPMF') ||
-                desc.includes('JUROS') ||
-                desc.includes('COMISS') ||
-                desc.includes('MANUTEN');
-
+            const isFee = /TAR|TARIFA|PIX|IMPOSTO|IOF|CPMF|JUROS|COMISS|MANUTEN/.test(desc);
             if (isFee) return true;
 
-            // Identify internal transfers to filter out from the noise
-            const isInternal =
-                desc.includes('RESGATE AUTOMAT') ||
-                desc.includes('APLICACAO AUTOMAT') ||
-                desc.includes('APLIC AUTOMAT') ||
-                desc.includes('RESG AUTOMAT') ||
-                desc.includes('SALDO DIA') ||
-                desc.includes('SDO CTA/APL');
-
+            const isInternal = /RESGATE AUTOMAT|APLICACAO AUTOMAT|APLIC AUTOMAT|RESG AUTOMAT|SALDO DIA|SDO CTA\/APL/.test(desc);
             return !isInternal;
         });
     };
 
     const parseCSV = (text: string, fileName: string, uploadTypeShort: 'Conta Corrente' | 'Conta Investimento') => {
-        const rows = text.split('\n');
+        const rows = text.split(/\r?\n/).filter(row => row.trim().length > 0);
         const newTransactions: BankTransaction[] = [];
         let startIdx = 0;
+
+        // Try to find header or start from 0 if it looks like data
         if (rows[0] && (rows[0].toLowerCase().includes('data') || rows[0].toLowerCase().includes('date'))) {
             startIdx = 1;
         }
@@ -405,7 +427,8 @@ export const useBankReconciliation = (user: User) => {
             // Priority 2: Date + Value Match
             const match = currentSystemEntries.find(se => {
                 if (se.is_reconciled) return false; // Don't auto-match already reconciled if no FITID
-                const dateDiff = Math.abs(new Date(se.date).getTime() - new Date(bt.date).getTime()) / (1000 * 60 * 60 * 24);
+                const systemDate = se.payment_date || se.date;
+                const dateDiff = Math.abs(new Date(systemDate).getTime() - new Date(bt.date).getTime()) / (1000 * 60 * 60 * 24);
                 const valueMatch = Math.abs(Number(se.value)) === bt.value;
                 const typeMatch = (bt.type === 'C' && se.type === 'Entrada') || (bt.type === 'D' && se.type === 'Saída');
                 return dateDiff <= 3 && valueMatch && typeMatch;
@@ -448,6 +471,7 @@ export const useBankReconciliation = (user: User) => {
 
             // If it's just a PDF, we stop here (no transaction parsing)
             if (isPdf) {
+                setShowMonthStatus(true);
                 return addToast('Extrato PDF vinculado como documento oficial do mês.', 'success');
             }
 
@@ -459,13 +483,26 @@ export const useBankReconciliation = (user: User) => {
             else return addToast('Para processar dados, use os formatos .OFX, .OFC ou .CSV.', 'error');
 
             const combined = [...transactions];
+            let addedCount = 0;
             newBatch.forEach(nt => {
-                if (!combined.some(t => t.fitid === nt.fitid)) combined.push(nt);
+                if (!combined.some(t => t.fitid === nt.fitid)) {
+                    combined.push(nt);
+                    addedCount++;
+                }
             });
+
+            if (combined.length === 0) {
+                return addToast('Nenhuma transação válida encontrada no arquivo. Verifique se o formato está correto.', 'warning');
+            }
 
             const matched = autoMatch(combined, systemEntries);
             setTransactions(matched);
-            addToast('Extrato de dados processado com sucesso!', 'success');
+
+            if (addedCount > 0) {
+                addToast(`${addedCount} novas transações processadas com sucesso!`, 'success');
+            } else {
+                addToast('Arquivo processado, mas todas as transações já tinham sido importadas.', 'info');
+            }
         } catch (e: any) {
             console.error(e);
             addToast('Falha no upload/processamento: ' + e.message, 'error');
@@ -638,6 +675,8 @@ export const useBankReconciliation = (user: User) => {
         handleBulkReconcile,
         handleQuickCreateStart,
         handleQuickCreate,
-        fetchSystemEntries
+        fetchSystemEntries,
+        showMonthStatus,
+        setShowMonthStatus
     };
 };

@@ -10,11 +10,12 @@ interface ImportZoneProps {
     filterMonth: string;
     selectedSchoolId: string;
     selectedBankAccountId: string;
+    onShowStatus?: () => void;
 }
 
 const ImportZone: React.FC<ImportZoneProps> = ({
     dragActive, setDragActive, uploadType, setUploadType, onFileUpload, filterMonth,
-    selectedSchoolId, selectedBankAccountId
+    selectedSchoolId, selectedBankAccountId, onShowStatus
 }) => {
     const isSelectionComplete = selectedSchoolId && selectedBankAccountId;
 
@@ -62,16 +63,27 @@ const ImportZone: React.FC<ImportZoneProps> = ({
                 </button>
             </div>
 
-            <label className={`px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg ${!isSelectionComplete ? 'bg-slate-700 text-slate-400 cursor-not-allowed opacity-50' : 'bg-primary hover:bg-primary/90 text-white cursor-pointer active:scale-95 shadow-primary/20'}`}>
-                Selecionar Arquivo
-                <input
-                    type="file"
-                    className="hidden"
-                    accept=".pdf,.ofx,.ofc,.csv"
-                    onChange={handleFileChange}
-                    disabled={!isSelectionComplete}
-                />
-            </label>
+            <div className="flex flex-col md:flex-row gap-3">
+                <label className={`px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg ${!isSelectionComplete ? 'bg-slate-700 text-slate-400 cursor-not-allowed opacity-50' : 'bg-primary hover:bg-primary/90 text-white cursor-pointer active:scale-95 shadow-primary/20'}`}>
+                    Selecionar Arquivo
+                    <input
+                        type="file"
+                        className="hidden"
+                        accept=".pdf,.ofx,.ofc,.csv"
+                        onChange={handleFileChange}
+                        disabled={!isSelectionComplete}
+                    />
+                </label>
+
+                {isSelectionComplete && onShowStatus && (
+                    <button
+                        onClick={onShowStatus}
+                        className="px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-xs transition-all bg-white/5 hover:bg-white/10 text-white border border-white/10 active:scale-95 shadow-lg"
+                    >
+                        Ver Status Atual
+                    </button>
+                )}
+            </div>
             <div className="flex flex-col items-center gap-1">
                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">
                     DATA (.OFX, .CSV): Processa os lançamentos automaticamente

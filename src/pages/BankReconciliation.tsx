@@ -13,6 +13,7 @@ import HelpModal from '../components/reconciliation/HelpModal';
 import ReconciliationReport from '../components/reconciliation/ReconciliationReport';
 import CapaModal from '../components/reconciliation/CapaModal';
 import ReconciliationHistoryModal from '../components/reconciliation/ReconciliationHistoryModal';
+import MonthStatusTable from '../components/reconciliation/MonthStatusTable';
 
 const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
     const recon = useBankReconciliation(user);
@@ -45,16 +46,26 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
             />
 
             {recon.transactions.length === 0 ? (
-                <ImportZone
-                    dragActive={recon.dragActive}
-                    setDragActive={recon.setDragActive}
-                    uploadType={recon.uploadType}
-                    setUploadType={recon.setUploadType}
-                    onFileUpload={recon.handleFileUpload}
-                    filterMonth={recon.filterMonth}
-                    selectedSchoolId={recon.selectedSchoolId}
-                    selectedBankAccountId={recon.selectedBankAccountId}
-                />
+                recon.showMonthStatus ? (
+                    <MonthStatusTable
+                        systemEntries={recon.systemEntries}
+                        programs={recon.programs}
+                        filterMonth={recon.filterMonth}
+                        onClose={() => recon.setShowMonthStatus(false)}
+                    />
+                ) : (
+                    <ImportZone
+                        dragActive={recon.dragActive}
+                        setDragActive={recon.setDragActive}
+                        uploadType={recon.uploadType}
+                        setUploadType={recon.setUploadType}
+                        onFileUpload={recon.handleFileUpload}
+                        filterMonth={recon.filterMonth}
+                        selectedSchoolId={recon.selectedSchoolId}
+                        selectedBankAccountId={recon.selectedBankAccountId}
+                        onShowStatus={() => recon.setShowMonthStatus(true)}
+                    />
+                )
             ) : (
                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 pb-20">
                     <div className="xl:col-span-12">
