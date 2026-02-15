@@ -62,7 +62,20 @@ const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
                         <select title="Selecione o Programa" aria-label="Selecione o Programa"
                             id="qc-program"
                             value={quickForm.program_id}
-                            onChange={e => setQuickForm({ ...quickForm, program_id: e.target.value })}
+                            onChange={e => {
+                                const newProgramId = e.target.value;
+                                const currentRubric = rubrics.find(r => r.id === quickForm.rubric_id);
+                                // Check if current rubric is compatible with new program
+                                const isCompatible = !newProgramId || (currentRubric && (
+                                    (typeof currentRubric.program_id === 'object' ? currentRubric.program_id?.id : currentRubric.program_id) === newProgramId
+                                ));
+
+                                setQuickForm({
+                                    ...quickForm,
+                                    program_id: newProgramId,
+                                    rubric_id: isCompatible ? quickForm.rubric_id : ''
+                                });
+                            }}
                             className="bg-card-dark border border-white/10 rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-indigo-500"
                         >
                             <option value="">Selecione o Programa</option>
@@ -86,7 +99,13 @@ const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
                             className="bg-card-dark border border-white/10 rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-indigo-500"
                         >
                             <option value="">Nenhuma / Natureza Direta</option>
-                            {rubrics.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                            {rubrics
+                                .filter(r => {
+                                    if (!quickForm.program_id) return false;
+                                    const rProgId = typeof r.program_id === 'object' ? r.program_id?.id : r.program_id;
+                                    return rProgId === quickForm.program_id;
+                                })
+                                .map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                         </select>
                     </div>
 

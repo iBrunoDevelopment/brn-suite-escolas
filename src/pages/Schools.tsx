@@ -57,7 +57,10 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
         plan_id: '',
         custom_price: '',
         custom_title: '',
-        discount_value: 0
+        discount_value: 0,
+        director_cpf: '',
+        director_rg: '',
+        director_address: ''
     });
 
     useEffect(() => {
@@ -134,6 +137,23 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
             .slice(0, 16);
     };
 
+    const formatCPFCNPJ_Local = (value: string) => {
+        const cleanValue = value.replace(/\D/g, '');
+        if (cleanValue.length <= 11) {
+            return cleanValue
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+                .slice(0, 14);
+        }
+        return cleanValue
+            .replace(/(\d{2})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d)/, '$1/$2')
+            .replace(/(\d{4})(\d{1,2})/, '$1-$2')
+            .slice(0, 18);
+    };
+
     const handleSave = async () => {
         if (!formData.name) {
             addToast('O nome da escola é obrigatório.', 'warning');
@@ -185,7 +205,10 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
             plan_id: school.plan_id || '',
             custom_price: school.custom_price || '',
             custom_title: school.custom_title || '',
-            discount_value: school.discount_value || 0
+            discount_value: school.discount_value || 0,
+            director_cpf: school.director_cpf || '',
+            director_rg: school.director_rg || '',
+            director_address: school.director_address || ''
         });
         setShowForm(true);
     };
@@ -299,7 +322,10 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
             plan_id: '',
             custom_price: '',
             custom_title: '',
-            discount_value: 0
+            discount_value: 0,
+            director_cpf: '',
+            director_rg: '',
+            director_address: ''
         });
     };
 
@@ -509,8 +535,30 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                                     <input id="conselho-escolar" type="text" aria-label="Conselho Escolar" value={formData.conselho_escolar} onChange={e => setFormData({ ...formData, conselho_escolar: e.target.value.toUpperCase() })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" placeholder="Nome do conselho..." />
                                 </div>
                                 <div className="md:col-span-2">
-                                    <label htmlFor="school-director" className="text-xs font-bold text-slate-400 uppercase mb-1 block">Diretor(a)</label>
+                                    <label htmlFor="school-director" className="text-xs font-bold text-slate-400 uppercase mb-1 block">Diretor(a) / Presidente</label>
                                     <input id="school-director" type="text" aria-label="Diretor(a)" placeholder="Nome completo do diretor" value={formData.director} onChange={e => setFormData({ ...formData, director: e.target.value.toUpperCase() })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" title="Nome do Diretor" />
+                                </div>
+
+                                {/* Director Details Section */}
+                                <div className="md:col-span-2 p-4 bg-primary/5 border border-primary/10 rounded-2xl space-y-4">
+                                    <div className="flex items-center gap-2 text-primary font-bold text-[10px] uppercase">
+                                        <span className="material-symbols-outlined text-sm">badge</span>
+                                        Dados do Representante Legal (Presidente)
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label htmlFor="dir-cpf" className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">CPF do Diretor</label>
+                                            <input id="dir-cpf" type="text" placeholder="000.000.000-00" value={formData.director_cpf} onChange={e => setFormData({ ...formData, director_cpf: formatCPFCNPJ_Local(e.target.value) })} className="w-full bg-[#0f172a] border-slate-800 rounded-lg text-white p-2 text-sm outline-none focus:border-primary/50" maxLength={14} />
+                                        </div>
+                                        <div>
+                                            <label htmlFor="dir-rg" className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">RG do Diretor</label>
+                                            <input id="dir-rg" type="text" placeholder="0.000.000" value={formData.director_rg} onChange={e => setFormData({ ...formData, director_rg: e.target.value })} className="w-full bg-[#0f172a] border-slate-800 rounded-lg text-white p-2 text-sm outline-none focus:border-primary/50" />
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <label htmlFor="dir-addr" className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Endereço Residencial</label>
+                                            <input id="dir-addr" type="text" placeholder="Rua, nº, Bairro, Cidade..." value={formData.director_address} onChange={e => setFormData({ ...formData, director_address: e.target.value.toUpperCase() })} className="w-full bg-[#0f172a] border-slate-800 rounded-lg text-white p-2 text-sm outline-none focus:border-primary/50" />
+                                        </div>
+                                    </div>
                                 </div>
                                 <div className="md:col-span-2">
                                     <label htmlFor="school-secretary" className="text-xs font-bold text-slate-400 uppercase mb-1 block">Secretário(a) do Conselho</label>

@@ -76,7 +76,21 @@ export const useSettings = (user: User) => {
 
     const [newProgram, setNewProgram] = useState({ name: '', description: '' });
 
-    const [newSupplier, setNewSupplier] = useState({ name: '', cnpj: '', email: '', phone: '', cep: '', address: '', city: '', uf: '', stamp_url: '' });
+    const [newSupplier, setNewSupplier] = useState({
+        name: '',
+        cnpj: '',
+        email: '',
+        phone: '',
+        cep: '',
+        address: '',
+        city: '',
+        uf: '',
+        stamp_url: '',
+        rep_name: '',
+        rep_cpf: '',
+        rep_rg: '',
+        rep_address: ''
+    });
     const [editingSupplierId, setEditingSupplierId] = useState<string | null>(null);
     const [isUploadingStamp, setIsUploadingStamp] = useState(false);
 
@@ -204,7 +218,10 @@ export const useSettings = (user: User) => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-            setNewSupplier({ name: '', cnpj: '', email: '', phone: '', cep: '', address: '', city: '', uf: '', stamp_url: '' });
+            setNewSupplier({
+                name: '', cnpj: '', email: '', phone: '', cep: '', address: '', city: '', uf: '', stamp_url: '',
+                rep_name: '', rep_cpf: '', rep_rg: '', rep_address: ''
+            });
             setEditingSupplierId(null);
         }
     });
@@ -442,7 +459,7 @@ export const useSettings = (user: User) => {
         fetchCities,
         handleSaveRubric, handleEditRubric: (r: any) => { setNewRubric({ name: r.name, program_id: r.program_id, school_id: r.school_id || '', default_nature: r.default_nature || 'Custeio' }); setEditingRubricId(r.id); },
         handleDeleteRubric, handleCreateProgram, handleDeleteProgram,
-        handleCreateSupplier, handleEditSupplier: (s: any) => { setNewSupplier({ ...s }); setEditingSupplierId(s.id); },
+        handleCreateSupplier, handleEditSupplier: (s: any) => { setNewSupplier({ ...s, rep_name: s.rep_name || '', rep_cpf: s.rep_cpf || '', rep_rg: s.rep_rg || '', rep_address: s.rep_address || '' }); setEditingSupplierId(s.id); },
         handleDeleteSupplier, handleStampUpload,
         handleCreateBank, handleEditBank: (b: any) => { setNewBank({ ...b, school_id: b.school_id || '', program_id: b.program_id || '' }); setEditingBankId(b.id); },
         handleDeleteBank,

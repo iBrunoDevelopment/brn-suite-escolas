@@ -74,7 +74,7 @@ const SuppliersSection: React.FC<SuppliersSectionProps> = ({
                     </h3>
                     {editingSupplierId && (
                         <button
-                            onClick={() => { setEditingSupplierId(null); setNewSupplier({ name: '', cnpj: '', email: '', phone: '', cep: '', address: '', city: '', uf: '', stamp_url: '' }); }}
+                            onClick={() => { setEditingSupplierId(null); setNewSupplier({ name: '', cnpj: '', email: '', phone: '', cep: '', address: '', city: '', uf: '', stamp_url: '', rep_name: '', rep_cpf: '', rep_rg: '', rep_address: '' }); }}
                             className="text-xs text-primary hover:underline"
                         >
                             Cancelar Edição
@@ -183,6 +183,33 @@ const SuppliersSection: React.FC<SuppliersSectionProps> = ({
                         </div>
                     </div>
 
+                    {/* Legal Representative Section */}
+                    <div className="border border-primary/20 bg-primary/5 p-4 rounded-lg flex flex-col gap-3">
+                        <p className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-1">
+                            <span className="material-symbols-outlined text-sm">assignment_ind</span>
+                            Representante Legal (para Contratos)
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div className="flex flex-col gap-1 lg:col-span-2">
+                                <label htmlFor="rep_name" className="text-[10px] text-slate-500 font-bold uppercase">Nome Completo</label>
+                                <input id="rep_name" type="text" value={newSupplier.rep_name || ''} onChange={e => setNewSupplier({ ...newSupplier, rep_name: e.target.value.toUpperCase() })} className="bg-surface-dark border border-surface-border rounded px-3 py-2 text-sm text-white focus:border-primary outline-none" placeholder="REPRESENTANTE LEGAL" />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label htmlFor="rep_cpf" className="text-[10px] text-slate-500 font-bold uppercase">CPF</label>
+                                <input id="rep_cpf" type="text" value={newSupplier.rep_cpf || ''} onChange={e => setNewSupplier({ ...newSupplier, rep_cpf: formatCPFCNPJ(e.target.value) })} className="bg-surface-dark border border-surface-border rounded px-3 py-2 text-sm text-white focus:border-primary outline-none" placeholder="000.000.000-00" maxLength={14} />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label htmlFor="rep_rg" className="text-[10px] text-slate-500 font-bold uppercase">RG</label>
+                                <input id="rep_rg" type="text" value={newSupplier.rep_rg || ''} onChange={e => setNewSupplier({ ...newSupplier, rep_rg: e.target.value })} className="bg-surface-dark border border-surface-border rounded px-3 py-2 text-sm text-white focus:border-primary outline-none" placeholder="0.000.000" />
+                            </div>
+                            <div className="flex flex-col gap-1 lg:col-span-4">
+                                <label htmlFor="rep_addr" className="text-[10px] text-slate-500 font-bold uppercase">Endereço do Representante</label>
+                                <input id="rep_addr" type="text" value={newSupplier.rep_address || ''} onChange={e => setNewSupplier({ ...newSupplier, rep_address: e.target.value.toUpperCase() })} className="bg-surface-dark border border-surface-border rounded px-3 py-2 text-sm text-white focus:border-primary outline-none" placeholder="ENDEREÇO COMPLETO" />
+                            </div>
+                        </div>
+                    </div>
+
+
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="flex flex-col gap-1">
                             <label htmlFor="sup_uf" className="text-xs text-slate-400">UF</label>
@@ -221,7 +248,7 @@ const SuppliersSection: React.FC<SuppliersSectionProps> = ({
 
                     <div className="flex justify-end gap-3">
                         {editingSupplierId && (
-                            <button onClick={() => { setEditingSupplierId(null); setNewSupplier({ name: '', cnpj: '', email: '', phone: '', cep: '', address: '', city: '', uf: '', stamp_url: '' }); }} className="bg-surface-dark border border-surface-border text-white px-6 py-2 rounded font-bold text-sm shadow-lg transition-all">
+                            <button onClick={() => { setEditingSupplierId(null); setNewSupplier({ name: '', cnpj: '', email: '', phone: '', cep: '', address: '', city: '', uf: '', stamp_url: '', rep_name: '', rep_cpf: '', rep_rg: '', rep_address: '' }); }} className="bg-surface-dark border border-surface-border text-white px-6 py-2 rounded font-bold text-sm shadow-lg transition-all">
                                 Cancelar
                             </button>
                         )}

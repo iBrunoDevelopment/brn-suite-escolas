@@ -68,6 +68,10 @@ export interface Supplier {
         account: string;
     };
     stamp_url?: string;
+    rep_name?: string;
+    rep_cpf?: string;
+    rep_rg?: string;
+    rep_address?: string;
 }
 
 export interface FinancialEntry {
@@ -135,6 +139,9 @@ export interface School {
     custom_price?: string; // Preço personalizado para a escola
     custom_title?: string; // Título personalizado do plano para a escola
     discount_value?: number; // Valor do desconto em reais
+    director_cpf?: string;
+    director_rg?: string;
+    director_address?: string;
 }
 
 export interface Program {

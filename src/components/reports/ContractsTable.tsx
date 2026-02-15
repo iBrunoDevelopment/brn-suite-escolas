@@ -6,9 +6,10 @@ interface ContractTableProps {
     contracts: any[];
     onDelete?: (id: string) => void;
     onEdit?: (contract: any) => void;
+    onPrint?: (contract: any) => void;
 }
 
-const ContractsTable: React.FC<ContractTableProps> = ({ contracts, onDelete, onEdit }) => {
+const ContractsTable: React.FC<ContractTableProps> = ({ contracts, onDelete, onEdit, onPrint }) => {
     if (contracts.length === 0) {
         return (
             <div className="bg-surface-dark border border-surface-border rounded-3xl p-20 flex flex-col items-center justify-center text-center">
@@ -75,15 +76,15 @@ const ContractsTable: React.FC<ContractTableProps> = ({ contracts, onDelete, onE
                                         <p className="text-xs font-black text-white">{formatCurrency(executed)} <span className="text-slate-500 font-medium">de {formatCurrency(total)}</span></p>
                                     </div>
                                     <p className={`text-xs font-black transition-colors duration-500 ${progress < 30 ? 'text-red-500' :
-                                            progress < 60 ? 'text-yellow-500' :
-                                                progress < 90 ? 'text-orange-500' : 'text-green-500'
+                                        progress < 60 ? 'text-yellow-500' :
+                                            progress < 90 ? 'text-orange-500' : 'text-green-500'
                                         }`}>{progress.toFixed(1)}%</p>
                                 </div>
                                 <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
                                     <div
                                         className={`h-full transition-all duration-1000 ${progress < 30 ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.3)]' :
-                                                progress < 60 ? 'bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.3)]' :
-                                                    progress < 90 ? 'bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.3)]' : 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)]'
+                                            progress < 60 ? 'bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.3)]' :
+                                                progress < 90 ? 'bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.3)]' : 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)]'
                                             }`}
                                         style={{ width: `${Math.min(100, progress)}%` }}
                                     ></div>
@@ -98,6 +99,13 @@ const ContractsTable: React.FC<ContractTableProps> = ({ contracts, onDelete, onE
                                     </p>
                                 </div>
                                 <div className="flex gap-2">
+                                    <button
+                                        onClick={() => onPrint?.(contract)}
+                                        className="p-2 text-slate-500 hover:text-white hover:bg-white/5 rounded-xl transition-all"
+                                        title="Imprimir Contrato"
+                                    >
+                                        <span className="material-symbols-outlined text-lg">print</span>
+                                    </button>
                                     <button
                                         onClick={() => onEdit?.(contract)}
                                         className="p-2 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-xl transition-all"

@@ -83,6 +83,24 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
     printDocument(html);
   };
 
+  const handlePrintContract = (contract: any) => {
+    // Wrap contract in a structure similar to process for the template
+    const pseudoProcess = {
+      id: contract.id,
+      contract: contract,
+      financial_entries: [{
+        schools: contract.schools,
+        suppliers: contract.suppliers,
+        programs: contract.programs,
+        description: contract.description,
+        date: contract.start_date,
+        category: contract.category
+      }]
+    };
+    const html = generateContratoServicoHTML(pseudoProcess);
+    printDocument(html);
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir esta prestação de contas?')) return;
 
@@ -258,6 +276,7 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
           contracts={contracts}
           onDelete={handleDeleteContract}
           onEdit={(c) => { setEditingContractId(c.id); setShowNewContractModal(true); }}
+          onPrint={handlePrintContract}
         />
       )}
 

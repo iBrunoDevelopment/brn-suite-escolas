@@ -657,6 +657,13 @@ export const generateContratoServicoHTML = (process: any) => {
     let entry = process.financial_entries || process.financial_entry;
     if (Array.isArray(entry)) entry = entry[0];
 
+    const category = (process as any).category || (process as any).contract?.category || entry?.category;
+
+    if (category === 'GÁS') {
+        return generateContratoGasHTML(process);
+    }
+
+
     const school = entry?.schools || entry?.school;
     const program = entry?.programs || entry?.program;
     let quotes = process.quotes || process.accountability_quotes || process.accountability_quote || [];
@@ -690,16 +697,15 @@ export const generateContratoServicoHTML = (process: any) => {
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8"/>
-    <title>Contrato de Prestação de Serviços - BRN Suite</title>
+    <title>Contrato de Prestação de Serviços Contínuos - BRN Suite</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background: white; color: black; line-height: 1.5; font-size: 11px; }
-        .print-container { width: 210mm; margin: 0 auto; padding: 2cm 2.5cm; min-height: 297mm; }
+        body { font-family: 'Inter', sans-serif; background: white; color: black; line-height: 1.4; font-size: 10px; }
+        .print-container { width: 210mm; margin: 0 auto; padding: 1.5cm 2cm; min-height: 297mm; }
         .text-justified { text-align: justify; text-justify: inter-word; }
         h1, h2, h3 { text-transform: uppercase; font-weight: 800; text-align: center; }
-        .clause { margin-top: 15px; font-weight: 800; text-transform: uppercase; text-decoration: underline; }
-        .subclause { font-weight: 700; margin-top: 8px; }
+        .clause { margin-top: 12px; font-weight: 800; text-transform: uppercase; border-bottom: 1px solid black; display: inline-block; }
         @media print {
             body { padding: 0 !important; margin: 0 !important; }
             @page { size: A4; margin: 0; }
@@ -710,96 +716,240 @@ export const generateContratoServicoHTML = (process: any) => {
 <body>
     <div class="print-container">
         <!-- Professional Header -->
-        <div class="text-center mb-10 space-y-1">
-            <h2 class="text-[12px]">ESTADO DE ALAGOAS</h2>
-            <h2 class="text-[12px]">SECRETARIA DA EDUCAÇÃO</h2>
-            <h2 class="text-[12px]">7ª GERÊNCIA REGIONAL DE EDUCAÇÃO</h2>
-            <h1 class="text-[13px] font-black border-b-2 border-black pb-2">CONSELHO ESCOLAR DA ${school?.name?.toUpperCase() || 'UNIDADE EXECUTORA'}</h1>
+        <div class="text-center mb-6 space-y-0.5">
+            <h2 class="text-[11px] font-bold">ESTADO DE ALAGOAS</h2>
+            <h2 class="text-[11px] font-bold">SECRETARIA DA EDUCAÇÃO</h2>
+            <h2 class="text-[11px] font-bold">7ª GERÊNCIA REGIONAL DE EDUCAÇÃO</h2>
+            <h1 class="text-[12px] font-black border-b border-black pb-1">CONSELHO ESCOLAR DA ${school?.name?.toUpperCase() || 'UNIDADE EXECUTORA'}</h1>
         </div>
 
-        <div class="text-center mb-10">
-            <h1 class="text-[15px]">CONTRATO DE PRESTAÇÃO DE SERVIÇOS</h1>
+        <div class="text-center mb-6">
+            <h1 class="text-[14px]">CONTRATO DE PRESTAÇÃO DE SERVIÇOS CONTÍNUOS Nº ${(process as any).contract?.contract_number || '___/2025'}</h1>
         </div>
 
-        <div class="text-justified space-y-4">
-            <p><strong>CONTRATANTE:</strong> O <strong>CONSELHO ESCOLAR DA ${school?.name?.toUpperCase()}</strong>, Unidade Executora Própria, inscrita no CNPJ sob o nº <strong>${formatCNPJ(school?.cnpj)}</strong>, com sede na ${school?.address?.toUpperCase()}, representada neste ato por seu Presidente, o(a) Sr(a). <strong>${school?.director?.toUpperCase() || '____________________'}</strong>.</p>
+        <div class="text-justified space-y-3">
+            <p><strong>CONTRATANTE:</strong> O <strong>CONSELHO ESCOLAR DA ${school?.name?.toUpperCase()}</strong>, Unidade Executora Própria, estabelecida na ${school?.address?.toUpperCase()}, inscrita no CNPJ sob o nº <strong>${formatCNPJ(school?.cnpj)}</strong>, representada neste ato por seu Presidente, o(a) Sr(a). <strong>${school?.director?.toUpperCase() || '____________________'}</strong>, portador(a) do RG nº ${school?.director_rg || '___________'} e CPF nº ${school?.director_cpf || '___________'}, residente e domiciliado(a) na ${school?.director_address?.toUpperCase() || 'ENDEREÇO NÃO INFORMADO'}.</p>
             
-            <p><strong>CONTRATADA:</strong> A empresa <strong>${supplier?.name?.toUpperCase() || '____________________'}</strong>, inscrita no CNPJ sob o nº <strong>${formatCNPJ(supplier?.cnpj)}</strong>, com sede na ${supplier?.address?.toUpperCase() || '____________________'}, doravante denominada simplesmente CONTRATADA.</p>
+            <p><strong>CONTRATADA:</strong> A empresa <strong>${supplier?.name?.toUpperCase() || '____________________'}</strong>, inscrita no CNPJ sob o nº <strong>${formatCNPJ(supplier?.cnpj)}</strong>, com sede na ${supplier?.address?.toUpperCase() || '____________________'}, neste ato representada por <strong>${(process as any).contract?.representative_name || supplier?.rep_name || '____________________'}</strong>, portador(a) do RG nº ${(process as any).contract?.representative_rg || supplier?.rep_rg || '___________'} e CPF nº ${(process as any).contract?.representative_cpf || supplier?.rep_cpf || '___________'}, residente e domiciliado(a) na ${(process as any).contract?.representative_address || supplier?.rep_address?.toUpperCase() || '____________________'}.</p>
 
-            <p>As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Prestação de Serviços, que se regerá pelas cláusulas seguintes:</p>
+            <p>As partes acima identificadas celebram o presente contrato sob a égide da <strong>Lei Federal nº 14.133/2021</strong> e demais normas aplicáveis, mediante as cláusulas seguintes:</p>
 
             <div class="clause">CLÁUSULA PRIMEIRA - DO OBJETO</div>
-            <p>O presente contrato tem como objeto a prestação de serviços de <strong>${entry?.description?.toUpperCase()}</strong>, visando atender as necessidades de conectividade e funcionamento da Unidade Escolar.</p>
+            <p>O presente contrato tem como objeto a prestação de serviços de <strong>${entry?.description?.toUpperCase()}</strong>, englobando suporte técnico e garantia de disponibilidade, conforme proposta da Contratada.</p>
 
-            <div class="clause">CLÁUSULA SEGUNDA – DO REGIME DE EXECUÇÃO DOS SERVIÇOS</div>
-            <p>Os serviços deverão ser prestados de forma contínua, garantindo a estabilidade e qualidade técnica exigida, iniciando-se a partir da assinatura deste instrumento.</p>
+            <div class="clause">CLÁUSULA SEGUNDA – DO REGIME DE EXECUÇÃO E SUPORTE</div>
+            <p>Os serviços deverão ser prestados de forma contínua, observando-se os seguintes prazos de atendimento (SLA):</p>
+            <ul class="list-disc ml-6 mt-1">
+                <li><strong>Reparo de Falhas:</strong> Até 24 (vinte e quatro) horas contadas da notificação.</li>
+                <li><strong>Instalação/Mudança de Endereço:</strong> Até 15 (quinze) dias úteis.</li>
+            </ul>
 
-            <div class="clause">CLÁUSULA TERCEIRA – DO VALOR DO CONTRATO</div>
-            <p>O valor mensal do presente Contrato é de <strong>${formatCurrency(monthlyValue)} (${numberToWords(monthlyValue).toUpperCase()})</strong>, perfazendo o total do período contratual de <strong>${formatCurrency(contractTotalValue)} (${numberToWords(contractTotalValue).toUpperCase()})</strong>.</p>
+            <div class="clause">CLÁUSULA TERCEIRA – DO VALOR E VIGÊNCIA</div>
+            <p>O valor mensal do presente Contrato é de <strong>${formatCurrency(monthlyValue)}</strong>, perfazendo o total estimado de <strong>${formatCurrency(contractTotalValue)}</strong>.</p>
+            <p>O prazo de vigência deste Contrato será de <strong>${(process as any).contract?.duration_months || 12} meses</strong>, iniciando-se em <strong>${startDate}</strong> e término em <strong>${endDate}</strong>.</p>
 
-            <div class="clause">CLÁUSULA QUARTA – DA VIGÊNCIA</div>
-            <p>O presente contrato terá vigência de <strong>${(process as any).contract?.duration_months || 12} meses</strong>, com início em <strong>${startDate}</strong> e término em <strong>${endDate}</strong>.</p>
+            <div class="clause">CLÁUSULA QUARTA – DA FORMA DE PAGAMENTO</div>
+            <p>O pagamento será efetuado em até <strong>05 (cinco) dias consecutivos</strong> após a liquidação da despesa e apresentação da Nota Fiscal devidamente atestada por 02 (dois) membros do Conselho Escolar.</p>
+            <p><strong>Parágrafo Único:</strong> Os recursos são oriundos do <strong>${program?.name || 'PROGRAMA ESCOLA DA HORA / PNAE'}</strong>.</p>
 
-            <div class="clause">CLÁUSULA QUINTA – DA FORMA DE PAGAMENTO</div>
-            <p>O pagamento será efetuado à Contratada após a liquidação da despesa, mediante a apresentação de Nota Fiscal devidamente atestada por 02 (dois) membros do Conselho Escolar.</p>
-            <p><strong>Parágrafo Único:</strong> O pagamento será realizado com recursos oriundos do programa <strong>${program?.name || 'PNAE/FNDE'}</strong>.</p>
+            <div class="clause">CLÁUSULA QUINTA – DO REAJUSTE</div>
+            <p>Os preços unitários serão reajustados anualmente, utilizando-se a variação do Índice Geral de Preços de Mercado – <strong>IGP-M/FGV</strong>, conforme legislação vigente.</p>
 
-            <div class="clause">CLÁUSULA SEXTA - DA FISCALIZAÇÃO</div>
-            <p>O termo ora ajustado deverá ser acompanhado e fiscalizado pelo Gestor do Contrato, indicado pela CONTRATANTE, competindo-lhe exigir o cumprimento de todas as obrigações e verificar a qualidade dos serviços prestados.</p>
+            <div class="clause">CLÁUSULA SEXTA – DAS PENALIDADES</div>
+            <p>Pelo atraso injustificado na execução do objeto, a CONTRANTE poderá aplicar à CONTRATADA multa de <strong>0,5% (zero vírgula cinco por cento) por dia de atraso</strong>, limitada a 10% sobre o valor da parcela devida.</p>
 
-            <div class="clause">CLÁUSULA SÉTIMA – DO REAJUSTE</div>
-            <p>Os preços unitários contratados serão reajustados anualmente, utilizando-se a variação do Índice Geral de Preço de Mercado – IGP-M/FGV, com base na fórmula: <strong>R = [(I - Io).P]/Io</strong>, onde R representa o reajuste procurado.</p>
+            <div class="clause">CLÁUSULA SÉTIMA – DA RESCISÃO</div>
+            <p>O contrato poderá ser rescindido por infração de cláusula contratual, por paralisação dos serviços sem justa causa ou por conveniência administrativa, mediante aviso prévio de 30 dias.</p>
 
-            <div class="clause">CLÁUSULA OITAVA – DA RESCISÃO</div>
-            <p>O presente contrato poderá ser rescindido em caso de infringência de obrigações ajustadas, paralisação do fornecimento sem justa causa ou por conveniência administrativa da CONTRATANTE, mediante aviso prévio de 30 dias.</p>
-
-            <div class="clause">CLÁUSULA NONA – DO FORO</div>
-            <p>Para dirimir quaisquer controvérsias oriundas do presente Contrato, as partes elegem o foro da Comarca de ${school?.city?.toUpperCase() || 'ALAGOAS'}/AL.</p>
+            <div class="clause">CLÁUSULA OITAVA – DO FORO</div>
+            <p>Fica eleito o Foro da Comarca de ${school?.city?.toUpperCase() || 'ALAGOAS'}/AL para dirimir quaisquer dúvidas decorrentes deste ajuste.</p>
         </div>
 
-        <div class="mt-16 text-center font-bold">
+        <div class="mt-10 text-center font-bold uppercase">
             ${school?.city?.toUpperCase() || 'ALAGOAS'}/AL, ${dateLong.toUpperCase()}
         </div>
 
-        <div class="mt-20 grid grid-cols-2 gap-12 text-center">
-            <div class="border-t border-black pt-2">
-                <p class="font-black">${school?.director?.toUpperCase() || 'PRESIDENTE'}</p>
+        <div class="mt-14 grid grid-cols-2 gap-12 text-center">
+            <div class="border-t border-black pt-1">
+                <p class="font-black text-[11px]">${school?.director?.toUpperCase() || 'PRESIDENTE'}</p>
                 <p class="text-[9px]">CONTRATANTE</p>
                 <p class="text-[8px]">CPF: ${school?.director_cpf || '___.___.___-__'}</p>
             </div>
-            <div class="border-t border-black pt-2">
-                <p class="font-black">${supplier?.name?.toUpperCase()}</p>
+            <div class="border-t border-black pt-1">
+                <p class="font-black text-[11px]">${supplier?.name?.toUpperCase()}</p>
                 <p class="text-[9px]">CONTRATADA</p>
-                <p class="text-[8px]">Representante: ${(process as any).contract?.representative_name || (supplier as any).contact_name || '____________________'}</p>
+                <p class="text-[8px]">Representante: ${(process as any).contract?.representative_name || supplier?.rep_name || '________________'}</p>
+                <p class="text-[7px]">CPF: ${(process as any).contract?.representative_cpf || supplier?.rep_cpf || '___.___.___-__'}</p>
             </div>
         </div>
 
-        <div class="mt-24 grid grid-cols-2 gap-12 text-center mb-10">
+        <div class="mt-14 grid grid-cols-2 gap-12 text-center mb-6">
             <div>
                 <div class="border-t border-black pt-1">
-                    <p class="font-bold">${(process as any).contract?.terms_json?.witness_1_name?.toUpperCase() || '________________________________________'}</p>
-                    <p class="text-[9px]">TESTEMUNHA 01</p>
+                    <p class="font-bold text-[9px]">${(process as any).contract?.terms_json?.witness_1_name?.toUpperCase() || '________________________________________'}</p>
+                    <p class="text-[8px]">TESTEMUNHA 01</p>
                 </div>
-                <p class="text-[8px] mt-1">CPF: ${(process as any).contract?.terms_json?.witness_1_cpf || '___.___.___-__'}</p>
-                <p class="text-[8px]">RG: ${(process as any).contract?.terms_json?.witness_1_rg || '___________'}</p>
             </div>
             <div>
                 <div class="border-t border-black pt-1">
-                    <p class="font-bold">${(process as any).contract?.terms_json?.witness_2_name?.toUpperCase() || '________________________________________'}</p>
-                    <p class="text-[9px]">TESTEMUNHA 02</p>
+                    <p class="font-bold text-[9px]">${(process as any).contract?.terms_json?.witness_2_name?.toUpperCase() || '________________________________________'}</p>
+                    <p class="text-[8px]">TESTEMUNHA 02</p>
                 </div>
-                <p class="text-[8px] mt-1">CPF: ${(process as any).contract?.terms_json?.witness_2_cpf || '___.___.___-__'}</p>
-                <p class="text-[8px]">RG: ${(process as any).contract?.terms_json?.witness_2_rg || '___________'}</p>
             </div>
         </div>
 
-        <div class="mt-20 text-[9px] text-gray-400 text-center border-t pt-2 no-print">
-            Documento gerado eletronicamente via BRN Suite Escolas. Hash: ${process.id?.substring(0, 8).toUpperCase()}
+        <div class="mt-8 text-[8px] text-gray-400 text-center border-t pt-1 no-print">
+            Documento gerado em conformidade com a Lei 14.133/21 via BRN Suite Escolas. Hash: ${process.id?.substring(0, 8).toUpperCase()}
         </div>
     </div>
 </body>
 </html>`;
 };
+
+export const generateContratoGasHTML = (process: any) => {
+    let entry = process.financial_entries || process.financial_entry;
+    if (Array.isArray(entry)) entry = entry[0];
+
+    const school = entry?.schools || entry?.school;
+    const program = entry?.programs || entry?.program;
+    let quotes = process.quotes || process.accountability_quotes || process.accountability_quote || [];
+
+    // Fallback
+    if (quotes.length === 0 && entry?.suppliers) {
+        quotes = [{
+            supplier_name: entry.suppliers.name,
+            supplier_cnpj: entry.suppliers.cnpj,
+            total_value: Math.abs(entry.value || 0),
+            is_winner: true,
+            suppliers: entry.suppliers
+        }];
+    }
+
+    const winner = quotes.find((q: any) => q.is_winner);
+    const supplier = winner?.suppliers || winner?.supplier || entry?.suppliers || entry?.supplier;
+    const totalValue = (winner?.total_value || 0) - (process.discount || 0);
+    const monthlyValue = (process as any).monthly_value || (process as any).contract?.monthly_value || totalValue;
+
+    const docDate = new Date();
+    const dateLongArr = docDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }).split(' de ');
+
+    const startDate = (process as any).contract?.start_date ? new Date((process as any).contract.start_date).toLocaleDateString('pt-BR') : '01/01/2026';
+    const endDate = (process as any).contract?.end_date ? new Date((process as any).contract.end_date).toLocaleDateString('pt-BR') : '31/12/2026';
+
+    const contractNumber = (process as any).contract?.contract_number || '05/2025';
+
+    return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8"/>
+    <title>Contrato de Fornecimento Contínuo de Produtos - BRN Suite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background: white; color: black; line-height: 1.4; font-size: 10.5px; }
+        .print-container { width: 210mm; margin: 0 auto; padding: 1.5cm 2cm; min-height: 297mm; }
+        .text-justified { text-align: justify; text-justify: inter-word; }
+        h1, h2, h3 { text-transform: uppercase; font-weight: 800; text-align: center; }
+        .clause { margin-top: 12px; font-weight: 800; text-transform: uppercase; border-bottom: 1px solid black; display: inline-block; }
+        @media print {
+            body { padding: 0 !important; margin: 0 !important; }
+            @page { size: A4; margin: 0; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-container">
+        <div class="text-center mb-6 space-y-0.5">
+            <h2 class="text-[11px] font-bold">ESTADO DE ALAGOAS</h2>
+            <h2 class="text-[11px] font-bold">SECRETARIA DA EDUCAÇÃO</h2>
+            <h2 class="text-[11px] font-bold">GERÊNCIA REGIONAL DE EDUCAÇÃO</h2>
+            <h1 class="text-[12px] font-black border-b border-black pb-1">CONSELHO ESCOLAR DA ${school?.name?.toUpperCase() || 'ESCOLA ESTADUAL MANOEL DE MATOS'}</h1>
+        </div>
+
+        <div class="text-center mb-6">
+            <h1 class="text-[14px]">CONTRATO DE FORNECIMENTO CONTÍNUO DE PRODUTOS Nº ${contractNumber}</h1>
+        </div>
+
+        <div class="flex justify-end mb-6">
+            <div class="max-w-[350px] text-[10px] font-bold text-right italic border-l-2 border-black pl-3 py-1">
+                CONTRATO DE FORNECIMENTO DE GÁS LIQUEFEITO DE PETRÓLEO (P13) QUE ENTRE SI CELEBRAM O CONSELHO ESCOLAR DA ${school?.name?.toUpperCase()} E A EMPRESA ${supplier?.name?.toUpperCase()}, NA FORMA ABAIXO:
+            </div>
+        </div>
+
+        <div class="text-justified space-y-3">
+            <p>Pelo presente instrumento o <strong>CONSELHO ESCOLAR DA ${school?.name?.toUpperCase()}</strong>, estabelecido na ${school?.address?.toUpperCase() || 'ENDEREÇO NOT FOUND'}, inscrita no CNPJ sob o nº <strong>${formatCNPJ(school?.cnpj)}</strong>, neste ato representado por seu Presidente, o(a) Sr(a). <strong>${school?.director?.toUpperCase() || '____________________'}</strong>, portador(a) do RG nº ${school?.director_rg || '___________'} e inscrito no CPF sob o nº ${school?.director_cpf || '___________'}, residente e domiciliado na ${school?.director_address?.toUpperCase() || 'ENDEREÇO NÃO INFORMADO'}, doravante denominada CONTRATANTE, de um lado, e, do outro, a empresa <strong>${supplier?.name?.toUpperCase()}</strong>, estabelecida na ${supplier?.address?.toUpperCase()}, inscrita no CNPJ sob o nº <strong>${formatCNPJ(supplier?.cnpj)}</strong>, neste ato representado pelo Sr(a). <strong>${(process as any).contract?.representative_name || supplier?.rep_name || (supplier as any).contact_name || '____________________'}</strong>, portador(a) do RG nº ${(process as any).contract?.representative_rg || supplier?.rep_rg || '___________'} e CPF nº ${(process as any).contract?.representative_cpf || supplier?.rep_cpf || '___________'}, residente na ${(process as any).contract?.representative_address || supplier?.rep_address?.toUpperCase() || '____________________'}, doravante denominada CONTRATADA, celebram o presente Contrato sob a égide da <strong>Lei Federal nº 14.133/2021</strong>, mediante as cláusulas e condições seguintes:</p>
+
+            <div class="clause">CLÁUSULA PRIMEIRA – DO OBJETO</div>
+            <p>Constitui objeto do presente Contrato o fornecimento de GÁS LIQUEFEITO DE PETRÓLEO (GÁS DE COZINHA - P13), para preparação da alimentação escolar da Unidade, conforme proposta da contratada que faz parte integrante deste instrumento.</p>
+            <p><strong>Parágrafo Único:</strong> A entrega deverá ocorrer no prazo máximo de <strong>24 horas</strong> contadas da solicitação da CONTRATANTE, garantindo a pesagem correta no ato do recebimento.</p>
+
+            <div class="clause">CLÁUSULA SEGUNDA – DO VALOR</div>
+            <p>O valor global estimado do presente Contrato é de <strong>${formatCurrency(totalValue)} (${numberToWords(totalValue).toUpperCase()})</strong>.</p>
+
+            <div class="clause">CLÁUSULA TERCEIRA – DA VIGÊNCIA</div>
+            <p>O prazo de vigência deste Contrato será de 12 (doze) meses, iniciando-se em <strong>${startDate}</strong> e finalizando em <strong>${endDate}</strong>.</p>
+
+            <div class="clause">CLÁUSULA QUARTA – DOS ACRÉSCIMOS E SUPRESSÕES</div>
+            <p>A CONTRATADA fica obrigada a aceitar, nas mesmas condições contratuais, os acréscimos que se fizerem necessários no objeto deste Contrato, até 30% (Trinta por cento) do valor inicial atualizado, conforme limites operacionais da Unidade Escolar.</p>
+
+            <div class="clause">CLÁUSULA QUINTA – DA FORMA DE PAGAMENTO</div>
+            <p>O pagamento será efetuado mensalmente, mediante apresentação de Nota Fiscal devidamente atestada por 02 (dois) membros do Conselho Escolar, acompanhada das certidões de regularidade fiscal e trabalhista.</p>
+
+            <div class="clause">CLÁUSULA SEXTA – DA FONTE DE RECURSOS</div>
+            <p>As despesas decorrentes deste Contrato correrão à conta de recurso repassado pelo <strong>${program?.name || 'PROGRAMA ESCOLA DA HORA / PNAE'}</strong>.</p>
+
+            <div class="clause">CLÁUSULA SÉTIMA – DO REAJUSTE</div>
+            <p>O preço será fixo, podendo ser reajustado anualmente com base na variação do <strong>IPCA/IBGE</strong>, caso haja prorrogação contratual e preenchimento dos requisitos legais de vantajosidade.</p>
+
+            <div class="clause">CLÁUSULA OITAVA – DAS SANÇÕES E PENALIDADES</div>
+            <p>Pelo atraso injustificado na entrega do objeto, a CONTRATANTE poderá aplicar à CONTRATADA multa de <strong>0,5% (zero vírgula cinco por cento) por dia de atraso</strong>, limitada a 10% sobre o valor da parcela em atraso, sem prejuízo de outras sanções previstas na Lei 14.133/2021.</p>
+
+            <div class="clause">CLÁUSULA NONA – DO FORO</div>
+            <p>Fica eleito o Foro da Comarca de ${school?.city?.toUpperCase() || 'ALAGOAS'}/AL para dirimir quaisquer dúvidas decorrentes deste Contrato.</p>
+        </div>
+
+        <div class="mt-8 text-center font-bold">
+            ${school?.city?.toUpperCase() || 'ALAGOAS'}/AL, ${docDate.getDate()} DE ${dateLongArr[1].toUpperCase()} DE ${docDate.getFullYear()}
+        </div>
+
+        <div class="mt-12 grid grid-cols-2 gap-x-12 text-center">
+            <div class="border-t border-black pt-1">
+                <p class="font-black">${school?.director?.toUpperCase()}</p>
+                <p class="text-[9px]">CONTRATANTE</p>
+                <p class="text-[8px]">CPF: ${school?.director_cpf || '___.___.___-__'}</p>
+            </div>
+            <div class="border-t border-black pt-1">
+                <p class="font-black">${supplier?.name?.toUpperCase()}</p>
+                <p class="text-[9px]">CONTRATADA</p>
+                <p class="text-[8px]">Representante: ${(process as any).contract?.representative_name || supplier?.rep_name || '________________'}</p>
+                <p class="text-[7px]">CPF: ${(process as any).contract?.representative_cpf || supplier?.rep_cpf || '___.___.___-__'}</p>
+            </div>
+        </div>
+
+        <div class="mt-12 grid grid-cols-2 gap-x-12 text-center">
+            <div>
+                <div class="border-t border-black pt-1">
+                    <p class="font-bold text-[9px]">${(process as any).contract?.terms_json?.witness_1_name?.toUpperCase() || '________________________________________'}</p>
+                    <p class="text-[8px]">TESTEMUNHA 01</p>
+                </div>
+            </div>
+            <div>
+                <div class="border-t border-black pt-1">
+                    <p class="font-bold text-[9px]">${(process as any).contract?.terms_json?.witness_2_name?.toUpperCase() || '________________________________________'}</p>
+                    <p class="text-[8px]">TESTEMUNHA 02</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-10 text-[8px] text-gray-400 text-center border-t border-gray-100 pt-1 no-print italic">
+            Documento gerado em conformidade com a Lei 14.133/21 via BRN Suite Escolas em ${new Date().toLocaleDateString('pt-BR')}
+        </div>
+    </div>
+</body>
+</html>`;
+};
+
 
 export const generateAditivoHTML = (process: any) => {
     let entry = process.financial_entries || process.financial_entry;
