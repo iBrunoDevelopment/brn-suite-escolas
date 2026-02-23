@@ -10,10 +10,12 @@ interface ReprogrammedBalancesModalProps {
     fetchReprogrammedBalances: () => void;
     accessibleSchools: any[];
     programs: any[];
+    rubrics: any[];
     periods: any[];
 }
 
 const ReprogrammedListItem = React.memo(({ rb, onDelete }: { rb: any, onDelete: (id: string) => void }) => {
+    const rubricName = rb.rubrics?.name;
     return (
         <div className="bg-white/5 hover:bg-white/10 p-4 rounded-xl flex justify-between items-center group transition-all border border-transparent hover:border-white/10">
             <div className="flex flex-col gap-0.5">
@@ -25,7 +27,18 @@ const ReprogrammedListItem = React.memo(({ rb, onDelete }: { rb: any, onDelete: 
                     <span className="material-symbols-outlined text-[10px]">school</span>
                     {rb.schools?.name}
                 </span>
-                <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mt-1">{rb.nature}</span>
+                <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">{rb.nature}</span>
+                    {rubricName && (
+                        <>
+                            <span className="text-slate-700">·</span>
+                            <span className="text-[10px] text-cyan-400/80 font-bold uppercase tracking-wider flex items-center gap-1">
+                                <span className="material-symbols-outlined text-[9px]">label</span>
+                                {rubricName}
+                            </span>
+                        </>
+                    )}
+                </div>
             </div>
             <div className="flex items-center gap-4">
                 <span className="text-lg font-black text-emerald-400 font-mono tracking-tight">{rb.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
@@ -46,6 +59,7 @@ const ReprogrammedBalancesModal: React.FC<ReprogrammedBalancesModalProps> = ({
     fetchReprogrammedBalances,
     accessibleSchools,
     programs,
+    rubrics,
     periods
 }) => {
     const [newReprogrammed, setNewReprogrammed] = React.useState({
@@ -105,6 +119,11 @@ const ReprogrammedBalancesModal: React.FC<ReprogrammedBalancesModalProps> = ({
     const programOptions = React.useMemo(() => programs.map(p => <option key={p.id} value={p.id}>{p.name}</option>), [programs]);
     const periodOptions = React.useMemo(() => periods.map(p => <option key={p.name} value={p.name}>{p.name}</option>), [periods]);
 
+    const filteredRubrics = React.useMemo(() =>
+        rubrics.filter(r => r.program_id === newReprogrammed.program_id),
+        [rubrics, newReprogrammed.program_id]
+    );
+
     if (!isOpen) return null;
 
     return (
@@ -149,11 +168,26 @@ const ReprogrammedBalancesModal: React.FC<ReprogrammedBalancesModalProps> = ({
                             id="reprog_new_program"
                             aria-label="Selecione o Programa"
                             value={newReprogrammed.program_id}
-                            onChange={e => setNewReprogrammed({ ...newReprogrammed, program_id: e.target.value })}
+                            onChange={e => setNewReprogrammed({ ...newReprogrammed, program_id: e.target.value, rubric_id: '' })}
                             className="bg-[#1e293b] rounded-lg h-10 px-3 text-white border-none outline-none focus:ring-1 focus:ring-blue-500"
                         >
                             <option value="">Selecione...</option>
                             {programOptions}
+                        </select>
+                        <label htmlFor="reprog_new_rubric" className="text-slate-400 uppercase font-black">Rubrica <span className="text-slate-600 normal-case font-normal">(opcional)</span></label>
+                        <select
+                            title="Selecione a Rubrica"
+                            id="reprog_new_rubric"
+                            aria-label="Selecione a Rubrica"
+                            value={newReprogrammed.rubric_id}
+                            onChange={e => setNewReprogrammed({ ...newReprogrammed, rubric_id: e.target.value })}
+                            disabled={!newReprogrammed.program_id}
+                            className="bg-[#1e293b] rounded-lg h-10 px-3 text-white border-none outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            <option value="">Nenhuma (apenas natureza)</option>
+                            {filteredRubrics.map(r => (
+                                <option key={r.id} value={r.id}>{r.name}</option>
+                            ))}
                         </select>
                         <div className="grid grid-cols-2 gap-2">
                             <div className="flex flex-col gap-2">

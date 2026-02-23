@@ -51,7 +51,7 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
     const [editingBatchId, setEditingBatchId] = useState<string | null>(null);
 
     // Destructure auxData
-    const { schools, programs, periods } = auxData;
+    const { schools, programs, rubrics, periods } = auxData;
 
     // Permissions and accessibility
     const entryPerm = usePermissions(user, 'entries');
@@ -295,6 +295,7 @@ const FinancialEntries: React.FC<{ user: User }> = ({ user }) => {
                 fetchReprogrammedBalances={fetchReprogrammedBalances}
                 accessibleSchools={accessibleSchools}
                 programs={programs}
+                rubrics={rubrics}
                 periods={periods}
             />
             <ReportOptionsModal
