@@ -201,20 +201,32 @@ export const useSettings = (user: User) => {
     // Specific Mutations
     const saveRubricMut = useMutation({
         mutationFn: async (payload: any) => {
-            if (editingRubricId) await supabase.from('rubrics').update(payload).eq('id', editingRubricId);
-            else await supabase.from('rubrics').insert(payload);
+            if (editingRubricId) {
+                const { error } = await supabase.from('rubrics').update(payload).eq('id', editingRubricId);
+                if (error) throw error;
+            } else {
+                const { error } = await supabase.from('rubrics').insert(payload);
+                if (error) throw error;
+            }
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['rubrics'] });
             setNewRubric({ name: '', program_id: '', school_id: '', default_nature: 'Custeio' });
             setEditingRubricId(null);
-        }
+            addToast(editingRubricId ? 'Rubrica atualizada!' : 'Rubrica criada!', 'success');
+        },
+        onError: (err: any) => addToast('Erro ao salvar rubrica: ' + err.message, 'error')
     });
 
     const saveSupplierMut = useMutation({
         mutationFn: async (payload: any) => {
-            if (editingSupplierId) await supabase.from('suppliers').update(payload).eq('id', editingSupplierId);
-            else await supabase.from('suppliers').insert(payload);
+            if (editingSupplierId) {
+                const { error } = await supabase.from('suppliers').update(payload).eq('id', editingSupplierId);
+                if (error) throw error;
+            } else {
+                const { error } = await supabase.from('suppliers').insert(payload);
+                if (error) throw error;
+            }
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['suppliers'] });
@@ -223,19 +235,28 @@ export const useSettings = (user: User) => {
                 rep_name: '', rep_cpf: '', rep_rg: '', rep_address: ''
             });
             setEditingSupplierId(null);
-        }
+            addToast(editingSupplierId ? 'Fornecedor atualizado!' : 'Fornecedor cadastrado!', 'success');
+        },
+        onError: (err: any) => addToast('Erro ao salvar fornecedor: ' + err.message, 'error')
     });
 
     const saveBankMut = useMutation({
         mutationFn: async (payload: any) => {
-            if (editingBankId) await supabase.from('bank_accounts').update(payload).eq('id', editingBankId);
-            else await supabase.from('bank_accounts').insert(payload);
+            if (editingBankId) {
+                const { error } = await supabase.from('bank_accounts').update(payload).eq('id', editingBankId);
+                if (error) throw error;
+            } else {
+                const { error } = await supabase.from('bank_accounts').insert(payload);
+                if (error) throw error;
+            }
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['bank_accounts'] });
             setNewBank({ name: '', bank_name: '', agency: '', account_number: '', school_id: '', program_id: '' });
             setEditingBankId(null);
-        }
+            addToast(editingBankId ? 'Conta bancária atualizada!' : 'Conta bancária criada!', 'success');
+        },
+        onError: (err: any) => addToast('Erro ao salvar conta bancária: ' + err.message, 'error')
     });
 
     const upsertSettingMut = useMutation({
