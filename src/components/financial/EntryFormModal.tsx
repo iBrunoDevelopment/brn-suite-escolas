@@ -822,6 +822,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                                     <label className="text-[10px] font-black uppercase text-primary tracking-[0.2em] mb-4 block leading-none">Contrato de Repasse de Serviços</label>
                                     <div className="relative z-10">
                                         <select
+                                            title="Selecione o Contrato"
                                             value={selectedContractId}
                                             onChange={e => {
                                                 const contractId = e.target.value;

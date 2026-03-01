@@ -75,8 +75,7 @@ const Contract: React.FC<ContractProps> = ({ user, onSigned }) => {
     if (signed && signatureData) {
         return (
             <div className="min-h-screen bg-[#111827] flex flex-col items-center p-4 md:p-8 text-white font-sans overflow-y-auto print:bg-white print:p-0 print:block print:overflow-visible">
-                <style dangerouslySetInnerHTML={{
-                    __html: `
+                <style>{`
                     @media print {
                         @page { 
                             size: A4; 
@@ -135,7 +134,7 @@ const Contract: React.FC<ContractProps> = ({ user, onSigned }) => {
                         /* Esconder o que sobrar */
                         .print-hidden { display: none !important; }
                     }
-                ` }} />
+                `}</style>
 
                 <div className="print-root print-inner max-w-4xl w-full bg-[#16202a] border border-emerald-500/30 p-8 md:p-12 rounded-3xl shadow-2xl relative overflow-hidden mb-8 print:shadow-none print:border-none print:bg-white print:text-black print:p-0 print:m-0 print:overflow-visible">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[80px] rounded-full -mr-10 -mt-10 print:hidden pointer-events-none"></div>

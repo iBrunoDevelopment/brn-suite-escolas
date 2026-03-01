@@ -1,25 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { User, UserRole } from './types';
 import Sidebar from './components/Sidebar';
 import { supabase } from './lib/supabaseClient';
 import Topbar from './components/Topbar';
-import Dashboard from './pages/Dashboard';
-import FinancialEntries from './pages/FinancialEntries';
-import Reports from './pages/Reports';
-import Settings from './pages/Settings';
-import Login from './pages/Login';
-import Help from './pages/Help';
-import Schools from './pages/Schools';
-import Users from './pages/Users';
-import Notifications from './pages/Notifications';
-import DocumentSafe from './pages/DocumentSafe';
-import BankReconciliation from './pages/BankReconciliation';
-import WaitingPage from './pages/WaitingPage';
-import GEEPage from './pages/GEE';
-import ProgramsGuide from './pages/ProgramsGuide';
-import LandingPage from './pages/LandingPage';
-import Contract from './pages/Contract';
-import ValidateReport from './pages/ValidateReport';
+
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const FinancialEntries = lazy(() => import('./pages/FinancialEntries'));
+const Reports = lazy(() => import('./pages/Reports'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Login = lazy(() => import('./pages/Login'));
+const Help = lazy(() => import('./pages/Help'));
+const Schools = lazy(() => import('./pages/Schools'));
+const Users = lazy(() => import('./pages/Users'));
+const Notifications = lazy(() => import('./pages/Notifications'));
+const DocumentSafe = lazy(() => import('./pages/DocumentSafe'));
+const BankReconciliation = lazy(() => import('./pages/BankReconciliation'));
+const WaitingPage = lazy(() => import('./pages/WaitingPage'));
+const GEEPage = lazy(() => import('./pages/GEE'));
+const ProgramsGuide = lazy(() => import('./pages/ProgramsGuide'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const Contract = lazy(() => import('./pages/Contract'));
+const ValidateReport = lazy(() => import('./pages/ValidateReport'));
 
 import { useAuth } from './context/AuthContext';
 
@@ -46,7 +47,11 @@ const App: React.FC = () => {
     }, []);
 
     if (window.location.pathname === '/validate') {
-        return <ValidateReport />;
+        return (
+            <Suspense fallback={<div className="h-screen w-full flex items-center justify-center bg-[#0f172a]"><span className="material-symbols-outlined text-4xl animate-spin text-primary">sync</span></div>}>
+                <ValidateReport />
+            </Suspense>
+        );
     }
 
     if (loading) {
@@ -58,14 +63,20 @@ const App: React.FC = () => {
         </div>;
     }
 
+    const Fallback = () => (
+        <div className="h-screen w-full flex items-center justify-center bg-[#0f172a]">
+            <span className="material-symbols-outlined text-4xl animate-spin text-primary">sync</span>
+        </div>
+    );
+
     if (!currentUser) {
         if (showGuide) {
-            return <ProgramsGuide onBack={() => setShowGuide(false)} />;
+            return <Suspense fallback={<Fallback />}><ProgramsGuide onBack={() => setShowGuide(false)} /></Suspense>;
         }
         if (showLogin) {
-            return <Login onLogin={() => { }} onBack={() => setShowLogin(false)} />;
+            return <Suspense fallback={<Fallback />}><Login onLogin={() => { }} onBack={() => setShowLogin(false)} /></Suspense>;
         }
-        return <LandingPage onLoginClick={() => setShowLogin(true)} onGuideClick={() => setShowGuide(true)} />;
+        return <Suspense fallback={<Fallback />}><LandingPage onLoginClick={() => setShowLogin(true)} onGuideClick={() => setShowGuide(true)} /></Suspense>;
     }
 
     const renderContent = () => {
@@ -131,7 +142,13 @@ const App: React.FC = () => {
                     onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
                 />
                 <main className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
-                    {renderContent()}
+                    <Suspense fallback={
+                        <div className="h-full w-full flex items-center justify-center">
+                            <span className="material-symbols-outlined text-4xl animate-spin text-primary">sync</span>
+                        </div>
+                    }>
+                        {renderContent()}
+                    </Suspense>
                 </main>
             </div>
         </div>

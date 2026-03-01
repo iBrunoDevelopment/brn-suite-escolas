@@ -287,6 +287,7 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({
                                     <div className="p-5 bg-amber-500/5 border border-amber-500/20 rounded-2xl animate-in slide-in-from-top-2 duration-300">
                                         <label className="text-[8px] font-black uppercase text-amber-500/70 tracking-widest mb-2 block">Selecionar Contrato para Aditar</label>
                                         <select
+                                            title="Selecionar Contrato"
                                             value={parentContractId}
                                             onChange={e => handleSelectParent(e.target.value)}
                                             aria-label="Selecionar Contrato Original"
@@ -316,6 +317,7 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({
                                             />
                                         </div>
                                         <select
+                                            title="Selecionar Fornecedor"
                                             value={supplierId}
                                             onChange={e => setSupplierId(e.target.value)}
                                             aria-label="Selecionar Fornecedor"
@@ -349,6 +351,7 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({
                                                 />
                                             </div>
                                             <select
+                                                title="Selecionar Unidade Escolar"
                                                 value={schoolId}
                                                 onChange={e => setSchoolId(e.target.value)}
                                                 aria-label="Selecionar Unidade Escolar"
@@ -368,6 +371,7 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({
                                     <div>
                                         <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest mb-2 block">Tipo de Contrato</label>
                                         <select
+                                            title="Tipo de Contrato"
                                             value={category}
                                             onChange={e => setCategory(e.target.value as any)}
                                             aria-label="Tipo de Contrato"
@@ -405,6 +409,7 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({
                                     <div>
                                         <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest mb-2 block">Programa</label>
                                         <select
+                                            title="Selecionar Programa"
                                             value={programId}
                                             onChange={e => setProgramId(e.target.value)}
                                             aria-label="Selecionar Programa"
@@ -417,6 +422,7 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({
                                     <div>
                                         <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest mb-2 block">Rubrica</label>
                                         <select
+                                            title="Selecionar Rubrica"
                                             value={rubricId}
                                             onChange={e => setRubricId(e.target.value)}
                                             aria-label="Selecionar Rubrica"

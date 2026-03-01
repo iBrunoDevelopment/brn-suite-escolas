@@ -1,3 +1,25 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/forms";
+@plugin "@tailwindcss/container-queries";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+    --color-primary: #137fec;
+    --color-primary-hover: #106ac4;
+    --color-background-light: #f6f7f8;
+    --color-background-dark: #101922;
+    --color-surface-dark: #1c2936;
+    --color-surface-border: #2d3f52;
+    --color-card-dark: #16202a;
+    --color-text-secondary: #92adc9;
+
+    --font-display: "Manrope", sans-serif;
+    --font-body: "Noto Sans", sans-serif;
+
+    --breakpoint-xs: 375px;
+}
+
 :root {
     --primary: #137fec;
     --primary-hover: #106ac4;
