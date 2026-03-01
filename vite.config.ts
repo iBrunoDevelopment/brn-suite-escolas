@@ -23,19 +23,9 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit: 600,
       rollupOptions: {
         output: {
-          manualChunks(id) {
-            if (id.includes('node_modules')) {
-              // Group React stuff into its own chunk
-              if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-                return 'vendor-react';
-              }
-              // Group supabase into its own chunk
-              if (id.includes('@supabase')) {
-                return 'vendor-supabase';
-              }
-              // Group everything else into a generic vendor chunk
-              return 'vendor';
-            }
+          manualChunks: {
+            react: ['react', 'react-dom'],
+            supabase: ['@supabase/supabase-js']
           }
         }
       }
