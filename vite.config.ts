@@ -22,12 +22,7 @@ export default defineConfig(({ mode }) => {
     build: {
       chunkSizeWarningLimit: 600,
       rollupOptions: {
-        output: {
-          manualChunks: {
-            react: ['react', 'react-dom'],
-            supabase: ['@supabase/supabase-js']
-          }
-        }
+
       }
     }
   };
