@@ -349,6 +349,13 @@ const ContractTerms: React.FC<{ user: User }> = ({ user }) => {
                     Comprometo-me a seguir as normas do FNDE (PNAE/PDDE). Estou ciente de que todas as ações no sistema são registradas para fins de auditoria interna ou externa pelos órgãos de controle, incluindo registro de IP e timestamp de cada operação.
                 </p>
             </div>
+
+            <div className="clause-block">
+                <h3 className="text-white font-bold uppercase text-sm border-b border-white/10 pb-2 mb-3 mt-6 print:text-black print:border-slate-300">6. Prioridade de Atendimento</h3>
+                <p>
+                    Visando oferecer um serviço de excelência e valorizar a agilidade de nossos parceiros, o nosso atendimento e a resolução das demandas seguem uma fila de prioridade baseada na ordem de recebimento da documentação <strong>completa</strong>. O gestor que nos enviar primeiramente todos os documentos solicitados terá o seu processo atendido prioritariamente. Caso a documentação seja enviada de forma incompleta ou fora dos padrões orientados, visando não prejudicar o gestor que cumpriu com todos os requisitos prontamente, o processo será reposicionado para o final da fila, aguardando os demais atendimentos para ser retomado. Agradecemos a compreensão e a colaboração de todos para que possamos manter a agilidade para todos os clientes.
+                </p>
+            </div>
         </>
     );
 };
