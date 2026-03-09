@@ -41,6 +41,9 @@ const MonthStatusTable: React.FC<MonthStatusTableProps> = ({ systemEntries, prog
 
     const handleExportPDF = async () => {
         if (reconciled.length === 0) return;
+        const [y, m] = filterMonth.split('-');
+        const lastDay = new Date(Number(y), Number(m), 0).getDate();
+
         const html = await generateRelatorioGerencialHTML(getMappedEntries(), {}, {}, [], {
             showSummary: true,
             showCharts: false,
@@ -48,7 +51,9 @@ const MonthStatusTable: React.FC<MonthStatusTableProps> = ({ systemEntries, prog
             showNatureSummary: true,
             groupReport: 'program',
             format: 'pdf',
-            reportMode: 'gerencial'
+            reportMode: 'gerencial',
+            filterStartDate: `${filterMonth}-01`,
+            filterEndDate: `${filterMonth}-${lastDay.toString().padStart(2, '0')}`
         });
         const w = window.open('', '_blank');
         if (w) {
