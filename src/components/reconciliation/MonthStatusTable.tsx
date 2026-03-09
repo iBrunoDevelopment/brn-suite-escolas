@@ -76,7 +76,7 @@ const MonthStatusTable: React.FC<MonthStatusTableProps> = ({ systemEntries, prog
                                             <div className="flex flex-col gap-1">
                                                 <div className="flex flex-col">
                                                     <span className="text-white font-bold">
-                                                        {new Date(entry.payment_date || entry.date).toLocaleDateString('pt-BR')}
+                                                        {new Date(entry.payment_date || entry.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
                                                     </span>
                                                     <span className="text-[9px] text-slate-500 uppercase font-black">
                                                         {entry.payment_date ? 'Data Pagto' : 'Data Documento'}

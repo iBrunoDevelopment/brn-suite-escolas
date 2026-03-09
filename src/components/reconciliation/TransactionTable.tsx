@@ -76,7 +76,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                                 <tr key={bt.id} className="group hover:bg-white/[0.02] transition-all">
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex flex-col gap-1">
-                                            <span className="text-xs text-white font-mono">{new Date(bt.date).toLocaleDateString('pt-BR')}</span>
+                                            <span className="text-xs text-white font-mono">{new Date(bt.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
                                             <span className={`text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md w-fit ${bt.extract_type === 'Conta Corrente' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'}`}>
                                                 {bt.extract_type === 'Conta Corrente' ? 'C. Corrente' : 'Investimento'}
                                             </span>
@@ -117,7 +117,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                                                 <div className="flex justify-between items-center text-[9px]">
                                                     <span className="text-slate-500 flex items-center gap-1">
                                                         <span className="material-symbols-outlined text-[10px]">calendar_today</span>
-                                                        {new Date(matchedEntry.date).toLocaleDateString('pt-BR')}
+                                                        {new Date(matchedEntry.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
                                                     </span>
                                                     <span className="text-emerald-500 font-black">
                                                         {Number(matchedEntry.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
@@ -180,7 +180,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                         <div key={bt.id} className="bg-white/5 rounded-2xl p-5 space-y-4 border border-white/5">
                             <div className="flex justify-between items-start">
                                 <div className="flex flex-col">
-                                    <span className="text-xs text-white font-mono">{new Date(bt.date).toLocaleDateString('pt-BR')}</span>
+                                    <span className="text-xs text-white font-mono">{new Date(bt.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
                                     <span className={`text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md w-fit mt-1 ${bt.extract_type === 'Conta Corrente' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'}`}>
                                         {bt.extract_type === 'Conta Corrente' ? 'C. Corrente' : 'Investimento'}
                                     </span>
@@ -218,7 +218,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                                             <div className="flex-1 min-w-0">
                                                 <span className="text-[10px] text-emerald-400 font-bold uppercase truncate block">{matchedEntry.description}</span>
                                                 <div className="flex justify-between items-center text-[9px] mt-1">
-                                                    <span className="text-slate-500">{new Date(matchedEntry.date).toLocaleDateString('pt-BR')}</span>
+                                                    <span className="text-slate-500">{new Date(matchedEntry.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
                                                     <span className="text-emerald-500 font-black">{Number(matchedEntry.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
                                                 </div>
                                             </div>

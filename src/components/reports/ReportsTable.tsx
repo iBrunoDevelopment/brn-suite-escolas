@@ -45,7 +45,7 @@ const ReportsTable: React.FC<ReportsTableProps> = ({ processes, onEdit, onDelete
                                     </span>
                                     <span className="text-[10px] uppercase font-black text-slate-500 flex items-center gap-1.5 whitespace-nowrap">
                                         <span className="material-symbols-outlined text-sm shrink-0">calendar_month</span>
-                                        {entry?.date ? new Date(entry.date).toLocaleDateString('pt-BR') : '---'}
+                                        {entry?.date ? new Date(entry.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '---'}
                                     </span>
                                     <span className="text-[10px] uppercase font-black text-primary flex items-center gap-1.5 min-w-0">
                                         <span className="material-symbols-outlined text-sm shrink-0">account_balance</span>

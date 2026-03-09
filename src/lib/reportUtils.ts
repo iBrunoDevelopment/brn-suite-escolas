@@ -300,7 +300,7 @@ export const generateRelatorioGerencialHTML = async (entries: any[], stats: any,
 
                 return `
                                             <tr class="hover:bg-slate-50/30 transition-colors">
-                                                <td class="px-6 py-5 font-bold text-slate-400 whitespace-nowrap">${new Date(e.date).toLocaleDateString('pt-BR')}</td>
+                                                <td class="px-6 py-5 font-bold text-slate-400 whitespace-nowrap">${new Date(e.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</td>
                                                 <td class="px-4 py-5">
                                                     <div class="flex items-center gap-2">
                                                         ${options.showStatusBadges ? `
@@ -414,7 +414,7 @@ export const generateRelatorioGerencialHTML = async (entries: any[], stats: any,
 export const generateCSV = (entries: any[]) => {
     const headers = ['Data', 'Descrição', 'Doc/NF', 'Escola', 'Programa', 'Rubrica', 'Fornecedor', 'Natureza', 'Tipo', 'Status', 'Valor (R$)'];
     const rows = entries.map(e => [
-        new Date(e.date).toLocaleDateString('pt-BR'),
+        new Date(e.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }),
         `"${e.description.replace(/"/g, '""')}"`,
         `"${e.document_number || ''}"`,
         `"${e.school}"`,

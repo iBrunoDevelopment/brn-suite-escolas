@@ -69,7 +69,7 @@ const ManualMatchModal: React.FC<ManualMatchModalProps> = ({
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-2 text-[10px] text-slate-500">
-                                                <span>{new Date(entry.date).toLocaleDateString('pt-BR')}</span>
+                                                <span>{new Date(entry.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
                                                 <span>•</span>
                                                 <span className="uppercase">{entry.supplier}</span>
                                                 <span>•</span>

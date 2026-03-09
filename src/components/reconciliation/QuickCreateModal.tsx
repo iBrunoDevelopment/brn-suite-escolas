@@ -35,7 +35,7 @@ const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1">
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Data do Banco</label>
-                            <div className="bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-xs text-white font-mono">{new Date(bt.date).toLocaleDateString('pt-BR')}</div>
+                            <div className="bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-xs text-white font-mono">{new Date(bt.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</div>
                         </div>
                         <div className="flex flex-col gap-1">
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Valor</label>

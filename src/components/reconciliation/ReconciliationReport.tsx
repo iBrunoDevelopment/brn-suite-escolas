@@ -117,7 +117,7 @@ const ReconciliationReport: React.FC<ReconciliationReportProps> = ({
                                     const match = systemEntries.find(se => se.id === t.matched_entry_id);
                                     return (
                                         <tr key={t.id} className="text-xs">
-                                            <td className="px-4 py-4 font-mono text-slate-500">{new Date(t.date).toLocaleDateString('pt-BR')}</td>
+                                            <td className="px-4 py-4 font-mono text-slate-500">{new Date(t.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</td>
                                             <td className="px-4 py-4">
                                                 <div className="flex flex-col">
                                                     <span className="font-bold text-slate-800">{t.description}</span>
