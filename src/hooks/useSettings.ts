@@ -482,7 +482,7 @@ export const useSettings = (user: User) => {
         handleDeleteRubric, handleCreateProgram, handleDeleteProgram,
         handleCreateSupplier, handleEditSupplier: (s: any) => { setNewSupplier({ ...s, rep_name: s.rep_name || '', rep_cpf: s.rep_cpf || '', rep_rg: s.rep_rg || '', rep_address: s.rep_address || '' }); setEditingSupplierId(s.id); },
         handleDeleteSupplier, handleStampUpload,
-        handleCreateBank, handleEditBank: (b: any) => { setNewBank({ ...b, school_id: b.school_id || '', program_id: b.program_id || '' }); setEditingBankId(b.id); },
+        handleCreateBank, handleEditBank: (b: any) => { setNewBank({ name: b.name || '', bank_name: b.bank_name || '', agency: b.agency || '', account_number: b.account_number || '', school_id: b.school_id || '', program_id: b.program_id || '' }); setEditingBankId(b.id); },
         handleDeleteBank,
         handleCreatePaymentMethod, handleDeletePaymentMethod,
         handleCreatePeriod, handleTogglePeriod, handleDeletePeriod,
