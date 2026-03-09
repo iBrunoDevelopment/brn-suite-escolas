@@ -28,7 +28,7 @@ const DashboardAlerts: React.FC<DashboardAlertsProps> = ({ alerts, selectedAlert
         const headers = ['Data', 'Escola', 'Categoria', 'Severidade', 'Título', 'Descrição'];
         const rows = filtered.map(a => [
             new Date(a.timestamp).toLocaleString('pt-BR'),
-            `"${a.schoolName || 'Geral'}"`,
+            `"${a.schoolName ? `CONSELHO ESCOLAR DA ESCOLA ESTADUAL ${a.schoolName.toUpperCase()}` : 'Geral'}"`,
             a.category,
             a.severity,
             `"${a.title.replace(/"/g, '""')}"`,
@@ -94,7 +94,7 @@ const DashboardAlerts: React.FC<DashboardAlertsProps> = ({ alerts, selectedAlert
 
             ${Object.entries(groups).map(([schoolName, schoolAlerts]) => `
                 <div class="school-group text-left">
-                    <div class="school-title">${schoolName} <span style="color: #64748b; font-size: 10px; margin-left: 10px;">(${schoolAlerts.length} alertas)</span></div>
+                    <div class="school-title">${schoolName !== 'Geral' ? `CONSELHO ESCOLAR DA ESCOLA ESTADUAL ${schoolName.toUpperCase()}` : 'Geral'} <span style="color: #64748b; font-size: 10px; margin-left: 10px;">(${schoolAlerts.length} alertas)</span></div>
                     <table style="width: 100%;">
                         <thead>
                             <tr>

@@ -52,10 +52,10 @@ export const generateAtaHTML = (process: any) => {
     <div class="print-container">
         <!-- Header -->
         <div class="text-center mb-10 space-y-4">
-            <h2 class="text-[14px] font-bold uppercase">CONSELHO ESCOLAR DA ${school?.name?.toUpperCase() || 'UNIDADE EXECUTORA'}</h2>
+            <h2 class="text-[14px] font-bold uppercase">CONSELHO ESCOLAR DA ESCOLA ESTADUAL ${school?.name?.toUpperCase() || 'UNIDADE EXECUTORA'}</h2>
             <h1 class="text-[14px] font-bold uppercase leading-tight">
                 ATA DA ASSEMBLEIA GERAL EXTRAORDINÁRIA DA UNIDADE EXECUTORA CONSELHO ESCOLAR<br/>
-                DA ${school?.name?.toUpperCase() || 'UNIDADE EXECUTORA'}
+                DA ESCOLA ESTADUAL ${school?.name?.toUpperCase() || 'UNIDADE EXECUTORA'}
             </h1>
         </div>
 
@@ -179,7 +179,7 @@ export const generateConsolidacaoHTML = (process: any) => {
         <div class="bloco-title uppercase">BLOCO I - IDENTIFICAÇÃO DA UNIDADE EXECUTORA PRÓPRIA (UEx) / ENTIDADE MANTENEDORA (EM)</div>
         <table>
             <tr>
-                <td width="55%"><span class="font-bold">Uex:</span> ${school?.name?.toUpperCase()}</td>
+                <td width="55%"><span class="font-bold">Uex:</span> CONSELHO ESCOLAR DA ESCOLA ESTADUAL ${school?.name?.toUpperCase()}</td>
                 <td width="15%">${formatCNPJ(school?.cnpj)}</td>
                 <td width="10%" class="bg-gray font-bold">RECURSO:</td>
                 <td width="10%">${program?.name || '---'}</td>
@@ -345,7 +345,7 @@ export const generateOrdemHTML = (process: any) => {
         <table>
             <tr>
                 <td width="15%" class="font-bold text-center bg-gray">UEX CONTRATANTE:</td>
-                <td>${school?.name?.toUpperCase() || '---'}</td>
+                <td>CONSELHO ESCOLAR DA ESCOLA ESTADUAL ${school?.name?.toUpperCase() || '---'}</td>
                 <td width="10%" class="font-bold text-center bg-gray">CNPJ:</td>
                 <td width="20%">${formatCNPJ(school?.cnpj)}</td>
             </tr>
@@ -481,7 +481,7 @@ export const generateReciboHTML = (process: any) => {
         </div>
 
         <div class="p-8 text-justified text-[14px] bg-gray-50/30 rounded-2xl border border-gray-100">
-            RECEBEMOS DO <strong>${school?.name?.toUpperCase() || 'UNIDADE EXECUTORA'}</strong>, 
+            RECEBEMOS DO <strong>CONSELHO ESCOLAR DA ESCOLA ESTADUAL ${school?.name?.toUpperCase() || 'UNIDADE EXECUTORA'}</strong>, 
             CNPJ <strong>${formatCNPJ(school?.cnpj)}</strong>, SITUADO NA <strong>${school?.address?.toUpperCase()}</strong>, 
             A IMPORTÂNCIA DE <strong>${formatCurrency(totalValue)} (${numberToWords(totalValue).toUpperCase()})</strong>, 
             REFERENTE A COMPRA DE PRODUTOS CONFORME NOTA FISCAL DE Nº <strong>${entry?.invoice_number || '_______'}</strong>, 
@@ -590,7 +590,7 @@ export const generateCotacaoHTML = (process: any, supplierIdx: number = 0) => {
                 <td>${formatCNPJ(school?.cnpj)}</td>
             </tr>
             <tr>
-                <td class="font-bold uppercase">NOME DO CLIENTE: ${school?.name}</td>
+                <td class="font-bold uppercase">NOME DO CLIENTE: CONSELHO ESCOLAR DA ESCOLA ESTADUAL ${school?.name?.toUpperCase() || '---'}</td>
                 <td colspan="2"></td>
             </tr>
             <tr>
@@ -720,7 +720,7 @@ export const generateContratoServicoHTML = (process: any) => {
             <h2 class="text-[11px] font-bold">ESTADO DE ALAGOAS</h2>
             <h2 class="text-[11px] font-bold">SECRETARIA DA EDUCAÇÃO</h2>
             <h2 class="text-[11px] font-bold">7ª GERÊNCIA REGIONAL DE EDUCAÇÃO</h2>
-            <h1 class="text-[12px] font-black border-b border-black pb-1">CONSELHO ESCOLAR DA ${school?.name?.toUpperCase() || 'UNIDADE EXECUTORA'}</h1>
+            <h1 class="text-[12px] font-black border-b border-black pb-1">CONSELHO ESCOLAR DA ESCOLA ESTADUAL ${school?.name?.toUpperCase() || 'UNIDADE EXECUTORA'}</h1>
         </div>
 
         <div class="text-center mb-6">
@@ -728,7 +728,7 @@ export const generateContratoServicoHTML = (process: any) => {
         </div>
 
         <div class="text-justified space-y-3">
-            <p><strong>CONTRATANTE:</strong> O <strong>CONSELHO ESCOLAR DA ${school?.name?.toUpperCase()}</strong>, Unidade Executora Própria, estabelecida na ${school?.address?.toUpperCase()}, inscrita no CNPJ sob o nº <strong>${formatCNPJ(school?.cnpj)}</strong>, representada neste ato por seu Presidente, o(a) Sr(a). <strong>${school?.director?.toUpperCase() || '____________________'}</strong>, portador(a) do RG nº ${school?.director_rg || '___________'} e CPF nº ${school?.director_cpf || '___________'}, residente e domiciliado(a) na ${school?.director_address?.toUpperCase() || 'ENDEREÇO NÃO INFORMADO'}.</p>
+            <p><strong>CONTRATANTE:</strong> O <strong>CONSELHO ESCOLAR DA ESCOLA ESTADUAL ${school?.name?.toUpperCase()}</strong>, Unidade Executora Própria, estabelecida na ${school?.address?.toUpperCase()}, inscrita no CNPJ sob o nº <strong>${formatCNPJ(school?.cnpj)}</strong>, representada neste ato por seu Presidente, o(a) Sr(a). <strong>${school?.director?.toUpperCase() || '____________________'}</strong>, portador(a) do RG nº ${school?.director_rg || '___________'} e CPF nº ${school?.director_cpf || '___________'}, residente e domiciliado(a) na ${school?.director_address?.toUpperCase() || 'ENDEREÇO NÃO INFORMADO'}.</p>
             
             <p><strong>CONTRATADA:</strong> A empresa <strong>${supplier?.name?.toUpperCase() || '____________________'}</strong>, inscrita no CNPJ sob o nº <strong>${formatCNPJ(supplier?.cnpj)}</strong>, com sede na ${supplier?.address?.toUpperCase() || '____________________'}, neste ato representada por <strong>${(process as any).contract?.representative_name || supplier?.rep_name || '____________________'}</strong>, portador(a) do RG nº ${(process as any).contract?.representative_rg || supplier?.rep_rg || '___________'} e CPF nº ${(process as any).contract?.representative_cpf || supplier?.rep_cpf || '___________'}, residente e domiciliado(a) na ${(process as any).contract?.representative_address || supplier?.rep_address?.toUpperCase() || '____________________'}.</p>
 
@@ -864,7 +864,7 @@ export const generateContratoGasHTML = (process: any) => {
             <h2 class="text-[11px] font-bold">ESTADO DE ALAGOAS</h2>
             <h2 class="text-[11px] font-bold">SECRETARIA DA EDUCAÇÃO</h2>
             <h2 class="text-[11px] font-bold">GERÊNCIA REGIONAL DE EDUCAÇÃO</h2>
-            <h1 class="text-[12px] font-black border-b border-black pb-1">CONSELHO ESCOLAR DA ${school?.name?.toUpperCase() || 'ESCOLA ESTADUAL MANOEL DE MATOS'}</h1>
+            <h1 class="text-[12px] font-black border-b border-black pb-1">CONSELHO ESCOLAR DA ESCOLA ESTADUAL ${school?.name?.toUpperCase() || 'MANOEL DE MATOS'}</h1>
         </div>
 
         <div class="text-center mb-6">
@@ -873,12 +873,12 @@ export const generateContratoGasHTML = (process: any) => {
 
         <div class="flex justify-end mb-6">
             <div class="max-w-[350px] text-[10px] font-bold text-right italic border-l-2 border-black pl-3 py-1">
-                CONTRATO DE FORNECIMENTO DE GÁS LIQUEFEITO DE PETRÓLEO (P13) QUE ENTRE SI CELEBRAM O CONSELHO ESCOLAR DA ${school?.name?.toUpperCase()} E A EMPRESA ${supplier?.name?.toUpperCase()}, NA FORMA ABAIXO:
+                CONTRATO DE FORNECIMENTO DE GÁS LIQUEFEITO DE PETRÓLEO (P13) QUE ENTRE SI CELEBRAM O CONSELHO ESCOLAR DA ESCOLA ESTADUAL ${school?.name?.toUpperCase()} E A EMPRESA ${supplier?.name?.toUpperCase()}, NA FORMA ABAIXO:
             </div>
         </div>
 
         <div class="text-justified space-y-3">
-            <p>Pelo presente instrumento o <strong>CONSELHO ESCOLAR DA ${school?.name?.toUpperCase()}</strong>, estabelecido na ${school?.address?.toUpperCase() || 'ENDEREÇO NOT FOUND'}, inscrita no CNPJ sob o nº <strong>${formatCNPJ(school?.cnpj)}</strong>, neste ato representado por seu Presidente, o(a) Sr(a). <strong>${school?.director?.toUpperCase() || '____________________'}</strong>, portador(a) do RG nº ${school?.director_rg || '___________'} e inscrito no CPF sob o nº ${school?.director_cpf || '___________'}, residente e domiciliado na ${school?.director_address?.toUpperCase() || 'ENDEREÇO NÃO INFORMADO'}, doravante denominada CONTRATANTE, de um lado, e, do outro, a empresa <strong>${supplier?.name?.toUpperCase()}</strong>, estabelecida na ${supplier?.address?.toUpperCase()}, inscrita no CNPJ sob o nº <strong>${formatCNPJ(supplier?.cnpj)}</strong>, neste ato representado pelo Sr(a). <strong>${(process as any).contract?.representative_name || supplier?.rep_name || (supplier as any).contact_name || '____________________'}</strong>, portador(a) do RG nº ${(process as any).contract?.representative_rg || supplier?.rep_rg || '___________'} e CPF nº ${(process as any).contract?.representative_cpf || supplier?.rep_cpf || '___________'}, residente na ${(process as any).contract?.representative_address || supplier?.rep_address?.toUpperCase() || '____________________'}, doravante denominada CONTRATADA, celebram o presente Contrato sob a égide da <strong>Lei Federal nº 14.133/2021</strong>, mediante as cláusulas e condições seguintes:</p>
+            <p>Pelo presente instrumento o <strong>CONSELHO ESCOLAR DA ESCOLA ESTADUAL ${school?.name?.toUpperCase()}</strong>, estabelecido na ${school?.address?.toUpperCase() || 'ENDEREÇO NOT FOUND'}, inscrita no CNPJ sob o nº <strong>${formatCNPJ(school?.cnpj)}</strong>, neste ato representado por seu Presidente, o(a) Sr(a). <strong>${school?.director?.toUpperCase() || '____________________'}</strong>, portador(a) do RG nº ${school?.director_rg || '___________'} e inscrito no CPF sob o nº ${school?.director_cpf || '___________'}, residente e domiciliado na ${school?.director_address?.toUpperCase() || 'ENDEREÇO NÃO INFORMADO'}, doravante denominada CONTRATANTE, de um lado, e, do outro, a empresa <strong>${supplier?.name?.toUpperCase()}</strong>, estabelecida na ${supplier?.address?.toUpperCase()}, inscrita no CNPJ sob o nº <strong>${formatCNPJ(supplier?.cnpj)}</strong>, neste ato representado pelo Sr(a). <strong>${(process as any).contract?.representative_name || supplier?.rep_name || (supplier as any).contact_name || '____________________'}</strong>, portador(a) do RG nº ${(process as any).contract?.representative_rg || supplier?.rep_rg || '___________'} e CPF nº ${(process as any).contract?.representative_cpf || supplier?.rep_cpf || '___________'}, residente na ${(process as any).contract?.representative_address || supplier?.rep_address?.toUpperCase() || '____________________'}, doravante denominada CONTRATADA, celebram o presente Contrato sob a égide da <strong>Lei Federal nº 14.133/2021</strong>, mediante as cláusulas e condições seguintes:</p>
 
             <div class="clause">CLÁUSULA PRIMEIRA – DO OBJETO</div>
             <p>Constitui objeto do presente Contrato o fornecimento de GÁS LIQUEFEITO DE PETRÓLEO (GÁS DE COZINHA - P13), para preparação da alimentação escolar da Unidade, conforme proposta da contratada que faz parte integrante deste instrumento.</p>
@@ -986,7 +986,7 @@ export const generateAditivoHTML = (process: any) => {
         <h1>TERMO ADITIVO DE PRORROGAÇÃO E REAJUSTE DE CONTRATO</h1>
 
         <div class="text-justified">
-            <p>Pelo presente instrumento particular, de um lado a <strong>${school?.name?.toUpperCase() || 'UNIDADE EXECUTORA'}</strong>, inscrita no CNPJ sob o nº ${school?.cnpj || '___.___.___/____-__'}, com sede na ${school?.address || 'ENDEREÇO NÃO CADASTRADO'}, doravante denominada <strong>CONTRATANTE</strong>, representada neste ato por seu Presidente, o(a) Sr(a). <strong>${school?.director?.toUpperCase() || 'DIRETOR(A)'}</strong>.</p>
+            <p>Pelo presente instrumento particular, de um lado a <strong>CONSELHO ESCOLAR DA ESCOLA ESTADUAL ${school?.name?.toUpperCase() || 'UNIDADE EXECUTORA'}</strong>, inscrita no CNPJ sob o nº ${school?.cnpj || '___.___.___/____-__'}, com sede na ${school?.address || 'ENDEREÇO NÃO CADASTRADO'}, doravante denominada <strong>CONTRATANTE</strong>, representada neste ato por seu Presidente, o(a) Sr(a). <strong>${school?.director?.toUpperCase() || 'DIRETOR(A)'}</strong>.</p>
 
             <p class="mt-4">E de outro lado, a empresa <strong>${supplier?.name?.toUpperCase() || 'RAZÃO SOCIAL DO FORNECEDOR'}</strong>, inscrita no CNPJ sob o nº ${supplier?.cnpj || '___.___.___/____-__'}, com sede na ${supplier?.address || 'ENDEREÇO DO FORNECEDOR'}, doravante denominada <strong>CONTRATADA</strong>.</p>
 

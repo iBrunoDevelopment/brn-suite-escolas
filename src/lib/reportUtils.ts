@@ -234,7 +234,7 @@ export const generateRelatorioGerencialHTML = async (entries: any[], stats: any,
                             ${school.name.charAt(0)}
                         </div>
                         <div>
-                            <h2 class="text-2xl font-black text-slate-900 uppercase tracking-tighter">${school.name}</h2>
+                            <h2 class="text-2xl font-black text-slate-900 uppercase tracking-tighter">CONSELHO ESCOLAR DA ESCOLA ESTADUAL ${school.name}</h2>
                             <div class="flex gap-3 mt-1">
                                 <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Unidade Executora</span>
                                 <div class="w-1 h-1 rounded-full bg-slate-300 mt-1.5"></div>
