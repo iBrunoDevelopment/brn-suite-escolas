@@ -457,8 +457,41 @@ export const useBankReconciliation = (user: User) => {
         try {
             const isPdf = lowName.endsWith('.pdf');
             const [year, month] = filterMonth.split('-').map(Number);
+            let newBatch: BankTransaction[] = [];
 
-            // 1. Record the upload in DB and storage
+            if (!isPdf) {
+                // 1. Initial Parse for data validation
+                const text = await file.text();
+                if (lowName.endsWith('.ofx') || lowName.endsWith('.ofc')) newBatch = parseOFX(text, file.name, uploadType);
+                else if (lowName.endsWith('.csv')) newBatch = parseCSV(text, file.name, uploadType);
+                else return addToast('Para processar dados, use os formatos .OFX, .OFC ou .CSV.', 'error');
+
+                if (newBatch.length === 0) {
+                    return addToast('Nenhuma transação válida encontrada no arquivo. Verifique se o formato está correto.', 'warning');
+                }
+
+                // 2. Cross-check reference month vs file data
+                const mismatchedDates = newBatch.filter(t => {
+                    const [tYear, tMonth] = t.date.split('-').map(Number);
+                    return tYear !== year || tMonth !== month;
+                });
+
+                if (mismatchedDates.length > 0) {
+                    const monthsCount: Record<string, number> = {};
+                    newBatch.forEach(t => {
+                        const ym = t.date.substring(0, 7);
+                        monthsCount[ym] = (monthsCount[ym] || 0) + 1;
+                    });
+                    const majorityMonth = Object.keys(monthsCount).sort((a, b) => monthsCount[b] - monthsCount[a])[0];
+                    const [mYear, mMonth] = majorityMonth.split('-');
+
+                    if (!confirm(`Atenção: O mês na tela é ${String(month).padStart(2, '0')}/${year}, mas o arquivo é de ${mMonth}/${mYear}.\n\nDeseja realizar a importação mesmo assim?`)) {
+                        return; // User cancelled
+                    }
+                }
+            }
+
+            // 3. Record the upload in DB and storage
             await recordUploadMutation.mutateAsync({
                 file,
                 schoolId: selectedSchoolId,
@@ -475,13 +508,7 @@ export const useBankReconciliation = (user: User) => {
                 return addToast('Extrato PDF vinculado como documento oficial do mês.', 'success');
             }
 
-            // 2. Parse for conciliation (for data files)
-            const text = await file.text();
-            let newBatch: BankTransaction[] = [];
-            if (lowName.endsWith('.ofx') || lowName.endsWith('.ofc')) newBatch = parseOFX(text, file.name, uploadType);
-            else if (lowName.endsWith('.csv')) newBatch = parseCSV(text, file.name, uploadType);
-            else return addToast('Para processar dados, use os formatos .OFX, .OFC ou .CSV.', 'error');
-
+            // 4. Merge and process new transactions
             const combined = [...transactions];
             let addedCount = 0;
             newBatch.forEach(nt => {
@@ -490,10 +517,6 @@ export const useBankReconciliation = (user: User) => {
                     addedCount++;
                 }
             });
-
-            if (combined.length === 0) {
-                return addToast('Nenhuma transação válida encontrada no arquivo. Verifique se o formato está correto.', 'warning');
-            }
 
             const matched = autoMatch(combined, systemEntries);
             setTransactions(matched);
