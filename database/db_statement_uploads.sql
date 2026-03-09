@@ -40,6 +40,7 @@ CREATE POLICY "uploads_insert" ON bank_statement_uploads FOR INSERT TO authentic
 CREATE POLICY "uploads_delete" ON bank_statement_uploads FOR DELETE TO authenticated USING (
     (SELECT role FROM users WHERE id = auth.uid()) = 'Administrador' 
     OR (SELECT role FROM users WHERE id = auth.uid()) = 'Operador'
+    OR ((SELECT role FROM users WHERE id = auth.uid()) = 'Diretor' AND school_id = (SELECT school_id FROM users WHERE id = auth.uid()))
 );
 
 -- 4. Storage Bucket

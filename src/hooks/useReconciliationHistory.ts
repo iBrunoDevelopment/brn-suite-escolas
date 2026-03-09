@@ -35,8 +35,12 @@ export const useDeleteReconciliationHistory = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: async (id: string) => {
-            const { error } = await supabase.from('bank_statement_uploads').delete().eq('id', id);
+            const { data, error } = await supabase.from('bank_statement_uploads').delete().eq('id', id).select();
             if (error) throw error;
+            if (!data || data.length === 0) {
+                throw new Error('Você não tem permissão para excluir este registro (bloqueado por segurança) ou ele não existe mais.');
+            }
+            return data;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['reconciliation_history'] });
