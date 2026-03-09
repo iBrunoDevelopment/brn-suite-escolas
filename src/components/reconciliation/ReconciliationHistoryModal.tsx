@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { useReconciliationHistory } from '../../hooks/useReconciliationHistory';
+import { useReconciliationHistory, useDeleteReconciliationHistory } from '../../hooks/useReconciliationHistory';
 import { User } from '../../types';
+import { useToast } from '../../context/ToastContext';
 
 interface ReconciliationHistoryModalProps {
     isOpen: boolean;
@@ -15,6 +16,16 @@ const ReconciliationHistoryModal: React.FC<ReconciliationHistoryModalProps> = ({
     isOpen, onClose, user, schoolId, bankAccountId
 }) => {
     const { data: history = [], isLoading } = useReconciliationHistory(user, { schoolId, bankAccountId });
+    const { addToast } = useToast();
+    const deleteMutation = useDeleteReconciliationHistory();
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('Deseja excluir este extrato do histórico? (Lançamentos já conciliados na aba Financeiro precisarão ser desfeitos manualmente se necessário)')) return;
+        deleteMutation.mutate(id, {
+            onSuccess: () => addToast('Registro excluído com sucesso.', 'success'),
+            onError: (err: any) => addToast('Erro ao excluir: ' + err.message, 'error')
+        });
+    };
 
     if (!isOpen) return null;
 
@@ -137,6 +148,14 @@ const ReconciliationHistoryModal: React.FC<ReconciliationHistoryModalProps> = ({
                                                     <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Dados (OFX/CSV)</span>
                                                 </a>
                                             )}
+                                            <button
+                                                onClick={() => handleDelete(record.id)}
+                                                disabled={deleteMutation.isPending}
+                                                className="flex items-center justify-center w-11 h-11 bg-white/5 hover:bg-rose-500/10 text-slate-500 hover:text-rose-500 border border-white/5 rounded-2xl transition-all disabled:opacity-50"
+                                                title="Excluir Extrato"
+                                            >
+                                                <span className="material-symbols-outlined text-xl">delete</span>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

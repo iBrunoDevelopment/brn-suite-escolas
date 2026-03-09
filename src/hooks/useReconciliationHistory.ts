@@ -1,7 +1,6 @@
-
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabaseClient';
-import { User } from '../types';
+import { User, UserRole } from '../types';
 
 export const useReconciliationHistory = (user: User, filters: { schoolId: string, bankAccountId: string }) => {
     return useQuery({
@@ -28,6 +27,19 @@ export const useReconciliationHistory = (user: User, filters: { schoolId: string
             const { data, error } = await query;
             if (error) throw error;
             return data || [];
+        }
+    });
+};
+
+export const useDeleteReconciliationHistory = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (id: string) => {
+            const { error } = await supabase.from('bank_statement_uploads').delete().eq('id', id);
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['reconciliation_history'] });
         }
     });
 };
