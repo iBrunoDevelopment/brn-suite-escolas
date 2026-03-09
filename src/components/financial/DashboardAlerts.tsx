@@ -9,7 +9,7 @@ interface DashboardAlertsProps {
 }
 
 const DashboardAlerts: React.FC<DashboardAlertsProps> = ({ alerts, selectedAlert, setSelectedAlert }) => {
-    const [activeAlertTab, setActiveAlertTab] = useState<'Tudo' | 'Auditoria' | 'Gestão' | 'Financeiro' | 'Sistema'>('Tudo');
+    const [activeAlertTab, setActiveAlertTab] = useState<'Tudo' | 'Auditoria' | 'Gestão' | 'Financeiro' | 'Sistema' | 'Conciliação'>('Tudo');
     const [alertSchoolSearch, setAlertSchoolSearch] = useState('');
 
     const filtered = (activeAlertTab === 'Tudo' ? alerts : alerts.filter((a: any) => a.category === activeAlertTab))
@@ -32,7 +32,7 @@ const DashboardAlerts: React.FC<DashboardAlertsProps> = ({ alerts, selectedAlert
                 </div>
 
                 <div className="flex-1 flex overflow-x-auto scrollbar-hide border-r border-border-dark/50">
-                    {(['Tudo', 'Auditoria', 'Gestão', 'Financeiro', 'Sistema'] as const).map(tab => {
+                    {(['Tudo', 'Auditoria', 'Gestão', 'Financeiro', 'Sistema', 'Conciliação'] as const).map(tab => {
                         const count = tab === 'Tudo' ? alerts.length : alerts.filter((a: any) => a.category === tab).length;
                         return (
                             <button
@@ -45,7 +45,7 @@ const DashboardAlerts: React.FC<DashboardAlertsProps> = ({ alerts, selectedAlert
                             >
                                 {tab}
                                 {count > 0 && (
-                                    <span className={`px-1.5 py-0.5 rounded-full text-[9px] ${tab === 'Auditoria' || tab === 'Gestão' ? 'bg-red-500 text-white' : 'bg-slate-700 text-slate-300'
+                                    <span className={`px-1.5 py-0.5 rounded-full text-[9px] ${tab === 'Auditoria' || tab === 'Gestão' || tab === 'Conciliação' ? 'bg-red-500 text-white' : 'bg-slate-700 text-slate-300'
                                         }`}>
                                         {count}
                                     </span>

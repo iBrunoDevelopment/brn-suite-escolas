@@ -360,21 +360,32 @@ export const useDashboard = (user: User) => {
                 schAccounts.forEach(acc => {
                     const types = ['Conta Corrente', 'Conta Investimento'];
                     types.forEach(type => {
-                        const exists = (uploads || []).some((u: any) =>
+                        const uploadRecord = (uploads || []).find((u: any) =>
                             u.bank_account_id === acc.id &&
                             u.month === period.month &&
                             u.year === period.year &&
                             u.account_type === type
                         );
 
-                        if (!exists) {
+                        const isContaCorrente = type === 'Conta Corrente';
+                        let missingParts = [];
+
+                        if (!uploadRecord) {
+                            missingParts.push(isContaCorrente ? 'OFX e PDF' : 'PDF');
+                        } else {
+                            if (isContaCorrente && !uploadRecord.file_url) missingParts.push('OFX');
+                            if (!uploadRecord.pdf_url) missingParts.push('PDF');
+                        }
+
+                        if (missingParts.length > 0) {
                             const monthName = new Date(period.year, period.month - 1).toLocaleString('pt-BR', { month: 'long' });
+                            const programName = auxData.programs.find((p: any) => p.id === acc.program_id)?.name || 'Sem Programa Vinculado';
                             alerts.push({
-                                id: `missing-stmt-${acc.id}-${period.month}-${period.year}-${type}`,
-                                title: 'Extrato Faltante',
-                                description: `O extrato de ${type} (${acc.name}) da escola ${sch.name} referente a ${monthName}/${period.year} ainda não foi enviado.`,
+                                id: `missing-stmt-${acc.id}-${period.month}-${period.year}-${type}-${missingParts.join('-')}`,
+                                title: 'Extrato Faltante para Conciliar',
+                                description: `A escola ${sch.name} não enviou o extrato de ${type} (${missingParts.join(' e ')}) do programa ${programName} (Ag/Cc: ${acc.agency || ''} ${acc.account_number || ''}) referente a ${monthName}/${period.year}.`,
                                 severity: 'Crítico',
-                                category: 'Auditoria',
+                                category: 'Conciliação',
                                 schoolId: sch.id,
                                 schoolName: sch.name,
                                 timestamp: today.toISOString()
@@ -432,7 +443,7 @@ export const useDashboard = (user: User) => {
                 title: 'Divergência na Conciliação',
                 description: `Existem ${unreconciledOld.length} lançamentos confirmados há mais de 7 dias que não coincidem com nenhum extrato bancário enviado.`,
                 severity: 'Crítico',
-                category: 'Auditoria',
+                category: 'Conciliação',
                 timestamp: today.toISOString()
             });
         }
