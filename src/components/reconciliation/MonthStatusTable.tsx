@@ -1,14 +1,18 @@
 import React from 'react';
 import { TransactionStatus } from '../../types';
+import { generateCSV, generateRelatorioGerencialHTML } from '../../lib/reportUtils';
 
 interface MonthStatusTableProps {
     systemEntries: any[];
     programs: any[];
+    schools: any[];
+    rubrics: any[];
+    suppliers: any[];
     filterMonth: string;
     onClose: () => void;
 }
 
-const MonthStatusTable: React.FC<MonthStatusTableProps> = ({ systemEntries, programs, filterMonth, onClose }) => {
+const MonthStatusTable: React.FC<MonthStatusTableProps> = ({ systemEntries, programs, schools, rubrics, suppliers, filterMonth, onClose }) => {
     // Determine which month an entry belongs to: 
     // If reconciled, it belongs to the month of payment.
     // If pending, it belongs to the month of the document date.
@@ -24,6 +28,39 @@ const MonthStatusTable: React.FC<MonthStatusTableProps> = ({ systemEntries, prog
 
     const reconciled = filteredEntries.filter(e => e.is_reconciled);
     const pending = filteredEntries.filter(e => !e.is_reconciled);
+
+    const getMappedEntries = () => {
+        return reconciled.map(e => ({
+            ...e,
+            school: schools.find(s => s.id === e.school_id)?.name || 'Sem Escola',
+            program: programs.find(p => p.id === e.program_id)?.name || 'Sem Programa',
+            rubric: rubrics.find(r => r.id === e.rubric_id)?.name || 'Sem Rubrica',
+            supplier: suppliers.find(s => s.id === e.supplier_id)?.name || 'Geral'
+        }));
+    };
+
+    const handleExportPDF = async () => {
+        if (reconciled.length === 0) return;
+        const html = await generateRelatorioGerencialHTML(getMappedEntries(), {}, {}, [], {
+            showSummary: true,
+            showCharts: false,
+            showStatusBadges: true,
+            showNatureSummary: true,
+            groupReport: 'program',
+            format: 'pdf',
+            reportMode: 'gerencial'
+        });
+        const w = window.open('', '_blank');
+        if (w) {
+            w.document.write(html);
+            w.document.close();
+        }
+    };
+
+    const handleExportCSV = () => {
+        if (reconciled.length === 0) return;
+        generateCSV(getMappedEntries());
+    };
 
     return (
         <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -42,9 +79,23 @@ const MonthStatusTable: React.FC<MonthStatusTableProps> = ({ systemEntries, prog
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-white/5">
-                    <div className="p-8 bg-card-dark flex flex-col items-center gap-2">
-                        <span className="text-4xl font-black text-emerald-500">{reconciled.length}</span>
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Conciliados (OK)</span>
+                    <div className="p-8 bg-card-dark flex flex-col items-center gap-4 relative">
+                        <div className="flex flex-col items-center gap-2">
+                            <span className="text-4xl font-black text-emerald-500">{reconciled.length}</span>
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Conciliados (OK)</span>
+                        </div>
+                        {reconciled.length > 0 && (
+                            <div className="flex gap-2 mt-2">
+                                <button onClick={handleExportPDF} className="p-2 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white rounded-lg transition-all flex items-center gap-1" title="Baixar PDF">
+                                    <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+                                    <span className="text-[9px] font-black uppercase">PDF</span>
+                                </button>
+                                <button onClick={handleExportCSV} className="p-2 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white rounded-lg transition-all flex items-center gap-1" title="Baixar Excel/CSV">
+                                    <span className="material-symbols-outlined text-[16px]">grid_on</span>
+                                    <span className="text-[9px] font-black uppercase">Excel</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
                     <div className="p-8 bg-card-dark flex flex-col items-center gap-2">
                         <span className="text-4xl font-black text-amber-500">{pending.length}</span>

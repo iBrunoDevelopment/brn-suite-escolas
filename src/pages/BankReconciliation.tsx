@@ -50,6 +50,9 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
                     <MonthStatusTable
                         systemEntries={recon.systemEntries}
                         programs={recon.programs}
+                        schools={recon.schools}
+                        rubrics={recon.rubrics}
+                        suppliers={recon.suppliers}
                         filterMonth={recon.filterMonth}
                         onClose={() => recon.setShowMonthStatus(false)}
                     />
