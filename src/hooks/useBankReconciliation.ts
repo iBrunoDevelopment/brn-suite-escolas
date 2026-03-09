@@ -625,7 +625,9 @@ export const useBankReconciliation = (user: User) => {
 
     const handleQuickCreateStart = (bt: BankTransaction) => {
         const desc = bt.description.toUpperCase();
-        let suggestedProgramId = '', suggestedRubricId = '', suggestedNature = 'Custeio';
+        const currentAccount = bankAccounts.find((a: any) => a.id === selectedBankAccountId);
+        let suggestedProgramId = currentAccount?.program_id || '';
+        let suggestedRubricId = '', suggestedNature = 'Custeio';
         const findRubric = (term: string) => rubrics.find((r: any) => r.name.toUpperCase().includes(term));
 
         let suggestedCategory = 'Compras e Serviços';
