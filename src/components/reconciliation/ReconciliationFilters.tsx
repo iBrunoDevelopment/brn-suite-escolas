@@ -14,6 +14,8 @@ interface ReconciliationFiltersProps {
     setFilterMonth: (m: string) => void;
     onShowHelp: () => void;
     onShowHistory: () => void;
+    isExportingAll: boolean;
+    onExportAll: (format: 'pdf' | 'csv') => void;
 }
 
 const ReconciliationFilters: React.FC<ReconciliationFiltersProps> = ({
@@ -21,7 +23,8 @@ const ReconciliationFilters: React.FC<ReconciliationFiltersProps> = ({
     selectedSchoolId, setSelectedSchoolId,
     selectedBankAccountId, setSelectedBankAccountId,
     filterMonth, setFilterMonth,
-    onShowHelp, onShowHistory
+    onShowHelp, onShowHistory,
+    isExportingAll, onExportAll
 }) => {
     return (
         <div className="flex flex-wrap items-center gap-3 md:gap-4 bg-card-dark/30 p-4 md:p-6 rounded-3xl border border-white/5 shadow-xl">
@@ -40,6 +43,32 @@ const ReconciliationFilters: React.FC<ReconciliationFiltersProps> = ({
                 <span className="material-symbols-outlined text-sm">history</span>
                 Histórico
             </button>
+
+            {/* Export All Buttons */}
+            <div className="flex gap-2 w-full md:w-auto">
+                <button
+                    onClick={() => onExportAll('pdf')}
+                    disabled={isExportingAll}
+                    title="Baixar TUDO em PDF"
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500 hover:text-white text-emerald-500 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all justify-center border border-emerald-500/20 disabled:opacity-50"
+                >
+                    <span className={`material-symbols-outlined text-sm ${isExportingAll ? 'animate-spin' : ''}`}>
+                        {isExportingAll ? 'refresh' : 'picture_as_pdf'}
+                    </span>
+                    Tudo PDF
+                </button>
+                <button
+                    onClick={() => onExportAll('csv')}
+                    disabled={isExportingAll}
+                    title="Baixar TUDO em Excel"
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500 hover:text-white text-emerald-500 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all justify-center border border-emerald-500/20 disabled:opacity-50"
+                >
+                    <span className={`material-symbols-outlined text-sm ${isExportingAll ? 'animate-spin' : ''}`}>
+                        {isExportingAll ? 'refresh' : 'grid_on'}
+                    </span>
+                    Tudo Excel
+                </button>
+            </div>
 
             {/* School Filter */}
             <div className="flex flex-col gap-1 flex-1 min-w-[200px]">

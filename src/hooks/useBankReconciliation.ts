@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import { User, StatementUpload, TransactionStatus } from '../types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '../context/ToastContext';
+import { generateCSV, generateRelatorioGerencialHTML } from '../lib/reportUtils';
 
 export interface BankTransaction {
     id: string;
@@ -43,6 +44,7 @@ export const useBankReconciliation = (user: User) => {
     const [capaForm, setCapaForm] = useState({ revenue: 0, taxes: 0, balance: 0 });
     const [quickForm, setQuickForm] = useState({ program_id: '', rubric_id: '', supplier_id: '', description: '', nature: 'Custeio', category: 'Compras e Serviços' });
     const [showMonthStatus, setShowMonthStatus] = useState(false);
+    const [isExportingAll, setIsExportingAll] = useState(false);
 
     // Queries
     const { data: auxData = {
@@ -664,6 +666,67 @@ export const useBankReconciliation = (user: User) => {
         setShowQuickCreate(true);
     };
 
+    const handleExportAllReconciled = async (format: 'pdf' | 'csv') => {
+        if (!selectedSchoolId) {
+            addToast('Selecione uma escola para exportar o relatório.', 'warning');
+            return;
+        }
+
+        setIsExportingAll(true);
+        try {
+            let query = supabase.from('financial_entries')
+                .select('*')
+                .eq('school_id', selectedSchoolId)
+                .eq('is_reconciled', true)
+                .order('date', { ascending: false });
+
+            if (selectedBankAccountId) {
+                query = query.eq('bank_account_id', selectedBankAccountId);
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            if (!data || data.length === 0) {
+                addToast('Nenhum lançamento conciliado encontrado para exportar.', 'warning');
+                setIsExportingAll(false);
+                return;
+            }
+
+            const mapped = data.map(e => ({
+                ...e,
+                school: schools.find((s: any) => s.id === e.school_id)?.name || 'Sem Escola',
+                program: programs.find((p: any) => p.id === e.program_id)?.name || 'Sem Programa',
+                rubric: rubrics.find((r: any) => r.id === e.rubric_id)?.name || 'Sem Rubrica',
+                supplier: suppliers.find((s: any) => s.id === e.supplier_id)?.name || 'Geral'
+            }));
+
+            if (format === 'csv') {
+                generateCSV(mapped);
+                addToast('Relatório Excel baixado com sucesso.', 'success');
+            } else {
+                const html = await generateRelatorioGerencialHTML(mapped, {}, {}, [], {
+                    showSummary: true,
+                    showCharts: false,
+                    showStatusBadges: true,
+                    showNatureSummary: true,
+                    groupReport: 'program',
+                    format: 'pdf',
+                    reportMode: 'gerencial'
+                });
+                const w = window.open('', '_blank');
+                if (w) {
+                    w.document.write(html);
+                    w.document.close();
+                }
+            }
+        } catch (e: any) {
+            addToast('Erro ao exportar relatório: ' + e.message, 'error');
+        } finally {
+            setIsExportingAll(false);
+        }
+    };
+
     const handleQuickCreate = async () => {
         if (!quickCreateBT || !selectedSchoolId || !selectedBankAccountId) return;
         quickCreateMutation.mutate({ bt: quickCreateBT, form: quickForm }, {
@@ -702,6 +765,8 @@ export const useBankReconciliation = (user: User) => {
         handleQuickCreate,
         fetchSystemEntries,
         showMonthStatus,
-        setShowMonthStatus
+        setShowMonthStatus,
+        handleExportAllReconciled,
+        isExportingAll
     };
 };

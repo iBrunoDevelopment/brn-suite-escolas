@@ -43,6 +43,8 @@ const BankReconciliation: React.FC<{ user: User }> = ({ user }) => {
                 setFilterMonth={recon.setFilterMonth}
                 onShowHelp={() => recon.setShowHelp(true)}
                 onShowHistory={() => recon.setShowHistory(true)}
+                isExportingAll={recon.isExportingAll}
+                onExportAll={recon.handleExportAllReconciled}
             />
 
             {recon.transactions.length === 0 ? (
