@@ -60,7 +60,11 @@ export const useReports = (user: User, filters: ReportsFilters) => {
             ]);
 
             const usedIds = new Set((existingRes.data || []).map(p => p.financial_entry_id));
-            return (entriesRes.data || []).filter(e => !usedIds.has(e.id)) as FinancialEntry[];
+            return (entriesRes.data || []).filter(e =>
+                !usedIds.has(e.id) &&
+                e.category !== 'Tarifa Bancária' &&
+                e.category !== 'Rendimento de Aplicação'
+            ) as FinancialEntry[];
         },
         enabled: !!user.id
     });
