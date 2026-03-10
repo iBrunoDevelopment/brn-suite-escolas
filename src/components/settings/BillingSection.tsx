@@ -6,7 +6,7 @@ interface BillingSectionProps {
     billingRecords: PlatformBilling[];
     schools: School[];
     loading: boolean;
-    onUpdateStatus: (data: { id: string, status: string, payment_date?: string, payment_method?: string, paid_amount?: number, description?: string, amount?: number }) => void;
+    onUpdateStatus: (data: { id: string, status: string, payment_date?: string, payment_method?: string, paid_amount?: number, description?: string, amount?: number, reference_month?: string }) => void;
     onGenerate: (month: string) => void;
     onCreate: (data: { school_id: string, reference_month: string, amount: number, description: string, status: string }) => void;
     currentUser: User;
@@ -41,6 +41,7 @@ const BillingSection: React.FC<BillingSectionProps> = ({
     const [editModal, setEditModal] = useState<{ open: boolean, record: PlatformBilling | null }>({ open: false, record: null });
     const [editDescription, setEditDescription] = useState('');
     const [editAmount, setEditAmount] = useState('');
+    const [editReferenceMonth, setEditReferenceMonth] = useState('');
 
     const [createModalOpen, setCreateModalOpen] = useState(false);
     const [newItem, setNewItem] = useState({
@@ -155,6 +156,7 @@ const BillingSection: React.FC<BillingSectionProps> = ({
         setEditModal({ open: true, record });
         setEditDescription(record.description || 'Mensalidade');
         setEditAmount(record.amount.toString());
+        setEditReferenceMonth(record.reference_month?.slice(0, 7) || '');
     };
 
     const handleConfirmPayment = () => {
@@ -186,7 +188,8 @@ const BillingSection: React.FC<BillingSectionProps> = ({
             id: editModal.record.id,
             status: editModal.record.status,
             description: editDescription,
-            amount: val
+            amount: val,
+            reference_month: `${editReferenceMonth}-01`
         });
         setEditModal({ open: false, record: null });
     };
@@ -374,9 +377,9 @@ const BillingSection: React.FC<BillingSectionProps> = ({
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 block">Início</label>
                             <input
                                 title="Data Inicial"
-                                type="date"
-                                value={`${periodStart}-01`}
-                                onChange={e => setPeriodStart(e.target.value.slice(0, 7))}
+                                type="month"
+                                value={periodStart}
+                                onChange={e => setPeriodStart(e.target.value)}
                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-primary"
                             />
                         </div>
@@ -386,9 +389,9 @@ const BillingSection: React.FC<BillingSectionProps> = ({
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 block">Fim</label>
                             <input
                                 title="Data Final"
-                                type="date"
-                                value={`${periodEnd}-01`}
-                                onChange={e => setPeriodEnd(e.target.value.slice(0, 7))}
+                                type="month"
+                                value={periodEnd}
+                                onChange={e => setPeriodEnd(e.target.value)}
                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-primary"
                             />
                         </div>
@@ -585,9 +588,9 @@ const BillingSection: React.FC<BillingSectionProps> = ({
                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Mês de Cobrança</label>
                                     <input
                                         title="Mês de Cobrança"
-                                        type="date"
-                                        value={`${newItem.reference_month}-01`}
-                                        onChange={e => setNewItem({ ...newItem, reference_month: e.target.value.slice(0, 7) })}
+                                        type="month"
+                                        value={newItem.reference_month}
+                                        onChange={e => setNewItem({ ...newItem, reference_month: e.target.value })}
                                         className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary transition-all"
                                     />
                                 </div>
@@ -648,15 +651,27 @@ const BillingSection: React.FC<BillingSectionProps> = ({
                                 />
                             </div>
 
-                            <div>
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Valor Total (R$)</label>
-                                <input
-                                    title="Valor Total"
-                                    type="number"
-                                    value={editAmount}
-                                    onChange={e => setEditAmount(e.target.value)}
-                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-bold outline-none focus:border-emerald-500 transition-all"
-                                />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Mês de Cobrança</label>
+                                    <input
+                                        title="Mês de Cobrança"
+                                        type="month"
+                                        value={editReferenceMonth}
+                                        onChange={e => setEditReferenceMonth(e.target.value)}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary transition-all"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Valor Total (R$)</label>
+                                    <input
+                                        title="Valor Total"
+                                        type="number"
+                                        value={editAmount}
+                                        onChange={e => setEditAmount(e.target.value)}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-bold outline-none focus:border-emerald-500 transition-all"
+                                    />
+                                </div>
                             </div>
                         </div>
 

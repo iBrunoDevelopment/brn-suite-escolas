@@ -277,13 +277,14 @@ export const useSettings = (user: User) => {
     });
 
     const updateBillingStatusMut = useMutation({
-        mutationFn: async ({ id, status, payment_date, payment_method, amount, paid_amount, description }: { id: string, status: string, payment_date?: string, payment_method?: string, amount?: number, paid_amount?: number, description?: string }) => {
+        mutationFn: async ({ id, status, payment_date, payment_method, amount, paid_amount, description, reference_month }: { id: string, status: string, payment_date?: string, payment_method?: string, amount?: number, paid_amount?: number, description?: string, reference_month?: string }) => {
             const payload: any = { status, updated_at: new Date().toISOString() };
             if (payment_date) payload.payment_date = payment_date;
             if (payment_method) payload.payment_method = payment_method;
             if (amount !== undefined) payload.amount = amount;
             if (paid_amount !== undefined) payload.paid_amount = paid_amount;
             if (description !== undefined) payload.description = description;
+            if (reference_month !== undefined) payload.reference_month = reference_month;
 
             const { error } = await supabase.from('platform_billing').update(payload).eq('id', id);
             if (error) throw error;
