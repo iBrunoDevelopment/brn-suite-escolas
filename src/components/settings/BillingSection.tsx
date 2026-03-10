@@ -12,6 +12,8 @@ interface BillingSectionProps {
     currentUser: User;
 }
 
+const MONTH_INPUT_TYPE = 'month';
+
 const BillingSection: React.FC<BillingSectionProps> = ({
     billingRecords, schools, loading, onUpdateStatus, onGenerate, onCreate, currentUser
 }) => {
@@ -377,7 +379,8 @@ const BillingSection: React.FC<BillingSectionProps> = ({
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 block">Início</label>
                             <input
                                 title="Data Inicial"
-                                type="month"
+                                type={MONTH_INPUT_TYPE}
+                                placeholder="AAAA-MM"
                                 value={periodStart}
                                 onChange={e => setPeriodStart(e.target.value)}
                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-primary"
@@ -389,7 +392,8 @@ const BillingSection: React.FC<BillingSectionProps> = ({
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 block">Fim</label>
                             <input
                                 title="Data Final"
-                                type="month"
+                                type={MONTH_INPUT_TYPE}
+                                placeholder="AAAA-MM"
                                 value={periodEnd}
                                 onChange={e => setPeriodEnd(e.target.value)}
                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-primary"
@@ -588,7 +592,8 @@ const BillingSection: React.FC<BillingSectionProps> = ({
                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Mês de Cobrança</label>
                                     <input
                                         title="Mês de Cobrança"
-                                        type="month"
+                                        type={MONTH_INPUT_TYPE}
+                                        placeholder="AAAA-MM"
                                         value={newItem.reference_month}
                                         onChange={e => setNewItem({ ...newItem, reference_month: e.target.value })}
                                         className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary transition-all"
@@ -656,7 +661,8 @@ const BillingSection: React.FC<BillingSectionProps> = ({
                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Mês de Cobrança</label>
                                     <input
                                         title="Mês de Cobrança"
-                                        type="month"
+                                        type={MONTH_INPUT_TYPE}
+                                        placeholder="AAAA-MM"
                                         value={editReferenceMonth}
                                         onChange={e => setEditReferenceMonth(e.target.value)}
                                         className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-primary transition-all"
