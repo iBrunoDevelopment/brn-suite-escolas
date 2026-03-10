@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BRAZIL_STATES } from '../../hooks/useSettings';
 
 interface SuppliersSectionProps {
@@ -27,6 +27,19 @@ const SuppliersSection: React.FC<SuppliersSectionProps> = ({
             fetchCities(newSupplier.uf);
         }
     }, [newSupplier.uf]);
+
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredSuppliers = suppliers.filter(s => {
+        const term = searchTerm.toLowerCase();
+        return (
+            (s.name && s.name.toLowerCase().includes(term)) ||
+            (s.cnpj && s.cnpj.toLowerCase().includes(term)) ||
+            (s.email && s.email.toLowerCase().includes(term)) ||
+            (s.city && s.city.toLowerCase().includes(term)) ||
+            (s.uf && s.uf.toLowerCase().includes(term))
+        );
+    });
 
     const formatCPFCNPJ = (value: string) => {
         const cleanValue = value.replace(/\D/g, '');
@@ -258,8 +271,23 @@ const SuppliersSection: React.FC<SuppliersSectionProps> = ({
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 mt-4">
-                    {suppliers.map(s => (
+                <div className="flex flex-col gap-4 mt-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-surface-border pb-3 gap-3">
+                        <h4 className="text-sm font-bold text-slate-300 uppercase tracking-wider">Fornecedores Cadastrados</h4>
+                        <div className="relative w-full sm:w-80">
+                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                            <input
+                                type="text"
+                                placeholder="Buscar por nome, documento, e-mail ou cidade..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full bg-surface-dark border border-surface-border rounded-lg pl-10 pr-4 py-2 text-xs text-white focus:border-primary outline-none transition-colors"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3">
+                        {filteredSuppliers.map(s => (
                         <div key={s.id} className="flex flex-col md:flex-row md:items-center p-4 bg-surface-dark border border-surface-border rounded-xl hover:border-slate-500 transition-colors group">
                             <div className="w-10 h-10 rounded bg-white/5 border border-white/10 flex items-center justify-center mr-4 overflow-hidden">
                                 {s.stamp_url ? (
@@ -288,11 +316,16 @@ const SuppliersSection: React.FC<SuppliersSectionProps> = ({
                             </div>
                         </div>
                     ))}
-                    {suppliers.length === 0 && (
+                    {suppliers.length === 0 ? (
                         <div className="text-center py-10 text-slate-600 bg-[#111a22]/50 border border-dashed border-slate-800 rounded-xl">
                             Nenhum fornecedor cadastrado.
                         </div>
-                    )}
+                    ) : filteredSuppliers.length === 0 ? (
+                        <div className="text-center py-10 text-slate-500 bg-[#111a22]/50 border border-dashed border-slate-800 rounded-xl">
+                            Nenhum fornecedor encontrado para a busca "{searchTerm}".
+                        </div>
+                    ) : null}
+                    </div>
                 </div>
             </div>
         </div>
