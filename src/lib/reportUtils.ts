@@ -58,13 +58,16 @@ export const generateRelatorioGerencialHTML = async (entries: any[], stats: any,
         custeio: number;
         capital: number;
         programs: Record<string, ProgramData>;
+        conselho_escolar?: string;
     }
 
     const dataBySchool: Record<string, SchoolData> = {};
 
-    const ensurePath = (schoolName: string, programName: string) => {
+    const ensurePath = (schoolName: string, programName: string, conselhoEscolar?: string) => {
         if (!dataBySchool[schoolName]) {
-            dataBySchool[schoolName] = { name: schoolName, previousBalance: 0, credits: 0, debits: 0, custeio: 0, capital: 0, programs: {} };
+            dataBySchool[schoolName] = { name: schoolName, conselho_escolar: conselhoEscolar, previousBalance: 0, credits: 0, debits: 0, custeio: 0, capital: 0, programs: {} };
+        } else if (conselhoEscolar && !dataBySchool[schoolName].conselho_escolar) {
+            dataBySchool[schoolName].conselho_escolar = conselhoEscolar;
         }
         if (!dataBySchool[schoolName].programs[programName]) {
             dataBySchool[schoolName].programs[programName] = { previousBalance: 0, credits: 0, debits: 0, entries: [] };
@@ -76,7 +79,7 @@ export const generateRelatorioGerencialHTML = async (entries: any[], stats: any,
         const schoolName = r.schools?.name || 'Escola Desconhecida';
         const progName = r.programs?.name || 'Sem Programa';
         const val = Number(r.value || 0);
-        const progNode = ensurePath(schoolName, progName);
+        const progNode = ensurePath(schoolName, progName, r.schools?.conselho_escolar);
         progNode.previousBalance += val;
         dataBySchool[schoolName].previousBalance += val;
     });
@@ -87,7 +90,7 @@ export const generateRelatorioGerencialHTML = async (entries: any[], stats: any,
         const val = Number(e.value);
         const type = e.type;
 
-        const progNode = ensurePath(schoolName, progName);
+        const progNode = ensurePath(schoolName, progName, e.schools?.conselho_escolar);
 
         if (type === 'Entrada') {
             progNode.credits += val;
@@ -234,7 +237,7 @@ export const generateRelatorioGerencialHTML = async (entries: any[], stats: any,
                             ${school.name.charAt(0)}
                         </div>
                         <div>
-                            <h2 class="text-2xl font-black text-slate-900 uppercase tracking-tighter">CONSELHO ESCOLAR DA ESCOLA ESTADUAL ${school.name}</h2>
+                            <h2 class="text-2xl font-black text-slate-900 uppercase tracking-tighter">${(school.conselho_escolar || `CONSELHO ESCOLAR DA ESCOLA ESTADUAL ${school.name}`).toUpperCase()}</h2>
                             <div class="flex gap-3 mt-1">
                                 <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Unidade Executora</span>
                                 <div class="w-1 h-1 rounded-full bg-slate-300 mt-1.5"></div>
