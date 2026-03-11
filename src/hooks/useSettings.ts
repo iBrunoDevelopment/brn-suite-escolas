@@ -175,6 +175,8 @@ export const useSettings = (user: User) => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey });
+            queryClient.invalidateQueries({ queryKey: ['aux_data'] });
+            queryClient.invalidateQueries({ queryKey: ['reports_aux'] });
             onSuccess?.();
         }
     });
@@ -186,6 +188,8 @@ export const useSettings = (user: User) => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey });
+            queryClient.invalidateQueries({ queryKey: ['aux_data'] });
+            queryClient.invalidateQueries({ queryKey: ['reports_aux'] });
             onSuccess?.();
         }
     });
@@ -211,6 +215,8 @@ export const useSettings = (user: User) => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['rubrics'] });
+            queryClient.invalidateQueries({ queryKey: ['aux_data'] });
+            queryClient.invalidateQueries({ queryKey: ['reports_aux'] });
             setNewRubric({ name: '', program_id: '', school_id: '', default_nature: 'Custeio' });
             setEditingRubricId(null);
             addToast(editingRubricId ? 'Rubrica atualizada!' : 'Rubrica criada!', 'success');
@@ -230,6 +236,8 @@ export const useSettings = (user: User) => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+            queryClient.invalidateQueries({ queryKey: ['aux_data'] });
+            queryClient.invalidateQueries({ queryKey: ['suppliers_list'] });
             setNewSupplier({
                 name: '', cnpj: '', email: '', phone: '', cep: '', address: '', city: '', uf: '', stamp_url: '',
                 rep_name: '', rep_cpf: '', rep_rg: '', rep_address: ''
@@ -252,6 +260,8 @@ export const useSettings = (user: User) => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['bank_accounts'] });
+            queryClient.invalidateQueries({ queryKey: ['aux_data'] });
+            queryClient.invalidateQueries({ queryKey: ['reports_aux'] });
             setNewBank({ name: '', bank_name: '', agency: '', account_number: '', school_id: '', program_id: '' });
             setEditingBankId(null);
             addToast(editingBankId ? 'Conta bancária atualizada!' : 'Conta bancária criada!', 'success');
@@ -378,6 +388,27 @@ export const useSettings = (user: User) => {
 
     const handleCreateSupplier = () => {
         if (!newSupplier.name) return addToast('Nome obrigatório', 'warning');
+        if (!newSupplier.cnpj) return addToast('CNPJ obrigatório', 'warning');
+
+        // Normalização para comparação: remove pontuação, espaços e converte para minúsculo
+        const cleanCNPJ = newSupplier.cnpj.replace(/\D/g, '');
+        const cleanName = newSupplier.name.trim().toLowerCase();
+
+        // Verificar duplicidade localmente (já temos os suppliers da Query)
+        const isDuplicate = suppliers.some((s: any) => {
+            // Se estiver editando, ignora o próprio registro
+            if (editingSupplierId && s.id === editingSupplierId) return false;
+
+            const existingCNPJ = (s.cnpj || '').replace(/\D/g, '');
+            const existingName = (s.name || '').trim().toLowerCase();
+
+            return existingCNPJ === cleanCNPJ || existingName === cleanName;
+        });
+
+        if (isDuplicate) {
+            return addToast('Já existe um fornecedor cadastrado com este Nome ou CNPJ.', 'error');
+        }
+
         saveSupplierMut.mutate(newSupplier);
     };
 

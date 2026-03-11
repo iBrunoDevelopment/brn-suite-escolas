@@ -216,6 +216,8 @@ export function useFinancialEntries(user: User, filters: any = {}) {
              queryClient.invalidateQueries({ queryKey: ['accountability_processes'] });
              queryClient.invalidateQueries({ queryKey: ['supplier_contracts'] });
              queryClient.invalidateQueries({ queryKey: ['suppliers_list'] });
+             queryClient.invalidateQueries({ queryKey: ['aux_data'] });
+             queryClient.invalidateQueries({ queryKey: ['reports_aux'] });
         }
     };
 }

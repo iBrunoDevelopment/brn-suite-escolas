@@ -172,6 +172,8 @@ export const useReports = (user: User, filters: ReportsFilters) => {
             queryClient.invalidateQueries({ queryKey: ['supplier_contracts'] });
             queryClient.invalidateQueries({ queryKey: ['financial_entries'] });
             queryClient.invalidateQueries({ queryKey: ['suppliers_list'] });
+            queryClient.invalidateQueries({ queryKey: ['aux_data'] });
+            queryClient.invalidateQueries({ queryKey: ['reports_aux'] });
         },
         deleteProcess: deleteProcessMut.mutate
     };
