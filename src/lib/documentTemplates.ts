@@ -439,9 +439,30 @@ export const generateReciboHTML = (process: any) => {
     const winner = quotes.find((q: any) => q.is_winner);
     const supplier = winner?.suppliers || winner?.supplier || entry?.suppliers || entry?.supplier;
 
-    const invoiceDate = entry?.date ? new Date(entry.date) : new Date();
-    const dateLong = invoiceDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+    // Dates
+    const invoiceDate = entry?.date ? new Date(entry.date) : null;
+    const paymentDate = entry?.payment_date ? new Date(entry.payment_date) : null;
+    
+    const dispInvoiceDate = invoiceDate ? invoiceDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '___/___/_____';
+    const dispPaymentDate = paymentDate ? paymentDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '___/___/_____';
+
+    // Bottom date uses payment date
+    const dateLong = (paymentDate || new Date()).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+    
     const totalValue = (winner?.total_value || 0) - (process.discount || 0);
+
+    // Payment method label
+    const paymentMethod = entry?.payment_method?.toLowerCase() || '';
+    let paymentLabel = 'AUTORIZAÇÃO';
+    if (paymentMethod.includes('pix')) {
+        paymentLabel = 'OPERAÇÃO';
+    } else if (paymentMethod.includes('cartão') || paymentMethod.includes('cartao')) {
+        paymentLabel = 'AUTORIZAÇÃO';
+    } else if (paymentMethod.includes('cheque')) {
+        paymentLabel = 'CHEQUE';
+    } else if (paymentMethod.includes('transferência') || paymentMethod.includes('transferencia')) {
+        paymentLabel = 'TRANSFERÊNCIA';
+    }
 
     return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -484,19 +505,24 @@ export const generateReciboHTML = (process: any) => {
             RECEBEMOS DO <strong>${(school?.conselho_escolar || `CONSELHO ESCOLAR DA ESCOLA ESTADUAL ${school?.name || 'UNIDADE EXECUTORA'}`).toUpperCase()}</strong>, 
             CNPJ <strong>${formatCNPJ(school?.cnpj)}</strong>, SITUADO NA <strong>${school?.address?.toUpperCase()}</strong>, 
             A IMPORTÂNCIA DE <strong>${formatCurrency(totalValue)} (${numberToWords(totalValue).toUpperCase()})</strong>, 
-            REFERENTE A COMPRA DE PRODUTOS CONFORME NOTA FISCAL DE Nº <strong>${entry?.invoice_number || '_______'}</strong>, 
-            DATADA DE <strong>${invoiceDate.toLocaleDateString('pt-BR')}</strong>.
+            REFERENTE A COMPRA DE PRODUTOS CONFORME NOTA FISCAL DE Nº <strong>${entry?.document_number || entry?.invoice_number || '_______'}</strong>, 
+            DATADA DE <strong>${dispInvoiceDate}</strong>.
             <br/><br/>
             PAGO COM RECURSO <strong>${program?.name?.toUpperCase() || 'PNAE/FNDE'}</strong>, 
-            AUTORIZAÇÃO Nº <strong>${process.id.substring(0, 6).toUpperCase()}</strong>, 
-            DATADA DE <strong>${new Date().toLocaleDateString('pt-BR')}</strong>.
+            ${paymentLabel} Nº <strong>${entry?.auth_number || '_______'}</strong>, 
+            DATADA DE <strong>${dispPaymentDate}</strong>.
         </div>
 
         <div class="text-right italic text-[13px] mt-20 mb-32">
             ${school?.city || 'ALAGOAS'}, ${dateLong}
         </div>
 
-        <div class="flex flex-col items-center">
+        <div class="flex flex-col items-center relative">
+            ${supplier?.stamp_url ? `
+                <div class="absolute -top-20 opacity-80 mix-blend-multiply pointer-events-none">
+                    <img src="${supplier.stamp_url}" class="w-48 h-auto rotate-[-5deg]" />
+                </div>
+            ` : ''}
             <div class="w-2/3 border-t border-black mb-2"></div>
             <p class="text-[11px] font-black uppercase text-gray-900">ASSINATURA DO FORNECEDOR</p>
             <p class="text-[10px] text-gray-400 font-medium uppercase">${supplier?.name || winner?.supplier_name}</p>

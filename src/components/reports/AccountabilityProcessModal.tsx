@@ -74,8 +74,8 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
         'Consolidação',
         'Ordem de Compra / Serviço',
         'Pesquisa de Preços (Cotações)',
-        'Certidão de Regularidade',
-        'Certidão de Proponente',
+        'Certidões',
+        'CNPJ',
         'Nota Fiscal',
         'Recibo / Quitação',
         'Comprovante de Pagamento',
@@ -895,7 +895,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                                                             fields.push(renderCheck('president', 'ORDEM DE COMPRA/SERVIÇO: Assinatura do presidente (diretor)'));
                                                         } else if (cat === 'Pesquisa de Preços (Cotações)') {
                                                             fields.push(renderCheck('supplier_sig_stamp', 'COTAÇÕES: Assinatura e carimbo do fornecedor'));
-                                                        } else if (cat === 'Certidão de Regularidade' || cat === 'Certidão de Proponente') {
+                                                        } else if (cat === 'Certidões' || cat === 'CNPJ') {
                                                             fields.push(renderCheck('president_sig', 'CERTIDÕES: Assinatura do presidente (diretor)'));
                                                             fields.push(renderInput('president_matr', 'Matrícula do Diretor', 'text'));
                                                         } else if (cat === 'Recibo / Quitação') {
