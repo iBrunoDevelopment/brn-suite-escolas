@@ -299,7 +299,7 @@ const ContractTerms: React.FC<{ user: User }> = ({ user }) => {
                             features: [] // Custom plans start with no predefined features
                         };
                     }
-                    
+
                     setPlan(finalPlan);
                 }
             } catch (error) {
@@ -334,7 +334,7 @@ const ContractTerms: React.FC<{ user: User }> = ({ user }) => {
             <div className="clause-block">
                 <h3 className="text-white font-bold uppercase text-sm border-b border-white/10 pb-2 mb-3 mt-6 print:text-black print:border-slate-300">3. Responsabilidades do Gestor</h3>
                 <p>
-                    É de inteira responsabilidade do gestor a <strong>coleta de todas as assinaturas</strong> necessárias nos documentos gerados pelo sistema, bem como a guarda dos mesmos. Além disso, o gestor compromete-me a fornecer/anexar no sistema a <strong>Nota Fiscal, Comprovante de Pagamento, Extratos de Investimento e Conta Corrente</strong> de cada conta bancária vinculada, além das certidões negativas de débito, impreterivelmente até o <strong>5º dia útil de cada mês</strong>.
+                    É de inteira responsabilidade do gestor a <strong>coleta de todas as assinaturas</strong> necessárias nos documentos gerados pelo sistema, bem como a guarda dos mesmos. Além disso, o gestor compromete-se a fornecer/anexar no sistema a <strong>Nota Fiscal, Comprovante de Pagamento, Extratos de Investimento e Conta Corrente</strong> de cada conta bancária vinculada, além das certidões negativas de débito, impreterivelmente até o <strong>5º dia útil de cada mês</strong>.
                 </p>
             </div>
 
@@ -382,10 +382,10 @@ const ContractTerms: React.FC<{ user: User }> = ({ user }) => {
 
             <div className="clause-block bg-slate-400/5 p-6 rounded-2xl border border-white/5 mt-8 print:bg-transparent print:p-0 print:border-none">
                 <h3 className="text-white font-bold uppercase text-sm border-b border-white/10 pb-2 mb-4 print:text-black print:border-slate-300">7. Procedimentos de Análise Técnica e Prazos</h3>
-                
+
                 <div className="space-y-4">
                     <p>Para garantir a segurança jurídica, a legitimidade contábil e a celeridade dos processos, o gestor concorda e compromete-se com as seguintes diretrizes:</p>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                         <div className="p-3 bg-white/5 rounded-xl border border-white/5">
                             <p className="text-primary font-bold mb-1 uppercase tracking-tighter text-[10px]">7.1 Prazo de Análise</p>
