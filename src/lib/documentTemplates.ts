@@ -660,16 +660,27 @@ export const generateCotacaoHTML = (process: any, supplierIdx: number = 0) => {
                 </tr>
             </tfoot>
         </table>
-        <div class="mt-4 flex justify-end gap-2 font-bold uppercase">
+        <div class="mt-6 text-center font-bold uppercase">
             <span>DATA:</span> <span>${dateText}</span>
         </div>
-        <div class="mt-6 space-y-1 font-bold text-[8px] leading-tight">
-            <p>Serão atendidas as seguintes condições:</p>
-            <p>Todos os itens da planilha deverão ser cotados;</p>
-            <p>Período de validade da proposta: 30 dias da catação;</p>
-            <p>Prazo máximo de entrega/execução: 02 dias a partir da ordem de compra/serviço pela Unidade Executora;</p>
-            <p>Recebimento mediante apresentação de nota fiscal e certidões;</p>
-            <p>Pagamento após conferência atesto da nota fiscal, mediante apresentação de recibo.</p>
+
+        <div class="mt-2 flex justify-between items-end gap-4 relative min-h-[100px]">
+            <div class="space-y-1 font-bold text-[8px] leading-tight flex-1">
+                <p>Serão atendidas as seguintes condições:</p>
+                <p>Todos os itens da planilha deverão ser cotados;</p>
+                <p>Período de validade da proposta: 30 dias da catação;</p>
+                <p>Prazo máximo de entrega/execução: 02 dias a partir da ordem de compra/serviço pela Unidade Executora;</p>
+                <p>Recebimento mediante apresentação de nota fiscal e certidões;</p>
+                <p>Pagamento após conferência atesto da nota fiscal, mediante apresentação de recibo.</p>
+            </div>
+            
+            <div class="relative min-w-[220px] min-h-[100px]">
+                ${supplier?.stamp_url ? `
+                    <div class="absolute bottom-0 right-0 opacity-80 mix-blend-multiply pointer-events-none z-0">
+                        <img src="${supplier.stamp_url}" class="w-56 h-auto rotate-[-3deg]" />
+                    </div>
+                ` : ''}
+            </div>
         </div>
     </div>
 </body>
