@@ -25,7 +25,26 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
 
     // Permissions
     const schoolPerm = usePermissions(user, 'schools');
-    const filteredSchools = useAccessibleSchools(user, schools);
+    const accessibleSchools = useAccessibleSchools(user, schools);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const displayedSchools = React.useMemo(() => {
+        if (!searchTerm) return accessibleSchools;
+        const lowerSearch = searchTerm.trim().toLowerCase();
+        const cleanSearch = lowerSearch.replace(/\D/g, '');
+
+        return accessibleSchools.filter(school => {
+            const matchName = school.name?.toLowerCase().includes(lowerSearch);
+            const matchDirector = school.director?.toLowerCase().includes(lowerSearch);
+            const matchCity = school.city?.toLowerCase().includes(lowerSearch);
+            const matchGee = school.gee?.toLowerCase().includes(lowerSearch);
+            const matchInep = school.inep?.includes(lowerSearch);
+            const matchCnpj = cleanSearch !== '' && school.cnpj?.replace(/\D/g, '').includes(cleanSearch);
+            
+            return matchName || matchDirector || matchCity || matchGee || matchInep || matchCnpj;
+        });
+    }, [accessibleSchools, searchTerm]);
+
     const { addToast } = useToast();
 
     if (!isAuthorized) {
@@ -331,28 +350,44 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
 
     return (
         <div className="flex flex-col gap-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <h1 className="text-3xl font-bold text-white">
                     Escolas
                     <span className="text-sm font-normal text-slate-400 block">Gestão de Unidades Escolares</span>
                 </h1>
 
-                {schoolPerm.canCreate && (
-                    <button
-                        onClick={() => { resetForm(); setShowForm(true); }}
-                        className="bg-primary hover:bg-primary-hover text-white px-6 py-2 rounded-lg font-bold shadow-lg flex items-center gap-2"
-                    >
-                        <span className="material-symbols-outlined">add</span> Nova Escola
-                    </button>
-                )}
+                <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+                    <div className="relative w-full sm:w-64 lg:w-96 group">
+                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors">search</span>
+                        <input
+                            type="text"
+                            placeholder="Pesquisar escola..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full bg-[#1e293b] border border-slate-700/50 rounded-xl py-2.5 pl-10 pr-4 text-white placeholder:text-slate-500 focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none transition-all shadow-inner"
+                        />
+                    </div>
+
+                    {schoolPerm.canCreate && (
+                        <button
+                            onClick={() => { resetForm(); setShowForm(true); }}
+                            className="bg-primary hover:bg-primary-hover text-white px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-primary/20 flex items-center gap-2 w-full sm:w-auto justify-center whitespace-nowrap active:scale-95 transition-all"
+                        >
+                            <span className="material-symbols-outlined">add</span> Nova Escola
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {loading && schools.length === 0 ? (
                     <div className="col-span-full animate-pulse text-center py-20 text-slate-400">Carregando escolas...</div>
-                ) : filteredSchools.length === 0 ? (
-                    <div className="col-span-full text-center py-20 text-slate-500">Nenhuma escola disponível ou permissão insuficiente.</div>
-                ) : filteredSchools.map(school => (
+                ) : displayedSchools.length === 0 ? (
+                    <div className="col-span-full text-center py-24 bg-surface-dark border border-surface-border border-dashed rounded-3xl">
+                        <span className="material-symbols-outlined text-5xl text-slate-700 mb-2">search_off</span>
+                        <p className="text-slate-500 font-medium">Nenhuma escola encontrada para sua busca.</p>
+                    </div>
+                ) : displayedSchools.map(school => (
                     <div key={school.id} className="bg-surface-dark border border-surface-border rounded-2xl overflow-hidden shadow-xl hover:border-primary/50 transition-all group">
                         <div className="h-32 bg-gradient-to-r from-primary/20 to-blue-600/20 relative">
                             {school.image_url ? (
