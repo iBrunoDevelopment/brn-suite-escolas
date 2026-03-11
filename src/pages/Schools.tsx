@@ -79,7 +79,9 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
         discount_value: 0,
         director_cpf: '',
         director_rg: '',
-        director_address: ''
+        director_address: '',
+        custom_description: '',
+        active: true
     });
 
     useEffect(() => {
@@ -227,7 +229,9 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
             discount_value: school.discount_value || 0,
             director_cpf: school.director_cpf || '',
             director_rg: school.director_rg || '',
-            director_address: school.director_address || ''
+            director_address: school.director_address || '',
+            custom_description: school.custom_description || '',
+            active: school.active !== undefined ? school.active : true
         });
         setShowForm(true);
     };
@@ -344,7 +348,9 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
             discount_value: 0,
             director_cpf: '',
             director_rg: '',
-            director_address: ''
+            director_address: '',
+            custom_description: '',
+            active: true
         });
     };
 
@@ -388,8 +394,15 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                         <p className="text-slate-500 font-medium">Nenhuma escola encontrada para sua busca.</p>
                     </div>
                 ) : displayedSchools.map(school => (
-                    <div key={school.id} className="bg-surface-dark border border-surface-border rounded-2xl overflow-hidden shadow-xl hover:border-primary/50 transition-all group">
+                    <div key={school.id} className={`bg-surface-dark border border-surface-border rounded-2xl overflow-hidden shadow-xl hover:border-primary/50 transition-all group ${!school.active ? 'opacity-60 saturate-50' : ''}`}>
                         <div className="h-32 bg-gradient-to-r from-primary/20 to-blue-600/20 relative">
+                            <div className="absolute top-4 left-4 z-10">
+                                {school.active ? (
+                                    <span className="bg-emerald-500/20 text-emerald-500 text-[10px] font-black px-2.5 py-1 rounded-full border border-emerald-500/30 uppercase tracking-widest backdrop-blur-md">Ativo</span>
+                                ) : (
+                                    <span className="bg-red-500/20 text-red-500 text-[10px] font-black px-2.5 py-1 rounded-full border border-red-500/30 uppercase tracking-widest backdrop-blur-md">Inativo</span>
+                                )}
+                            </div>
                             {school.image_url ? (
                                 <img src={school.image_url} alt={school.name} className="w-24 h-24 rounded-2xl object-cover absolute -bottom-6 left-6 border-4 border-[#0f172a] shadow-2xl" />
                             ) : (
@@ -481,26 +494,38 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                                 <span className="text-[10px] text-slate-500 font-bold uppercase">Logotipo da Instituição</span>
                             </div>
 
+                            <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 flex items-center justify-between">
+                                <div>
+                                    <p className="text-white font-bold text-sm">Status da Escola</p>
+                                    <p className="text-[10px] text-slate-500 uppercase font-bold">Ativar ou desativar acesso da unidade</p>
+                                </div>
+                                <label htmlFor="school-active" className="relative inline-flex items-center cursor-pointer">
+                                    <input id="school-active" type="checkbox" checked={formData.active} onChange={e => setFormData({ ...formData, active: e.target.checked })} className="sr-only peer" />
+                                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                                    <span className="sr-only">Status da Escola</span>
+                                </label>
+                            </div>
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="md:col-span-2">
-                                    <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Nome da Instituição (Escola)</label>
-                                    <input type="text" aria-label="Nome da Instituição (Escola)" placeholder="Ex: ESCOLA ESTADUAL..." value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value.toUpperCase() })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" />
+                                    <label htmlFor="school-name" className="text-xs font-bold text-slate-400 uppercase mb-1 block">Nome da Instituição (Escola)</label>
+                                    <input id="school-name" type="text" aria-label="Nome da Instituição (Escola)" placeholder="Ex: ESCOLA ESTADUAL..." value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value.toUpperCase() })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">CNPJ</label>
-                                    <input type="text" aria-label="CNPJ" value={formData.cnpj} onChange={e => setFormData({ ...formData, cnpj: formatCNPJ(e.target.value) })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" placeholder="00.000.000/0001-00" maxLength={18} />
+                                    <label htmlFor="school-cnpj" className="text-xs font-bold text-slate-400 uppercase mb-1 block">CNPJ</label>
+                                    <input id="school-cnpj" type="text" aria-label="CNPJ" value={formData.cnpj} onChange={e => setFormData({ ...formData, cnpj: formatCNPJ(e.target.value) })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" placeholder="00.000.000/0001-00" maxLength={18} />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Telefone</label>
-                                    <input type="text" aria-label="Telefone" value={formData.phone} onChange={e => setFormData({ ...formData, phone: formatPhone(e.target.value) })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" placeholder="(00) 0 0000-0000" maxLength={16} />
+                                    <label htmlFor="school-phone" className="text-xs font-bold text-slate-400 uppercase mb-1 block">Telefone</label>
+                                    <input id="school-phone" type="text" aria-label="Telefone" value={formData.phone} onChange={e => setFormData({ ...formData, phone: formatPhone(e.target.value) })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" placeholder="(00) 0 0000-0000" maxLength={16} />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Código INEP</label>
-                                    <input type="text" aria-label="Código INEP" placeholder="00000000" value={formData.inep} onChange={e => setFormData({ ...formData, inep: e.target.value })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" />
+                                    <label htmlFor="school-inep" className="text-xs font-bold text-slate-400 uppercase mb-1 block">Código INEP</label>
+                                    <input id="school-inep" type="text" aria-label="Código INEP" placeholder="00000000" value={formData.inep} onChange={e => setFormData({ ...formData, inep: e.target.value })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Código SEEC</label>
-                                    <input type="text" aria-label="Código SEEC" placeholder="000" value={formData.seec} onChange={e => setFormData({ ...formData, seec: e.target.value })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" />
+                                    <label htmlFor="school-seec" className="text-xs font-bold text-slate-400 uppercase mb-1 block">Código SEEC</label>
+                                    <input id="school-seec" type="text" aria-label="Código SEEC" placeholder="000" value={formData.seec} onChange={e => setFormData({ ...formData, seec: e.target.value })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none" />
                                 </div>
                                 <div className="md:col-span-2">
                                     <label htmlFor="school_gee_id" className="text-xs font-bold text-slate-400 uppercase mb-1 block">Regional (GEE)</label>
@@ -529,31 +554,58 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                                         id="school_plan_id"
                                         value={formData.plan_id}
                                         onChange={e => setFormData({ ...formData, plan_id: e.target.value })}
-                                        className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none border-emerald-500/30"
+                                        className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none border-emerald-500/30 font-bold"
                                     >
                                         <option value="">Selecione o plano...</option>
-                                        {availablePlans.map(plan => (
-                                            <option key={plan.id} value={plan.id}>{plan.title} ({plan.price_value}{plan.price_period})</option>
-                                        ))}
+                                        {availablePlans.map(plan => {
+                                            const rawPrice = plan.price_value || plan.price || '0';
+                                            const cleanPrice = typeof rawPrice === 'string' 
+                                                ? Number(rawPrice.replace(/[^\d,.]/g, '').replace(',', '.')) 
+                                                : Number(rawPrice);
+                                            
+                                            return (
+                                                <option key={plan.id} value={plan.id}>
+                                                    {plan.title} ({new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cleanPrice)})
+                                                </option>
+                                            );
+                                        })}
+                                        <option value="custom" className="text-emerald-500 font-bold">✨ PLANO PERSONALIZADO (CRIAR AGORA)</option>
                                     </select>
-                                    <p className="text-xs text-emerald-500/60 mt-1 font-medium">Os itens deste plano serão descritos automaticamente no contrato digital.</p>
+                                    <p className="text-xs text-emerald-500/60 mt-1 font-medium">
+                                        {formData.plan_id === 'custom' 
+                                            ? 'Você está criando um plano do zero. Preencha os campos abaixo.' 
+                                            : 'Os itens deste plano serão descritos automaticamente no contrato digital.'}
+                                    </p>
                                 </div>
 
                                 {formData.plan_id && (
-                                    <div className="md:col-span-2 p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl space-y-4">
+                                    <div className={`md:col-span-2 p-4 border rounded-2xl space-y-4 ${formData.plan_id === 'custom' ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-slate-500/5 border-slate-700/30'}`}>
                                         <div className="flex items-center gap-2 text-emerald-500 font-bold text-[10px] uppercase">
                                             <span className="material-symbols-outlined text-sm">settings_suggest</span>
-                                            Personalizar para esta Escola
+                                            {formData.plan_id === 'custom' ? 'Configurar Plano Personalizado' : 'Personalizar para esta Escola'}
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <label htmlFor="custom-title" className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Título Customizado (Opcional)</label>
-                                                <input id="custom-title" type="text" placeholder="Ex: Pacote Especial Escolas" value={formData.custom_title} onChange={e => setFormData({ ...formData, custom_title: e.target.value })} className="w-full bg-[#0f172a] border-slate-800 rounded-lg text-white p-2 text-sm outline-none focus:border-emerald-500/50" />
+                                            <div className={formData.plan_id === 'custom' ? '' : 'md:col-span-2'}>
+                                                <label htmlFor="custom-title" className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">
+                                                    {formData.plan_id === 'custom' ? 'Título do Plano (Obrigatório)' : 'Título Customizado (Opcional)'}
+                                                </label>
+                                                <input id="custom-title" type="text" placeholder={formData.plan_id === 'custom' ? "Ex: Pacote Premium" : "Ex: Pacote Especial Escolas"} value={formData.custom_title} onChange={e => setFormData({ ...formData, custom_title: e.target.value })} className="w-full bg-[#0f172a] border-slate-800 rounded-lg text-white p-2 text-sm outline-none focus:border-emerald-500/50" />
                                             </div>
-                                            <div>
-                                                <label htmlFor="custom-price" className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Preço Customizado (Opcional)</label>
-                                                <input id="custom-price" type="text" placeholder="Ex: R$ 450" value={formData.custom_price} onChange={e => setFormData({ ...formData, custom_price: e.target.value })} className="w-full bg-[#0f172a] border-slate-800 rounded-lg text-white p-2 text-sm outline-none focus:border-emerald-500/50" />
-                                            </div>
+                                            
+                                            {formData.plan_id === 'custom' && (
+                                                <div>
+                                                    <label htmlFor="custom-price" className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Preço Mensal (Obrigatório)</label>
+                                                    <input id="custom-price" type="text" placeholder="Ex: R$ 450" value={formData.custom_price} onChange={e => setFormData({ ...formData, custom_price: e.target.value })} className="w-full bg-[#0f172a] border-slate-800 rounded-lg text-white p-2 text-sm outline-none focus:border-emerald-500/50" />
+                                                </div>
+                                            )}
+
+                                            {formData.plan_id === 'custom' && (
+                                                <div className="md:col-span-2">
+                                                    <label htmlFor="custom-description" className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Descrição Adicional do Plano (Opcional)</label>
+                                                    <textarea id="custom-description" rows={3} placeholder="Descreva os detalhes específicos deste plano personalizado..." value={formData.custom_description} onChange={e => setFormData({ ...formData, custom_description: e.target.value })} className="w-full bg-[#0f172a] border-slate-800 rounded-lg text-white p-2 text-sm outline-none focus:border-emerald-500/50 resize-none" />
+                                                </div>
+                                            )}
+
                                             <div className="md:col-span-2">
                                                 <label htmlFor="discount-value" className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Valor do Desconto Mensal (R$)</label>
                                                 <div className="relative">
@@ -632,13 +684,13 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
             {/* Contract Viewer Modal */}
             {
                 viewingContract && (
-                    <div className="fixed inset-0 z-[60] bg-[#0f172a] overflow-y-auto pt-16 md:pt-0">
-                        <div className="sticky top-0 z-[70] bg-[#1e293b] p-4 flex justify-between items-center sm:hidden border-b border-white/10">
+                    <div className="fixed inset-0 z-[60] bg-[#0f172a] overflow-y-auto pt-16 md:pt-0 print:bg-white print:overflow-visible print:static print:p-0">
+                        <div className="sticky top-0 z-[70] bg-[#1e293b] p-4 flex justify-between items-center sm:hidden border-b border-white/10 print:hidden">
                             <h3 className="font-bold text-white uppercase text-xs">Visualizando Contrato</h3>
                             <button onClick={() => setViewingContract(null)} className="text-white bg-white/10 p-2 rounded-lg"><span className="material-symbols-outlined">close</span></button>
                         </div>
 
-                        <div className="relative">
+                        <div className="relative print:static">
                             <button
                                 onClick={() => setViewingContract(null)}
                                 className="fixed top-6 right-10 z-[70] hidden sm:flex items-center gap-2 text-white bg-slate-800/80 hover:bg-slate-700 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 transition-all font-bold uppercase text-xs print:hidden"
@@ -646,7 +698,7 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                                 <span className="material-symbols-outlined">close</span> Fechar
                             </button>
 
-                            <div className="max-w-5xl mx-auto py-8 px-4">
+                            <div className="max-w-5xl mx-auto py-8 px-4 print:p-0 print:max-w-none">
                                 <Contract user={viewingContract.directorUser} />
                             </div>
                         </div>

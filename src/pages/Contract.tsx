@@ -77,52 +77,18 @@ const Contract: React.FC<ContractProps> = ({ user, onSigned }) => {
             <div className="min-h-screen bg-[#111827] flex flex-col items-center p-4 md:p-8 text-white font-sans overflow-y-auto print:bg-white print:p-0 print:block print:overflow-visible">
                 <style>{`
                     @media print {
-                        @page { 
-                            size: A4; 
-                            margin: 2cm; 
-                        }
-                        
-                        /* Garantir que nada impeça o fluxo de múltiplas páginas */
-                        body, html, #root {
-                            height: auto !important;
-                            overflow: visible !important;
-                            background: white !important;
-                        }
-
-                        /* Esconder UI do sistema */
-                        aside, nav, header, .sidebar, .topbar, button:not(.print-root button) {
-                            display: none !important;
-                        }
-
-                        /* Forçar o container do contrato a ser o fluxo principal */
                         .print-root {
                             position: static !important;
                             display: block !important;
                             width: 100% !important;
-                            margin: 0 !important;
-                            padding: 0 !important;
                             background: white !important;
                             color: black !important;
                         }
 
-                        .print-inner {
-                            padding: 0 !important;
-                            margin: 0 !important;
-                            border: none !important;
-                            box-shadow: none !important;
-                        }
-
-                        /* Estilização de texto para papel */
-                        h1, h2, h3, p, li, strong, span, div {
-                            color: black !important;
-                        }
-
-                        /* Quebras de página inteligentes */
                         .clause-block {
                             page-break-inside: avoid;
                             break-inside: avoid;
                             margin-bottom: 20px !important;
-                            display: block !important;
                         }
 
                         .signature-block {
@@ -130,9 +96,6 @@ const Contract: React.FC<ContractProps> = ({ user, onSigned }) => {
                             break-inside: avoid;
                             margin-top: 50px !important;
                         }
-
-                        /* Esconder o que sobrar */
-                        .print-hidden { display: none !important; }
                     }
                 `}</style>
 
@@ -203,22 +166,28 @@ const Contract: React.FC<ContractProps> = ({ user, onSigned }) => {
     }
 
     return (
-        <div className="min-h-screen bg-[#111827] flex items-center justify-center p-4 md:p-8 text-white font-sans">
-            <div className="max-w-4xl w-full bg-[#16202a] border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[85vh]">
+        <div className="min-h-screen bg-[#111827] flex items-center justify-center p-4 md:p-8 text-white font-sans print:bg-white print:p-0">
+            <div className="print-root max-w-4xl w-full bg-[#16202a] border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[85vh] print:h-auto print:border-none print:shadow-none print:bg-white">
 
                 {/* Header */}
-                <div className="bg-[#0f151c] p-6 border-b border-white/10 flex items-center justify-between shrink-0">
+                <div className="bg-[#0f151c] p-6 border-b border-white/10 flex items-center justify-between shrink-0 print:border-slate-200">
                     <div className="flex items-center gap-3">
-                        <span className="material-symbols-outlined text-yellow-500 text-3xl">gavel</span>
+                        <span className="material-symbols-outlined text-yellow-500 text-3xl print:text-slate-700">gavel</span>
                         <div>
-                            <h1 className="text-xl font-bold uppercase tracking-wider">Termo de Responsabilidade</h1>
-                            <p className="text-xs text-slate-400">Leia atentamente antes de prosseguir</p>
+                            <h1 className="text-xl font-bold uppercase tracking-wider print:text-black">Termo de Responsabilidade</h1>
+                            <p className="text-xs text-slate-400 print:text-slate-500">Leia atentamente antes de prosseguir</p>
                         </div>
                     </div>
+                    <button
+                        onClick={() => window.print()}
+                        className="text-white/60 hover:text-white flex items-center gap-2 text-xs font-bold uppercase bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 transition-all print:hidden"
+                    >
+                        <span className="material-symbols-outlined text-sm">print</span> Imprimir
+                    </button>
                 </div>
 
                 {/* Content - Scrollable */}
-                <div className="flex-1 overflow-y-auto p-8 text-slate-300 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                <div className="flex-1 overflow-y-auto p-8 text-slate-300 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent print:overflow-visible print:h-auto print:p-0 print:pt-6">
                     <div className="prose prose-invert max-w-none text-sm leading-relaxed">
                         <p className="text-lg font-medium text-white mb-6">
                             Pelo presente instrumento, eu, <strong className="text-yellow-500 uppercase">{user.name}</strong>, inscrito como usuário do sistema <strong>BRN Suite Escolas</strong>, declaro para os devidos fins que:
@@ -265,39 +234,86 @@ const ContractTerms: React.FC<{ user: User }> = ({ user }) => {
 
     React.useEffect(() => {
         const fetchPlanData = async () => {
-            if (!user.schoolId) return;
+            const schoolId = user.schoolId || (user as any).school_id;
+            if (!schoolId) return;
 
-            // 1. Get school's plan_id
-            const { data: school } = await supabase
-                .from('schools')
-                .select('plan_id, custom_title, custom_price, discount_value')
-                .eq('id', user.schoolId)
-                .maybeSingle();
-
-            if (school?.plan_id) {
-                // 2. Get plans from settings
-                const { data: settings } = await supabase
-                    .from('system_settings')
-                    .select('value')
-                    .eq('key', 'landing_page_plans')
+            try {
+                // 1. Get school's plan_id
+                const { data: school } = await supabase
+                    .from('schools')
+                    .select('plan_id, custom_title, custom_price, discount_value, custom_description')
+                    .eq('id', schoolId)
                     .maybeSingle();
 
-                if (settings?.value) {
-                    const matchedPlan = settings.value.find((p: any) => p.id === school.plan_id);
-                    if (matchedPlan) {
-                        setPlan({
-                            ...matchedPlan,
-                            title: school.custom_title || matchedPlan.title,
-                            price_value: school.custom_price || matchedPlan.price_value,
-                            discount_value: school.discount_value || 0
-                        });
+                if (school) {
+                    // Helper to check if a value is a valid price
+                    const isValidPrice = (val: any) => val !== null && val !== "" && !isNaN(Number(val));
+
+                    // Initialize default plan data
+                    let finalPlan: any = {
+                        title: school.custom_title || 'Contratado',
+                        price_value: isValidPrice(school.custom_price) ? Number(school.custom_price) : null,
+                        discount_value: school.discount_value || 0,
+                        features: []
+                    };
+
+                    // 2. If there's a base plan, enrichment with its features/default price
+                    if (school.plan_id && school.plan_id !== 'custom') {
+                        const { data: settings } = await supabase
+                            .from('system_settings')
+                            .select('value')
+                            .eq('key', 'landing_page_plans')
+                            .maybeSingle();
+
+                        if (settings?.value) {
+                            const matchedPlan = settings.value.find((p: any) => p.id === school.plan_id);
+                            if (matchedPlan) {
+                                // Rule: Standard plans ALWAYS use their base price. 
+                                // Clean the price string (it might contain "R$ ", etc)
+                                const rawPrice = matchedPlan.price_value || matchedPlan.price || 0;
+                                const cleanBasePrice = typeof rawPrice === 'string'
+                                    ? Number(rawPrice.replace(/[^\d,.]/g, '').replace(',', '.'))
+                                    : Number(rawPrice);
+
+                                const basePrice = isNaN(cleanBasePrice) ? 0 : cleanBasePrice;
+                                const discountValue = Number(school.discount_value || 0);
+
+                                finalPlan = {
+                                    ...matchedPlan,
+                                    title: school.custom_title || matchedPlan.title,
+                                    price_value: basePrice - discountValue,
+                                    discount_value: discountValue
+                                };
+                            }
+                        }
+                    } else if (school.plan_id === 'custom') {
+                        // For custom plans, we use the manually entered data
+                        const basePrice = isValidPrice(school.custom_price) ? Number(school.custom_price) : 0;
+                        const discountValue = Number(school.discount_value || 0);
+
+                        finalPlan = {
+                            title: school.custom_title || 'Plano Personalizado',
+                            price_value: basePrice - discountValue,
+                            discount_value: discountValue,
+                            description: school.custom_description,
+                            features: [] // Custom plans start with no predefined features
+                        };
                     }
+                    
+                    setPlan(finalPlan);
                 }
+            } catch (error) {
+                console.error('Error fetching plan data:', error);
             }
         };
 
         fetchPlanData();
-    }, [user.schoolId]);
+    }, [user.schoolId, (user as any).school_id]);
+
+    const formatCurrency = (value: number | null) => {
+        if (value === null || value === undefined) return 'valor sob consulta';
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+    };
 
     return (
         <>
@@ -327,18 +343,25 @@ const ContractTerms: React.FC<{ user: User }> = ({ user }) => {
                 <div className="space-y-3">
                     <p>
                         A empresa <strong>BRN GROUP</strong> obriga-se a cumprir com os itens descritos no plano <strong>{plan?.title || 'Contratado'}</strong>,
-                        pelo valor de <strong>{plan?.price_value || 'valor sob consulta'}</strong>{plan?.price_period || ''}
-                        {plan?.discount_value > 0 && <span> (com bonificação de R$ {plan.discount_value} aplicada mensalmente)</span>},
-                        garantindo:
+                        pelo valor mensal de <strong>{formatCurrency(plan?.price_value)}</strong>
+                        {plan?.discount_value > 0 && (
+                            <span> (valor original com bonificação mensal de <strong>{formatCurrency(plan.discount_value)}</strong> já aplicada)</span>
+                        )},
+                        garantindo à instituição:
                     </p>
-                    {plan?.features ? (
+                    {plan?.description && (
+                        <p className="text-xs italic text-slate-400 border-l-2 border-emerald-500/30 pl-3 py-1 mb-2">
+                            {plan.description}
+                        </p>
+                    )}
+                    {plan?.features && plan.features.length > 0 ? (
                         <ul className="list-disc pl-5 space-y-1 text-slate-400 print:text-black">
                             {plan.features.map((feature: string, idx: number) => (
                                 <li key={idx} className="text-xs">{feature}</li>
                             ))}
                         </ul>
                     ) : (
-                        <p className="text-xs italic text-slate-500">Planos e funcionalidades conforme proposta comercial aceita.</p>
+                        !plan?.description && <p className="text-xs italic text-slate-500">Planos e funcionalidades conforme proposta comercial aceita.</p>
                     )}
                 </div>
             </div>
@@ -355,6 +378,63 @@ const ContractTerms: React.FC<{ user: User }> = ({ user }) => {
                 <p>
                     Visando oferecer um serviço de excelência e valorizar a agilidade de nossos parceiros, o nosso atendimento e a resolução das demandas seguem uma fila de prioridade baseada na ordem de recebimento da documentação <strong>completa</strong>. O gestor que nos enviar primeiramente todos os documentos solicitados terá o seu processo atendido prioritariamente. Caso a documentação seja enviada de forma incompleta ou fora dos padrões orientados, visando não prejudicar o gestor que cumpriu com todos os requisitos prontamente, o processo será reposicionado para o final da fila, aguardando os demais atendimentos para ser retomado. Agradecemos a compreensão e a colaboração de todos para que possamos manter a agilidade para todos os clientes.
                 </p>
+            </div>
+
+            <div className="clause-block bg-slate-400/5 p-6 rounded-2xl border border-white/5 mt-8 print:bg-transparent print:p-0 print:border-none">
+                <h3 className="text-white font-bold uppercase text-sm border-b border-white/10 pb-2 mb-4 print:text-black print:border-slate-300">7. Procedimentos de Análise Técnica e Prazos</h3>
+                
+                <div className="space-y-4">
+                    <p>Para garantir a segurança jurídica, a legitimidade contábil e a celeridade dos processos, o gestor concorda e compromete-se com as seguintes diretrizes:</p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        <div className="p-3 bg-white/5 rounded-xl border border-white/5">
+                            <p className="text-primary font-bold mb-1 uppercase tracking-tighter text-[10px]">7.1 Prazo de Análise</p>
+                            <p>Estimado em até <strong>24 horas úteis</strong>, a contar do recebimento da documentação integral e correta.</p>
+                        </div>
+                        <div className="p-3 bg-white/5 rounded-xl border border-white/5">
+                            <p className="text-primary font-bold mb-1 uppercase tracking-tighter text-[10px]">7.3 Canal de Envio</p>
+                            <p>Preferencialmente via <strong>e-mail oficial da BRN</strong>, para registro e rastro da comunicação.</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p className="font-bold text-white mb-2 text-xs uppercase tracking-widest">7.2 Documentação Obrigatória (Condições e Formatos):</p>
+                        <ul className="list-none space-y-2 text-xs">
+                            <li className="flex items-center gap-2">
+                                <span className="w-5 h-5 rounded bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-[10px]">1</span>
+                                <span><strong>Nota Fiscal:</strong> Arquivos originais em <strong>PDF e XML</strong>.</span>
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <span className="w-5 h-5 rounded bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-[10px]">2</span>
+                                <span><strong>Certidões Negativas:</strong> Municipal, Estadual, Federal, FGTS e Trabalhista em <strong>PDF</strong>.</span>
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <span className="w-5 h-5 rounded bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-[10px]">3</span>
+                                <span><strong>Comprovante de Pagamento:</strong> Arquivo original em <strong>PDF</strong>.</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-xl">
+                        <p className="text-orange-400 font-bold text-xs uppercase mb-1 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-sm">priority_high</span>
+                            7.4 Qualidade e Autenticidade
+                        </p>
+                        <p className="text-xs italic underline decoration-orange-500/30 underline-offset-4">
+                            <strong>Evite documentos escaneados.</strong> Prefira arquivos digitais originais para preservar metadados, legibilidade e a plena autenticidade documental.
+                        </p>
+                    </div>
+
+                    <div className="p-4 bg-red-500/20 border border-red-500/40 rounded-xl relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-2 opacity-20">
+                            <span className="material-symbols-outlined text-4xl">warning</span>
+                        </div>
+                        <p className="text-red-400 font-black text-xs uppercase mb-2">⚠️ Alerta de Conformidade</p>
+                        <p className="text-slate-200 text-xs leading-relaxed font-medium">
+                            A inobservância destas medidas impossibilita que a <strong>BRN GROUP</strong> ateste a conformidade fiscal da compra ou a autenticidade dos documentos apresentados perante os órgãos de controle.
+                        </p>
+                    </div>
+                </div>
             </div>
         </>
     );

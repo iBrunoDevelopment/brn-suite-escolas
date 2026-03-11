@@ -142,6 +142,8 @@ export interface School {
     director_cpf?: string;
     director_rg?: string;
     director_address?: string;
+    custom_description?: string;
+    active?: boolean;
 }
 
 export interface Program {

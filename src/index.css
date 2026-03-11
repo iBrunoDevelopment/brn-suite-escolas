@@ -159,3 +159,103 @@ select option {
     background-color: #1c2936;
     color: white;
 }
+
+/* Global Print Styles - Final Isolation Strategy */
+@media print {
+    @page {
+        size: A4;
+        margin: 1.5cm;
+    }
+
+    /* 1. Reset Global Context */
+    html, body, #root {
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        background: white !important;
+        color: black !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        position: static !important;
+    }
+
+    /* 2. Isolation Logic: Hide anything that is NOT a parent of .print-root */
+    /* And hide elements that are explicitly meant to be hidden */
+    #root *:not(:has(.print-root)):not(.print-root):not(.print-root *) {
+        display: none !important;
+    }
+
+    /* 3. Container flattening: Force all ancestors of .print-root to flow normally */
+    /* This handles deep nesting in modals, layouts, and wrappers */
+    *:has(.print-root) {
+        display: block !important;
+        position: static !important;
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        transform: none !important;
+        inset: auto !important;
+    }
+
+    /* 4. The Print Target */
+    .print-root {
+        display: block !important;
+        position: static !important;
+        width: 100% !important;
+        background: white !important;
+        color: black !important;
+        overflow: visible !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+    }
+
+    /* 5. Content Cleanup */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color: black !important;
+        text-shadow: none !important;
+        box-shadow: none !important;
+    }
+
+    /* Neutralize prose and backgrounds */
+    .prose {
+        color: black !important;
+        max-width: none !important;
+    }
+
+    [class*="bg-"], [class*="bg-[#"], .card, .bg-slate-800, .bg-slate-400\/5 {
+        background-color: transparent !important;
+        background: transparent !important;
+        border: none !important;
+    }
+
+    .bg-orange-500\/10, .bg-red-500\/20, .bg-blue-500\/20, .bg-emerald-500\/10 {
+        background-color: #f8fafc !important;
+        border: 1px solid #cbd5e1 !important;
+    }
+
+    ::-webkit-scrollbar {
+        display: none !important;
+    }
+
+    .clause-block {
+        page-break-inside: avoid;
+        break-inside: avoid;
+        margin-bottom: 1.5rem !important;
+        display: block !important;
+    }
+
+    .signature-block {
+        page-break-inside: avoid;
+        break-inside: avoid;
+        margin-top: 3rem !important;
+        display: block !important;
+    }
+}
