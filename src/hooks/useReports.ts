@@ -167,8 +167,11 @@ export const useReports = (user: User, filters: ReportsFilters) => {
         programs,
         templateUrl,
         refresh: () => {
-            refreshProcesses();
-            refreshContracts();
+            queryClient.invalidateQueries({ queryKey: ['accountability_processes'] });
+            queryClient.invalidateQueries({ queryKey: ['available_entries'] });
+            queryClient.invalidateQueries({ queryKey: ['supplier_contracts'] });
+            queryClient.invalidateQueries({ queryKey: ['financial_entries'] });
+            queryClient.invalidateQueries({ queryKey: ['suppliers_list'] });
         },
         deleteProcess: deleteProcessMut.mutate
     };

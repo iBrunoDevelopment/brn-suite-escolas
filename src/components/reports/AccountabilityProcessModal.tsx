@@ -322,7 +322,8 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
 
         for (let i = startIndex; i < lines.length; i++) {
             const line = lines[i];
-            if (!line.trim()) continue;
+            const cleanLine = line.replace(/[;,\t\r\n]/g, '').trim();
+            if (!cleanLine) continue; // skip entirely empty rows like ;;;;;
             const cols = line.split(delimiter);
             if (cols.length < 2) continue;
             parsedRows.push({
@@ -1029,7 +1030,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                         <div className="p-10 space-y-8">
                             <div className="grid grid-cols-2 gap-4">
                                 <button onClick={downloadTemplate} className="h-14 rounded-2xl bg-indigo-500/10 text-indigo-400 font-black uppercase tracking-widest border border-indigo-500/20 hover:bg-indigo-500 hover:text-white transition-all flex items-center justify-center gap-3"><span className="material-symbols-outlined">download</span> Modelo CSV</button>
-                                <label className="h-14 rounded-2xl bg-emerald-500/10 text-emerald-400 font-black uppercase tracking-widest border border-emerald-500/20 hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center gap-3 cursor-pointer"><span className="material-symbols-outlined">upload_file</span> Subir CSV <input type="file" accept=".csv" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; const text = await file.text(); if (text) { setImportText(text); setTimeout(() => processImport(), 100); } }} /></label>
+                                <label className="h-14 rounded-2xl bg-emerald-500/10 text-emerald-400 font-black uppercase tracking-widest border border-emerald-500/20 hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center gap-3 cursor-pointer"><span className="material-symbols-outlined">upload_file</span> Subir CSV <input type="file" accept=".csv" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; const buf = await file.arrayBuffer(); const decoder = new TextDecoder('windows-1252'); const text = decoder.decode(buf); if (text) { setImportText(text); setTimeout(() => processImport(), 100); } e.target.value = ''; }} /></label>
                             </div>
                             <div className="space-y-4">
                                 <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Colunas: Descrição, Qtd, Unid, Preço Vencedor, Concorrente 1, Concorrente 2</label>

@@ -85,7 +85,7 @@ export function useFinancialEntries(user: User, filters: any = {}) {
     });
 
     // Main Query for Financial Entries
-    const { data: entries = [], isLoading: loading, refetch: refresh } = useQuery({
+    const { data: entries = [], isLoading: loading, refetch: refreshQuery } = useQuery({
         queryKey: ['financial_entries', user.id, filters],
         queryFn: async () => {
             let q = supabase.from('financial_entries').select(`
@@ -209,6 +209,13 @@ export function useFinancialEntries(user: User, filters: any = {}) {
         auxData,
         reprogrammedBalances,
         fetchReprogrammedBalances: () => queryClient.invalidateQueries({ queryKey: ['reprogrammed_balances'] }),
-        refresh
+        refresh: () => {
+             queryClient.invalidateQueries({ queryKey: ['financial_entries'] });
+             queryClient.invalidateQueries({ queryKey: ['reprogrammed_balances'] });
+             queryClient.invalidateQueries({ queryKey: ['available_entries'] });
+             queryClient.invalidateQueries({ queryKey: ['accountability_processes'] });
+             queryClient.invalidateQueries({ queryKey: ['supplier_contracts'] });
+             queryClient.invalidateQueries({ queryKey: ['suppliers_list'] });
+        }
     };
 }
