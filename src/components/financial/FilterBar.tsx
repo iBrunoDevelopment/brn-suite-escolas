@@ -28,6 +28,9 @@ const FilterBar: React.FC<FilterBarProps> = ({
     auxData,
     onPrintReport
 }) => {
+    const [schoolSearch, setSchoolSearch] = React.useState('');
+    const [supplierSearch, setSupplierSearch] = React.useState('');
+
     const clearFilters = () => {
         setFilters({
             school: '',
@@ -39,7 +42,44 @@ const FilterBar: React.FC<FilterBarProps> = ({
             nature: '',
             search: ''
         });
+        setSchoolSearch('');
+        setSupplierSearch('');
     };
+
+    const filteredSchools = React.useMemo(() => {
+        if (!schoolSearch) return auxData.schools;
+        const s = schoolSearch.toLowerCase().trim();
+        return auxData.schools.filter((school: any) => 
+            school.id === filters.school || 
+            school.name.toLowerCase().includes(s)
+        );
+    }, [auxData.schools, schoolSearch, filters.school]);
+
+    const filteredSuppliers = React.useMemo(() => {
+        if (!supplierSearch) return auxData.suppliers;
+        const s = supplierSearch.toLowerCase().trim();
+        const sClean = s.replace(/[^\d]/g, '');
+
+        return auxData.suppliers.filter((supp: any) => {
+            if (supp.id === filters.supplier) return true;
+            
+            const matchName = supp.name?.toLowerCase().includes(s);
+            let matchCnpj = false;
+            
+            if (supp.cnpj) {
+                if (supp.cnpj.toLowerCase().includes(s)) {
+                    matchCnpj = true;
+                } else if (sClean.length > 0) {
+                    const cnpjClean = supp.cnpj.replace(/[^\d]/g, '');
+                    if (cnpjClean.includes(sClean)) {
+                        matchCnpj = true;
+                    }
+                }
+            }
+            
+            return matchName || matchCnpj;
+        });
+    }, [auxData.suppliers, supplierSearch, filters.supplier]);
 
     return (
         <div className="flex flex-col gap-4">
@@ -100,15 +140,27 @@ const FilterBar: React.FC<FilterBarProps> = ({
 
             {showFilters && (
                 <div className="bg-[#111a22] border border-surface-border rounded-2xl p-4 md:p-6 grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-6 items-end animate-in fade-in slide-in-from-top-4">
-                    <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Unidade Escolar</label>
+                    <div className="flex flex-col gap-2 relative">
+                        <div className="flex justify-between items-end px-1">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Unidade Escolar</label>
+                            <div className="relative w-32">
+                                <input 
+                                    type="text" 
+                                    placeholder="Buscar..." 
+                                    value={schoolSearch}
+                                    onChange={e => setSchoolSearch(e.target.value)}
+                                    className="w-full bg-[#1c2936]/50 border border-white/5 rounded-lg h-6 px-2 pl-6 text-[10px] text-white outline-none focus:border-primary transition-colors placeholder:text-slate-600"
+                                />
+                                <span className="material-symbols-outlined absolute left-1.5 top-1 text-[12px] text-slate-500">search</span>
+                            </div>
+                        </div>
                         <select title="Filtrar por Unidade Escolar" aria-label="Filtrar por Unidade Escolar"
                             value={filters.school}
                             onChange={e => setFilters({ ...filters, school: e.target.value })}
                             className="w-full bg-[#1c2936] text-white text-xs h-10 px-3 rounded-xl border border-white/10 outline-none focus:border-primary"
                         >
                             <option value="">Todas as Escolas</option>
-                            {auxData.schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            {filteredSchools.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                     </div>
                     <div className="flex flex-col gap-2">
@@ -173,11 +225,23 @@ const FilterBar: React.FC<FilterBarProps> = ({
                             <option value="Capital">Capital</option>
                         </select>
                     </div>
-                    <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Fornecedor</label>
+                    <div className="flex flex-col gap-2 relative">
+                        <div className="flex justify-between items-end px-1">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Fornecedor</label>
+                            <div className="relative w-32">
+                                <input 
+                                    type="text" 
+                                    placeholder="Buscar..." 
+                                    value={supplierSearch}
+                                    onChange={e => setSupplierSearch(e.target.value)}
+                                    className="w-full bg-[#1c2936]/50 border border-white/5 rounded-lg h-6 px-2 pl-6 text-[10px] text-white outline-none focus:border-primary transition-colors placeholder:text-slate-600"
+                                />
+                                <span className="material-symbols-outlined absolute left-1.5 top-1 text-[12px] text-slate-500">search</span>
+                            </div>
+                        </div>
                         <select title="Filtrar por Fornecedor" aria-label="Filtrar por Fornecedor" value={filters.supplier} onChange={e => setFilters({ ...filters, supplier: e.target.value })} className="w-full bg-[#1c2936] text-white text-xs h-10 px-3 rounded-xl border border-white/10 outline-none focus:border-primary">
                             <option value="">Todos</option>
-                            {auxData.suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            {filteredSuppliers.map((s: any) => <option key={s.id} value={s.id}>{s.name}{s.cnpj ? ` (${s.cnpj})` : ''}</option>)}
                         </select>
                     </div>
                     <div className="md:col-span-3 lg:col-span-4 flex flex-col gap-2">

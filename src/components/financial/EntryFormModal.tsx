@@ -57,6 +57,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
     const [totalValue, setTotalValue] = React.useState('');
     const [mainDescription, setMainDescription] = React.useState('');
     const [selectedSupplierId, setSelectedSupplierId] = React.useState('');
+    const [supplierSearch, setSupplierSearch] = React.useState('');
+    const [schoolSearch, setSchoolSearch] = React.useState('');
+    const [programSearch, setProgramSearch] = React.useState('');
     const [status, setStatus] = React.useState<TransactionStatus>(TransactionStatus.PENDENTE);
     const [invoiceDate, setInvoiceDate] = React.useState('');
     const [paymentDate, setPaymentDate] = React.useState('');
@@ -149,6 +152,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
     const resetForm = () => {
         setType('Saída'); setCategory('Compra de Produtos'); setDate(new Date().toISOString().split('T')[0]);
         setTotalValue(''); setMainDescription(''); setSelectedSupplierId(''); setSelectedSchoolId(user.schoolId || '');
+        setSupplierSearch(''); setSchoolSearch(''); setProgramSearch('');
         setSelectedProgramId(''); setStatus(TransactionStatus.PENDENTE); setInvoiceDate('');
         setSelectedBankAccountId(''); setSelectedPaymentMethodId(''); setDocumentNumber(''); setAuthNumber('');
         setPaymentDate('');
@@ -447,9 +451,54 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
         }
     };
 
-    const schoolOptions = React.useMemo(() => accessibleSchools.map(s => <option key={s.id} value={s.id}>{s.name}</option>), [accessibleSchools]);
-    const programOptions = React.useMemo(() => programs.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>), [programs]);
-    const supplierOptions = React.useMemo(() => suppliers.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>), [suppliers]);
+    const filteredSchools = React.useMemo(() => {
+        if (!schoolSearch) return accessibleSchools;
+        const s = schoolSearch.toLowerCase().trim();
+        return accessibleSchools.filter(school => 
+            school.id === selectedSchoolId || 
+            school.name.toLowerCase().includes(s)
+        );
+    }, [accessibleSchools, schoolSearch, selectedSchoolId]);
+
+    const filteredPrograms = React.useMemo(() => {
+        if (!programSearch) return programs;
+        const s = programSearch.toLowerCase().trim();
+        return programs.filter((prog: any) => 
+            prog.id === selectedProgramId || 
+            prog.name.toLowerCase().includes(s)
+        );
+    }, [programs, programSearch, selectedProgramId]);
+
+    const schoolOptions = React.useMemo(() => filteredSchools.map(s => <option key={s.id} value={s.id}>{s.name}</option>), [filteredSchools]);
+    const programOptions = React.useMemo(() => filteredPrograms.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>), [filteredPrograms]);
+    
+    const filteredSuppliers = React.useMemo(() => {
+        if (!supplierSearch) return suppliers;
+        const s = supplierSearch.toLowerCase().trim();
+        const sClean = s.replace(/[^\d]/g, '');
+
+        return suppliers.filter((supp: any) => {
+            if (supp.id === selectedSupplierId) return true;
+            
+            const matchName = supp.name?.toLowerCase().includes(s);
+            let matchCnpj = false;
+            
+            if (supp.cnpj) {
+                if (supp.cnpj.toLowerCase().includes(s)) {
+                    matchCnpj = true;
+                } else if (sClean.length > 0) {
+                    const cnpjClean = supp.cnpj.replace(/[^\d]/g, '');
+                    if (cnpjClean.includes(sClean)) {
+                        matchCnpj = true;
+                    }
+                }
+            }
+            
+            return matchName || matchCnpj;
+        });
+    }, [suppliers, supplierSearch, selectedSupplierId]);
+
+    const supplierOptions = React.useMemo(() => filteredSuppliers.map((s: any) => <option key={s.id} value={s.id}>{s.name}{s.cnpj ? ` (${s.cnpj})` : ''}</option>), [filteredSuppliers]);
     const bankAccountOptions = React.useMemo(() => bankAccounts.filter((b: any) => b.school_id === selectedSchoolId && b.program_id === selectedProgramId).map((b: any) => (<option key={b.id} value={b.id}>{b.name} ({b.account_number})</option>)), [bankAccounts, selectedSchoolId, selectedProgramId]);
     const paymentMethodOptions = React.useMemo(() => paymentMethods.map((pm: any) => <option key={pm.id} value={pm.id}>{pm.name}</option>), [paymentMethods]);
 
@@ -498,7 +547,19 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="flex flex-col gap-2">
-                                <label htmlFor="entry_school_id" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Escola</label>
+                                <div className="flex justify-between items-end px-1">
+                                    <label htmlFor="entry_school_id" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Escola</label>
+                                    <div className="relative w-40">
+                                        <input 
+                                            type="text" 
+                                            placeholder="Buscar..." 
+                                            value={schoolSearch}
+                                            onChange={e => setSchoolSearch(e.target.value)}
+                                            className="w-full bg-[#1e293b]/50 border border-white/5 rounded-lg h-6 px-2 pl-6 text-[10px] text-white outline-none focus:border-primary transition-colors placeholder:text-slate-600"
+                                        />
+                                        <span className="material-symbols-outlined absolute left-1.5 top-1 text-[12px] text-slate-500">search</span>
+                                    </div>
+                                </div>
                                 <select
                                     title="Selecione a Escola"
                                     id="entry_school_id"
@@ -528,7 +589,19 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="flex flex-col gap-2">
-                                <label htmlFor="entry_program_id" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Programa</label>
+                                <div className="flex justify-between items-end px-1">
+                                    <label htmlFor="entry_program_id" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Programa</label>
+                                    <div className="relative w-40">
+                                        <input 
+                                            type="text" 
+                                            placeholder="Buscar..." 
+                                            value={programSearch}
+                                            onChange={e => setProgramSearch(e.target.value)}
+                                            className="w-full bg-[#1e293b]/50 border border-white/5 rounded-lg h-6 px-2 pl-6 text-[10px] text-white outline-none focus:border-primary transition-colors placeholder:text-slate-600"
+                                        />
+                                        <span className="material-symbols-outlined absolute left-1.5 top-1 text-[12px] text-slate-500">search</span>
+                                    </div>
+                                </div>
                                 <select
                                     title="Selecione o Programa"
                                     aria-label="Selecione o Programa"
@@ -543,7 +616,19 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                             </div>
                             {!isSimplified && (
                                 <div className="flex flex-col gap-2">
-                                    <label htmlFor="entry_supplier_id" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Fornecedor</label>
+                                    <div className="flex justify-between items-end px-1">
+                                        <label htmlFor="entry_supplier_id" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Fornecedor</label>
+                                        <div className="relative w-40">
+                                            <input 
+                                                type="text" 
+                                                placeholder="Buscar..." 
+                                                value={supplierSearch}
+                                                onChange={e => setSupplierSearch(e.target.value)}
+                                                className="w-full bg-[#1e293b]/50 border border-white/5 rounded-lg h-6 px-2 pl-6 text-[10px] text-white outline-none focus:border-primary transition-colors placeholder:text-slate-600"
+                                            />
+                                            <span className="material-symbols-outlined absolute left-1.5 top-1 text-[12px] text-slate-500">search</span>
+                                        </div>
+                                    </div>
                                     <select
                                         title="Selecione o Fornecedor"
                                         aria-label="Selecione o Fornecedor"
@@ -776,9 +861,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                                                 cats.push({ label: 'Extrato Bancário', icon: 'account_balance' });
                                             }
 
-                                            // Certidões: Apenas se NÃO for simplificado
+                                            // Certidões e CNPJ: Apenas se NÃO for simplificado
                                             if (!isSimplified) {
                                                 cats.push({ label: 'Certidões', icon: 'verified' });
+                                                cats.push({ label: 'CNPJ', icon: 'badge' });
                                             }
 
                                             // Caso especial para Reembolso / Estorno (que não está no isSimplified mas pode precisar de extrato)

@@ -53,7 +53,7 @@ export function useFinancialEntries(user: User, filters: any = {}) {
                 supabase.from('schools').select('id, name').order('name'),
                 supabase.from('programs').select('id, name').order('name'),
                 supabase.from('rubrics').select('id, name, program_id, default_nature, school_id').order('name'),
-                supabase.from('suppliers').select('id, name').order('name'),
+                supabase.from('suppliers').select('id, name, cnpj').order('name'),
                 supabase.from('bank_accounts').select('id, name, program_id, school_id, account_number, bank_name, agency').order('name'),
                 supabase.from('payment_methods').select('id, name').order('name'),
                 supabase.from('periods').select('name, is_active').order('name', { ascending: false })
