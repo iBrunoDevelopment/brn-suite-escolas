@@ -9,7 +9,7 @@ interface ProfileSectionProps {
 
 const ProfileSection: React.FC<ProfileSectionProps> = ({ profileData, setProfileData, updatingProfile, onUpdate }) => {
     return (
-        <div className="flex flex-col gap-8 animate-in fade-in">
+        <div className="flex flex-col gap-8 animate-in fade-in w-full">
             <div className="flex items-center gap-4 border-b border-surface-border pb-4">
                 <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
                     <span className="material-symbols-outlined text-3xl">person</span>

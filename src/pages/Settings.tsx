@@ -50,33 +50,42 @@ const Settings: React.FC<{ user: User }> = ({ user }) => {
   }, [activeTab]);
 
   return (
-    <div className="flex flex-col gap-8 w-full max-w-6xl mx-auto">
+    <div className="flex flex-col gap-8 w-full max-w-7xl mx-auto px-4 md:px-6">
       <div className="flex flex-col gap-1">
         <h1 className="text-3xl font-bold tracking-tight text-white">Configurações do Sistema</h1>
         <p className="text-text-secondary text-sm">Gerencie parâmetros, cadastros base e regras de negócio do BRN Suite.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Sidebar Mini - Improved Responsiveness for Mobile */}
-        <div className="flex flex-row md:flex-col gap-2 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0 scrollbar-hide">
-          {configTabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left whitespace-nowrap min-w-fit md:min-w-0 ${activeTab === tab.id
-                ? 'bg-primary/10 text-white border-b-2 md:border-b-0 md:border-l-4 border-primary font-bold'
-                : 'text-text-secondary hover:bg-surface-dark hover:text-white'
-                }`}
-            >
-              <span className="material-symbols-outlined text-[20px]">{tab.icon}</span>
-              <span className="text-sm">{tab.label}</span>
-            </button>
-          ))}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Sidebar Mini - Improved Responsiveness */}
+        <div className="flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible pb-4 lg:pb-0 no-scrollbar lg:col-span-4 xl:col-span-3 sticky lg:top-8 scroll-smooth">
+          <div className="flex flex-row lg:flex-col gap-1.5 w-full">
+            {configTabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-left min-w-fit lg:min-w-0 group ${activeTab === tab.id
+                  ? 'bg-primary/20 text-white border-b-2 lg:border-b-0 lg:border-l-4 border-primary shadow-lg shadow-primary/10'
+                  : 'text-slate-500 hover:bg-white/5 hover:text-white'
+                  }`}
+              >
+                <div className={`p-2 rounded-xl transition-colors shrink-0 ${activeTab === tab.id ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-white/5 text-slate-400 group-hover:text-white'}`}>
+                    <span className="material-symbols-outlined text-[20px] block">{tab.icon}</span>
+                </div>
+                <span className={`text-[13px] font-bold leading-tight ${activeTab === tab.id ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`}>
+                  {tab.label}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Content Area */}
-        <div className="md:col-span-3 flex flex-col gap-6 bg-surface-dark border border-surface-border rounded-xl p-4 md:p-8">
-          <div className="flex flex-col gap-6">
+        <div className="lg:col-span-8 xl:col-span-9 flex flex-col gap-6 bg-surface-dark/50 backdrop-blur-md border border-white/5 rounded-[32px] p-6 md:p-10 shadow-2xl relative overflow-hidden min-w-0">
+          {/* Subtle background glow */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-[120px] -mr-48 -mt-48 pointer-events-none"></div>
+          
+          <div className="relative z-10 flex flex-col gap-6 w-full">
             {activeTab === 'profile' && (
               <ProfileSection
                 profileData={settings.profileData}

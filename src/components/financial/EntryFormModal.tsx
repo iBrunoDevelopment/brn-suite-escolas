@@ -83,10 +83,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
 
     const filteredRubrics = React.useMemo(() => {
         if (selectedProgramId && allRubrics) {
-            return allRubrics.filter((r: any) => r.program_id === selectedProgramId);
+            return allRubrics.filter((r: any) => 
+                r.program_id === selectedProgramId && 
+                (!r.school_id || r.school_id === selectedSchoolId)
+            );
         }
         return [];
-    }, [selectedProgramId, allRubrics]);
+    }, [selectedProgramId, selectedSchoolId, allRubrics]);
 
     const isSimplified = React.useMemo(() => {
         const simplifiedCats = [
@@ -505,7 +508,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
             <div className="w-full max-w-5xl bg-[#0f172a] border border-white/10 rounded-[32px] shadow-2xl flex flex-col min-h-[600px] max-h-[90vh] animate-in zoom-in-95 duration-200">
                 <div className="p-6 md:p-8 border-b border-white/5 flex flex-col gap-6 shrink-0">
                     <div className="flex justify-between items-center">

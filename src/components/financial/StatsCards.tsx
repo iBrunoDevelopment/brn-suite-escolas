@@ -21,9 +21,9 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
     const reservesAndEarnings = (stats.reprogrammed || 0) + stats.rendimentos;
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
             {/* CARD 1: SALDO TOTAL */}
-            <div className="group bg-surface-dark border border-blue-500/20 p-6 rounded-2xl shadow-xl transition-all hover:border-blue-500/40 hover:bg-blue-500/5">
+            <div className="group bg-surface-dark border border-blue-500/20 p-4 sm:p-6 rounded-2xl shadow-xl transition-all hover:border-blue-500/40 hover:bg-blue-500/5">
                 <div className="flex justify-between items-start mb-2">
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Saldo Total Disponível</span>
                     <span className="material-symbols-outlined text-blue-500 text-[20px] opacity-50 group-hover:opacity-100">account_balance_wallet</span>
@@ -36,7 +36,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
             </div>
 
             {/* CARD 2: REPASSES */}
-            <div className="group bg-surface-dark border border-green-500/20 p-6 rounded-2xl shadow-xl transition-all hover:border-green-500/40 hover:bg-green-500/5">
+            <div className="group bg-surface-dark border border-green-500/20 p-4 sm:p-6 rounded-2xl shadow-xl transition-all hover:border-green-500/40 hover:bg-green-500/5">
                 <div className="flex justify-between items-start mb-2">
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Novos Repasses</span>
                     <span className="material-symbols-outlined text-green-500 text-[20px] opacity-50 group-hover:opacity-100">trending_up</span>
@@ -49,7 +49,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
             </div>
 
             {/* CARD 3: RESERVAS & RENDIMENTOS */}
-            <div className="group bg-surface-dark border border-orange-500/20 p-6 rounded-2xl shadow-xl transition-all hover:border-orange-500/40 hover:bg-orange-500/5">
+            <div className="group bg-surface-dark border border-orange-500/20 p-4 sm:p-6 rounded-2xl shadow-xl transition-all hover:border-orange-500/40 hover:bg-orange-500/5">
                 <div className="flex justify-between items-start mb-2">
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Reserva & Rendimentos</span>
                     <span className="material-symbols-outlined text-orange-500 text-[20px] opacity-50 group-hover:opacity-100">savings</span>
@@ -70,7 +70,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
             </div>
 
             {/* CARD 4: DESPESAS */}
-            <div className="group bg-surface-dark border border-red-500/20 p-6 rounded-2xl shadow-xl transition-all hover:border-red-500/40 hover:bg-red-500/5">
+            <div className="group bg-surface-dark border border-red-500/20 p-4 sm:p-6 rounded-2xl shadow-xl transition-all hover:border-red-500/40 hover:bg-red-500/5">
                 <div className="flex justify-between items-start mb-2">
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Execução (Saídas)</span>
                     <span className="material-symbols-outlined text-red-500 text-[20px] opacity-50 group-hover:opacity-100">trending_down</span>

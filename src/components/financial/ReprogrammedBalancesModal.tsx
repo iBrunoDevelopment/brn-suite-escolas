@@ -120,14 +120,17 @@ const ReprogrammedBalancesModal: React.FC<ReprogrammedBalancesModalProps> = ({
     const periodOptions = React.useMemo(() => periods.map(p => <option key={p.name} value={p.name}>{p.name}</option>), [periods]);
 
     const filteredRubrics = React.useMemo(() =>
-        rubrics.filter(r => r.program_id === newReprogrammed.program_id),
-        [rubrics, newReprogrammed.program_id]
+        rubrics.filter(r => 
+            r.program_id === newReprogrammed.program_id && 
+            (!r.school_id || r.school_id === newReprogrammed.school_id)
+        ),
+        [rubrics, newReprogrammed.program_id, newReprogrammed.school_id]
     );
 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
             <div className="w-full max-w-4xl bg-[#0f172a] border border-blue-500/20 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[95vh] md:max-h-[90vh]">
                 <div className="p-6 border-b border-white/5 flex justify-between items-center bg-blue-500/5 shrink-0">
                     <div className="flex items-center gap-3">
