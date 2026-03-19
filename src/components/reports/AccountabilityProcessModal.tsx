@@ -552,7 +552,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
         <div className="fixed inset-0 z-[100] flex items-start justify-center p-0 md:p-8 bg-black/95 backdrop-blur-xl overflow-y-auto pt-0 md:pt-20">
             <div className="w-full max-w-7xl bg-[#0a0f14] border-x md:border border-white/10 rounded-none md:rounded-[40px] shadow-2xl flex flex-col animate-in zoom-in-95 duration-300 relative min-h-screen md:min-h-0">
                 {/* Header */}
-                <div className="p-5 md:p-10 border-b border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-[#0a0f14] rounded-t-none md:rounded-t-[40px]">
+                <div className="p-4 md:p-8 lg:p-10 border-b border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-[#0a0f14] rounded-t-none md:rounded-t-[40px] sticky top-0 z-20">
                     <div className="flex flex-col gap-1 w-full md:w-auto">
                         <h2 className="text-xl md:text-3xl font-black text-white flex items-center gap-3">
                             <span className="material-symbols-outlined text-primary text-2xl md:text-3xl">assignment_turned_in</span>
@@ -561,14 +561,14 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                         <p className="text-[8px] md:text-xs text-slate-500 uppercase font-black tracking-widest md:tracking-[0.2em]">Fluxo: Lançamento • Cotações • Checklist</p>
                     </div>
                     <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto">
-                        <button onClick={onClose} className="flex-1 md:flex-none h-12 md:h-14 px-4 md:px-8 rounded-xl md:rounded-2xl text-slate-400 font-bold hover:bg-white/5 transition-all text-[10px] md:text-sm uppercase tracking-widest">Descartar</button>
-                        <button onClick={handleSave} disabled={loading} className="flex-[2] md:flex-none h-12 md:h-14 px-4 md:px-12 rounded-xl md:rounded-2xl bg-primary text-white font-black text-[10px] md:text-sm uppercase tracking-widest shadow-2xl shadow-primary/30 hover:bg-primary-hover active:scale-95 transition-all disabled:opacity-50">
+                        <button onClick={onClose} className="flex-1 md:flex-none h-10 md:h-14 px-4 md:px-8 rounded-xl md:rounded-2xl text-slate-400 font-bold hover:bg-white/5 transition-all text-[10px] md:text-sm uppercase tracking-widest">Descartar</button>
+                        <button onClick={handleSave} disabled={loading} className="flex-[2] md:flex-none h-10 md:h-14 px-4 md:px-12 rounded-xl md:rounded-2xl bg-primary text-white font-black text-[10px] md:text-sm uppercase tracking-widest shadow-2xl shadow-primary/30 hover:bg-primary-hover active:scale-95 transition-all disabled:opacity-50">
                             {loading ? 'Sincronizando...' : 'Finalizar Processo'}
                         </button>
                     </div>
                 </div>
 
-                <div className="flex-1 p-4 md:p-10 space-y-6 md:space-y-10">
+                <div className="flex-1 p-4 md:p-8 lg:p-10 space-y-6 md:space-y-10">
                     <ValueCounter />
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
@@ -1023,22 +1023,22 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
             {showImportModal && (
                 <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/99 backdrop-blur-md overflow-y-auto">
                     <div className="bg-[#0a0f14] border border-white/10 w-full max-w-2xl rounded-3xl shadow-2xl flex flex-col">
-                        <div className="p-10 border-b border-white/5 flex justify-between items-center">
-                            <h3 className="text-2xl font-black text-white uppercase tracking-widest leading-tight">Importação em Massa</h3>
-                            <button onClick={() => setShowImportModal(false)} className="w-12 h-12 rounded-full hover:bg-white/5 flex items-center justify-center text-slate-500 hover:text-white transition-all"><span className="material-symbols-outlined text-2xl">close</span></button>
+                        <div className="p-5 md:p-10 border-b border-white/5 flex justify-between items-center bg-[#0a0f14] rounded-t-3xl">
+                            <h3 className="text-lg md:text-2xl font-black text-white uppercase tracking-widest leading-tight">Importação em Massa</h3>
+                            <button onClick={() => setShowImportModal(false)} className="w-10 h-10 md:w-12 md:h-12 rounded-full hover:bg-white/5 flex items-center justify-center text-slate-500 hover:text-white transition-all"><span className="material-symbols-outlined text-xl md:text-2xl">close</span></button>
                         </div>
-                        <div className="p-10 space-y-8">
-                            <div className="grid grid-cols-2 gap-4">
-                                <button onClick={downloadTemplate} className="h-14 rounded-2xl bg-indigo-500/10 text-indigo-400 font-black uppercase tracking-widest border border-indigo-500/20 hover:bg-indigo-500 hover:text-white transition-all flex items-center justify-center gap-3"><span className="material-symbols-outlined">download</span> Modelo CSV</button>
-                                <label className="h-14 rounded-2xl bg-emerald-500/10 text-emerald-400 font-black uppercase tracking-widest border border-emerald-500/20 hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center gap-3 cursor-pointer"><span className="material-symbols-outlined">upload_file</span> Subir CSV <input type="file" accept=".csv" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; const buf = await file.arrayBuffer(); const decoder = new TextDecoder('windows-1252'); const text = decoder.decode(buf); if (text) { setImportText(text); setTimeout(() => processImport(), 100); } e.target.value = ''; }} /></label>
+                        <div className="p-4 md:p-10 space-y-6 md:space-y-8">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <button onClick={downloadTemplate} className="h-12 md:h-14 rounded-2xl bg-indigo-500/10 text-indigo-400 font-black uppercase tracking-widest border border-indigo-500/20 hover:bg-indigo-500 hover:text-white transition-all flex items-center justify-center gap-3 text-xs"><span className="material-symbols-outlined">download</span> Modelo CSV</button>
+                                <label className="h-12 md:h-14 rounded-2xl bg-emerald-500/10 text-emerald-400 font-black uppercase tracking-widest border border-emerald-500/20 hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center gap-3 cursor-pointer text-xs"><span className="material-symbols-outlined">upload_file</span> Subir CSV <input type="file" accept=".csv" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; const buf = await file.arrayBuffer(); const decoder = new TextDecoder('windows-1252'); const text = decoder.decode(buf); if (text) { setImportText(text); setTimeout(() => processImport(), 100); } e.target.value = ''; }} /></label>
                             </div>
-                            <div className="space-y-4">
-                                <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Colunas: Descrição, Qtd, Unid, Preço Vencedor, Concorrente 1, Concorrente 2</label>
-                                <textarea id="import_text" value={importText} onChange={e => setImportText(e.target.value)} className="w-full h-64 bg-black/40 border border-white/10 rounded-2xl p-6 text-xs font-mono text-white outline-none focus:border-primary transition-all resize-none" placeholder="Cole os dados aqui..." />
+                            <div className="space-y-3 md:space-y-4">
+                                <label className="text-[9px] md:text-[10px] text-slate-500 font-black uppercase tracking-widest">Colunas: Descrição, Qtd, Unid, Preço Vencedor, Concorrente 1, Concorrente 2</label>
+                                <textarea id="import_text" value={importText} onChange={e => setImportText(e.target.value)} className="w-full h-48 md:h-64 bg-black/40 border border-white/10 rounded-2xl p-4 md:p-6 text-xs font-mono text-white outline-none focus:border-primary transition-all resize-none" placeholder="Cole os dados aqui..." />
                             </div>
-                            <div className="flex justify-end gap-3 pt-6 border-t border-white/5">
-                                <button onClick={() => setShowImportModal(false)} className="px-8 h-12 text-slate-400 font-bold uppercase tracking-widest hover:bg-white/5 rounded-xl transition-all">Cancelar</button>
-                                <button onClick={processImport} disabled={!importText.trim()} className="px-12 h-12 bg-primary text-white font-black uppercase tracking-widest rounded-xl shadow-2xl shadow-primary/30 hover:bg-primary-hover transition-all">Importar Itens</button>
+                            <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 border-t border-white/5">
+                                <button onClick={() => setShowImportModal(false)} className="w-full sm:w-auto px-8 h-12 text-slate-400 font-bold uppercase tracking-widest hover:bg-white/5 rounded-xl transition-all text-xs">Cancelar</button>
+                                <button onClick={processImport} disabled={!importText.trim()} className="w-full sm:w-auto px-8 md:px-12 h-12 bg-primary text-white font-black uppercase tracking-widest rounded-xl shadow-2xl shadow-primary/30 hover:bg-primary-hover transition-all text-xs">Importar Itens</button>
                             </div>
                         </div>
                     </div>

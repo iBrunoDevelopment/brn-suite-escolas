@@ -156,6 +156,16 @@ export const useReports = (user: User, filters: ReportsFilters) => {
     });
 
     const { schools, programs, templateUrl } = auxData;
+    const stats = useMemo(() => {
+        const pendingProcesses = processes.filter(p => p.status !== 'Concluído').length;
+        const completedProcesses = processes.filter(p => p.status === 'Concluído').length;
+        // The join result in the query is named 'financial_entries'
+        const totalNotesValue = processes.reduce((acc, p) => acc + Math.abs((p as any).financial_entries?.value || 0), 0);
+        // The join result in the query is named 'accountability_quotes'
+        const totalQuotes = processes.reduce((acc, p) => acc + ((p as any).accountability_quotes?.length || 0), 0);
+
+        return { pendingProcesses, completedProcesses, totalNotesValue, totalQuotes };
+    }, [processes]);
 
     return {
         loading: loadingProcesses || loadingEntries || loadingContracts,
@@ -166,6 +176,7 @@ export const useReports = (user: User, filters: ReportsFilters) => {
         schools,
         programs,
         templateUrl,
+        stats,
         refresh: () => {
             queryClient.invalidateQueries({ queryKey: ['accountability_processes'] });
             queryClient.invalidateQueries({ queryKey: ['available_entries'] });

@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabaseClient';
 import { usePermissions, useAccessibleSchools } from '../hooks/usePermissions';
 import { useReports } from '../hooks/useReports';
 import { useToast } from '../context/ToastContext';
+import { formatCurrency } from '../lib/printUtils';
 
 // Subcomponents
 import ReportsTable from '../components/reports/ReportsTable';
@@ -28,7 +29,9 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
     schoolId: '',
     programId: '',
     status: '',
-    search: ''
+    search: '',
+    startDate: '',
+    endDate: ''
   });
 
   // Data Hook
@@ -41,6 +44,7 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
     schools,
     programs,
     templateUrl,
+    stats,
     refresh
   } = useReports(user, filters);
 
@@ -50,8 +54,7 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
 
   const handlePrint = (process: AccountabilityProcess, type: string) => {
     let html = '';
-    const entry = (process as any).financial_entry || (process as any).financial_entries;
-
+    
     switch (type) {
       case 'ata':
         html = generateAtaHTML(process);
@@ -104,7 +107,6 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir esta prestação de contas?')) return;
 
-    const { supabase } = await import('../lib/supabaseClient');
     const { error } = await supabase.from('accountability_processes').delete().eq('id', id);
 
     if (error) {
@@ -131,34 +133,38 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
   return (
     <div className="flex flex-col gap-6 w-full p-4 md:p-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-32">
       {/* Header Area */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-6">
         <div className="flex flex-col gap-1">
           <h1 className="text-3xl font-black text-white">Prestação de Contas</h1>
           <p className="text-slate-400 text-sm">Controle de cotações, itens de nota e finalização documental.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5 mr-4">
+        
+        <div className="flex flex-wrap items-center gap-4 lg:gap-3">
+          {/* View Toggle */}
+          <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5">
             <button
               onClick={() => setView('processes')}
-              className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${view === 'processes' ? 'bg-primary text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
+              className={`px-4 md:px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${view === 'processes' ? 'bg-primary text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
             >
               Prestações
             </button>
             <button
               onClick={() => setView('contracts')}
-              className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${view === 'contracts' ? 'bg-primary text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
+              className={`px-4 md:px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${view === 'contracts' ? 'bg-primary text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
             >
               Contratos
             </button>
           </div>
+
+          {/* Action Buttons */}
           {reportPerm.canCreate && user.role !== UserRole.DIRETOR && (
-            <div className="flex gap-3 shrink-0">
+            <div className="flex items-center gap-2 md:gap-3 flex-wrap">
               <button
                 onClick={() => setShowNewContractModal(true)}
-                className="h-12 md:h-14 px-5 md:px-8 bg-white/5 hover:bg-white/10 text-white rounded-2xl md:rounded-3xl flex items-center gap-3 transition-all border border-white/10 group"
+                className="h-12 px-4 md:px-6 bg-white/5 hover:bg-white/10 text-white rounded-2xl flex items-center gap-2 transition-all border border-white/10 group whitespace-nowrap"
               >
-                <span className="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">history_edu</span>
-                <span className="text-[10px] md:text-xs font-black uppercase tracking-widest hidden sm:inline">Novo Contrato</span>
+                <span className="material-symbols-outlined text-primary group-hover:scale-110 transition-transform text-xl">history_edu</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">Contrato</span>
               </button>
 
               <button
@@ -166,10 +172,10 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
                   setEditingProcessId(null);
                   setShowNewProcessModal(true);
                 }}
-                className="h-12 md:h-14 px-5 md:px-8 bg-primary hover:bg-primary-hover text-white rounded-2xl md:rounded-3xl flex items-center gap-3 shadow-2xl shadow-primary/30 active:scale-95 transition-all group"
+                className="h-12 px-4 md:px-6 bg-primary hover:bg-primary-hover text-white rounded-2xl flex items-center gap-2 shadow-xl shadow-primary/20 active:scale-95 transition-all group whitespace-nowrap"
               >
-                <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">add_circle</span>
-                <span className="text-[10px] md:text-xs font-black uppercase tracking-widest">Nova Prestação</span>
+                <span className="material-symbols-outlined group-hover:rotate-12 transition-transform text-xl">add_circle</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">Nova Prestação</span>
               </button>
             </div>
           )}
@@ -191,66 +197,81 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
         </div>
       )}
 
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Processos em Aberto', val: stats.pendingProcesses, icon: 'pending_actions', color: 'amber' },
+          { label: 'Processos Concluídos', val: stats.completedProcesses, icon: 'verified', color: 'emerald' },
+          { label: 'Total em Notas', val: formatCurrency(stats.totalNotesValue), icon: 'receipt', color: 'blue' },
+          { label: 'Cotações Realizadas', val: stats.totalQuotes, icon: 'request_quote', color: 'indigo' },
+        ].map((s, idx) => (
+          <div key={idx} className="bg-[#111a22] p-6 rounded-3xl border border-white/5 flex items-center gap-5 hover:border-primary/20 transition-all group">
+            <div className={`w-14 h-14 rounded-2xl bg-${s.color}-500/10 flex items-center justify-center text-${s.color}-500 shrink-0 group-hover:scale-110 transition-transform`}>
+              <span className="material-symbols-outlined text-3xl">{s.icon}</span>
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1 truncate">{s.label}</span>
+              <span className="text-xl font-black text-white block truncate">{s.val}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* Filter Bar */}
-      <div className="bg-[#111a22] border border-surface-border rounded-2xl p-4 md:p-6 grid grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-        <div className="col-span-2 lg:col-span-1">
-          <label htmlFor="filter_school" className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-widest">Escola</label>
-          <select
-            title="Selecione a Escola"
-            aria-label="Selecione a Escola"
-            id="filter_school"
-            value={filters.schoolId}
-            onChange={e => setFilters({ ...filters, schoolId: e.target.value })}
-            className="w-full bg-[#0a0f14] text-white text-xs h-10 px-3 rounded-xl border border-surface-border focus:border-primary outline-none transition-all"
-          >
-            <option value="">Todas as Escolas</option>
-            {accessibleSchools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
+      <div className="bg-[#111a22] border border-surface-border rounded-2xl p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end">
+        <div className="flex flex-col gap-2">
+            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">Escola</label>
+            <select
+                title="Filtrar por Escola"
+                aria-label="Filtrar por Escola"
+                value={filters.schoolId}
+                onChange={(e) => setFilters({ ...filters, schoolId: e.target.value })}
+                className="w-full h-11 bg-black/40 border border-white/10 rounded-xl px-4 text-xs text-white outline-none focus:border-primary transition-all"
+            >
+                <option value="">Todas as Escolas</option>
+                {accessibleSchools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
         </div>
-        <div className="col-span-1">
-          <label htmlFor="filter_program" className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-widest">Programa</label>
-          <select
-            title="Selecione o Programa"
-            aria-label="Selecione o Programa"
-            id="filter_program"
-            value={filters.programId}
-            onChange={e => setFilters({ ...filters, programId: e.target.value })}
-            className="w-full bg-[#0a0f14] text-white text-xs h-10 px-3 rounded-xl border border-surface-border focus:border-primary outline-none transition-all"
-          >
-            <option value="">Todos</option>
-            {programs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
+        <div className="flex flex-col gap-2">
+            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">Programa</label>
+            <select
+                title="Filtrar por Programa"
+                aria-label="Filtrar por Programa"
+                value={filters.programId}
+                onChange={(e) => setFilters({ ...filters, programId: e.target.value })}
+                className="w-full h-11 bg-black/40 border border-white/10 rounded-xl px-4 text-xs text-white outline-none focus:border-primary transition-all"
+            >
+                <option value="">Todos os Programas</option>
+                {programs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
         </div>
-        <div className="col-span-1">
-          <label htmlFor="filter_status" className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-widest">Status</label>
-          <select
-            title="Selecione o Status"
-            aria-label="Selecione o Status"
-            id="filter_status"
-            value={filters.status}
-            onChange={e => setFilters({ ...filters, status: e.target.value })}
-            className="w-full bg-[#0a0f14] text-white text-xs h-10 px-3 rounded-xl border border-surface-border focus:border-primary outline-none transition-all"
-          >
-            <option value="">Todos</option>
-            <option value="Em Andamento">Em Andamento</option>
-            <option value="Concluído">Concluído</option>
-          </select>
+        <div className="flex flex-col gap-2">
+            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">Status</label>
+            <select
+                title="Filtrar por Status"
+                aria-label="Filtrar por Status"
+                value={filters.status}
+                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                className="w-full h-11 bg-black/40 border border-white/10 rounded-xl px-4 text-xs text-white outline-none focus:border-primary transition-all"
+            >
+                <option value="">Todos os Status</option>
+                <option value="Em Andamento">Em Andamento</option>
+                <option value="Concluído">Concluído</option>
+            </select>
         </div>
-        <div className="col-span-2 lg:col-span-1">
-          <label htmlFor="filter_search" className="text-[10px] font-black text-slate-500 uppercase mb-1.5 block tracking-widest">Busca Rápida</label>
-          <input
-            id="filter_search"
-            type="text"
-            value={filters.search}
-            onChange={e => setFilters({ ...filters, search: e.target.value })}
-            className="w-full bg-[#0a0f14] text-white text-xs h-10 px-4 rounded-xl border border-surface-border focus:border-primary outline-none transition-all"
-            placeholder="Filtrar por descrição..."
-          />
+        <div className="flex flex-col gap-2">
+            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest ml-1">Busca Rápida</label>
+            <input
+                placeholder="Filtrar por descrição..."
+                value={filters.search}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                className="w-full h-11 bg-black/40 border border-white/10 rounded-xl px-4 text-xs text-white outline-none focus:border-primary transition-all"
+            />
         </div>
-        <div className="col-span-2 lg:col-span-1">
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => setFilters({ schoolId: '', programId: '', status: '', search: '' })}
-            className="w-full bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest h-10 rounded-xl hover:bg-slate-700 transition-all active:scale-95"
+            onClick={() => setFilters({ schoolId: '', programId: '', status: '', search: '', startDate: '', endDate: '' })}
+            className="w-full bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest h-11 rounded-xl hover:bg-slate-700 transition-all active:scale-95"
           >
             Limpar Filtros
           </button>

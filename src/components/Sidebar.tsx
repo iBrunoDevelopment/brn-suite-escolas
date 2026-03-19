@@ -104,8 +104,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     const navGroups = getNavGroups();
 
     // Responsive classes
-    const mobileClasses = `fixed inset-y-0 left-0 transform ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out md:translate-x-0 md:relative`;
-    const desktopWidthClasses = `w-64 md:${isCollapsed ? 'w-20' : 'w-64'}`;
+    const mobileClasses = `fixed inset-y-0 left-0 transform ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} transition-all duration-300 ease-in-out md:translate-x-0 md:relative`;
+    const desktopWidthClasses = `${isCollapsed ? 'w-20' : 'w-64'}`;
 
     // Logic to show full content (labels, header text)
     // Show if on mobile open OR if not collapsed on desktop
@@ -151,7 +151,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             {/* Navigation */}
-            <nav className={`flex-1 overflow-y-auto py-6 ${showFull ? 'px-4' : 'px-2'} flex flex-col gap-6 scrollbar-hide`}>
+            <nav className={`flex-1 overflow-y-auto py-6 ${showFull ? 'px-4' : 'px-0'} flex flex-col gap-6 scrollbar-hide transition-all duration-300`}>
                 {navGroups.map((group, gIdx) => (
                     <div key={gIdx} className="flex flex-col gap-1.5">
                         {showFull && (
@@ -168,7 +168,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                     key={item.id}
                                     onClick={() => onPageChange(item.id)}
                                     title={!showFull ? item.label : ''}
-                                    className={`flex items-center ${showFull ? 'gap-3 px-3' : 'justify-center'} py-2.5 rounded-xl text-sm font-bold transition-all duration-300 group/item relative ${activePage === item.id
+                                    className={`flex items-center ${showFull ? 'gap-3 px-3 mx-0' : 'justify-center mx-auto w-12'} py-2.5 rounded-xl text-sm font-bold transition-all duration-300 group/item relative ${activePage === item.id
                                         ? 'bg-primary text-white shadow-xl shadow-primary/20 scale-[1.02]'
                                         : 'text-slate-400 hover:text-white hover:bg-white/5'
                                         }`}
@@ -192,8 +192,8 @@ const Sidebar: React.FC<SidebarProps> = ({
             </nav>
 
             {/* User Info / Footer Slim */}
-            <div className={`p-4 border-t border-[#1e293b] bg-surface-dark/30 overflow-hidden`}>
-                <div className={`flex items-center ${showFull ? 'gap-3 p-2' : 'justify-center'} mb-3`}>
+            <div className={`${showFull ? 'p-4' : 'p-2'} border-t border-[#1e293b] bg-surface-dark/30 overflow-hidden transition-all duration-300`}>
+                <div className={`flex items-center ${showFull ? 'gap-3 p-2' : 'justify-center h-12'} mb-3`}>
                     {user?.avatar_url ? (
                         <img src={user.avatar_url} className="w-8 h-8 rounded-lg object-cover border border-primary/20 shrink-0" alt="" />
                     ) : (
