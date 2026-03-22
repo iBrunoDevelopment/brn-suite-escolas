@@ -39,6 +39,7 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({
     const [totalValue, setTotalValue] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    const [durationMonths, setDurationMonths] = useState('12');
     const [category, setCategory] = useState<'INTERNET' | 'GÁS' | 'OUTROS'>('INTERNET');
     const [status, setStatus] = useState<'Ativo' | 'Encerrado' | 'Suspenso'>('Ativo');
     const [creationMode, setCreationMode] = useState<'NEW' | 'ADITIVO'>('NEW');
@@ -136,6 +137,25 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({
             setW2Rg(terms.witness_2_rg || '');
         }
     };
+
+    useEffect(() => {
+        if (startDate && durationMonths && creationMode === 'NEW') {
+            const start = new Date(startDate + 'T12:00:00');
+            const end = new Date(start);
+            end.setMonth(start.getMonth() + parseInt(durationMonths));
+            
+            // Format to YYYY-MM-DD
+            const yyyy = end.getFullYear();
+            const mm = String(end.getMonth() + 1).padStart(2, '0');
+            const dd = String(end.getDate()).padStart(2, '0');
+            setEndDate(`${yyyy}-${mm}-${dd}`);
+
+            // Also auto-calculate total value if monthly exists
+            if (monthlyValue) {
+                setTotalValue((parseFloat(monthlyValue) * parseInt(durationMonths)).toString());
+            }
+        }
+    }, [startDate, durationMonths, monthlyValue, creationMode]);
 
     const fetchRubrics = async () => {
         const { data } = await supabase.from('rubrics').select('*').order('name');
@@ -465,7 +485,7 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-3 gap-4">
                                     <div>
                                         <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest mb-2 block">Data Início</label>
                                         <input
@@ -474,6 +494,17 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({
                                             className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 px-5 text-white outline-none focus:border-primary transition-all"
                                             value={startDate}
                                             onChange={e => setStartDate(e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest mb-2 block">Vigência (Meses)</label>
+                                        <input
+                                            type="number"
+                                            placeholder="12"
+                                            aria-label="Meses de Vigência"
+                                            className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 px-5 text-white outline-none focus:border-primary transition-all font-black"
+                                            value={durationMonths}
+                                            onChange={e => setDurationMonths(e.target.value)}
                                         />
                                     </div>
                                     <div>

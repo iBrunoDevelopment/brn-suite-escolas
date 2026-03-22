@@ -28,6 +28,7 @@ interface DocumentFile {
     };
     process_id?: string;
     process_info?: string;
+    supplier_name?: string;
 }
 
 const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
@@ -37,6 +38,9 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
     const [filterCategory, setFilterCategory] = useState('');
     const [filterSchool, setFilterSchool] = useState('');
     const [filterProcess, setFilterProcess] = useState('');
+    const [filterPeriod, setFilterPeriod] = useState(''); // Format: "MM-YYYY"
+    const [filterStartDate, setFilterStartDate] = useState('');
+    const [filterEndDate, setFilterEndDate] = useState('');
     const { addToast } = useToast();
     const [schools, setSchools] = useState<any[]>([]);
     const [processes, setProcesses] = useState<any[]>([]);
@@ -63,7 +67,7 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
             // Fetch entries with attachments
             let query = supabase.from('financial_entries').select(`
                 id, date, description, value, attachments, school_id,
-                schools(name), programs(name)
+                schools(name), programs(name), suppliers(name)
             `).not('attachments', 'is', null);
 
             if (user.role !== UserRole.ADMIN && user.role !== UserRole.OPERADOR) {
@@ -77,7 +81,7 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
             let procQuery = supabase.from('accountability_processes').select(`
                 id, financial_entry_id, school_id, attachments,
                 schools(name),
-                financial_entries(description, date, value, programs(name))
+                financial_entries(description, date, value, programs(name), suppliers(name))
             `).not('attachments', 'is', null);
 
             if (user.role !== UserRole.ADMIN && user.role !== UserRole.OPERADOR) {
@@ -114,6 +118,7 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                         school_id: entry.school_id,
                         school_name: entry.schools?.name || 'Escola não vinculada',
                         program_name: entry.programs?.name || 'Geral',
+                        supplier_name: entry.suppliers?.name || 'Sem fornecedor',
                         value: entry.value,
                         process_id: process?.id || entry.id,
                         process_info: process?.id ? entry.description : `[Lançamento] ${entry.description}`,
@@ -151,6 +156,7 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                         school_id: proc.school_id,
                         school_name: proc.schools?.name || 'Escola não vinculada',
                         program_name: entry?.programs?.name || 'Geral',
+                        supplier_name: entry?.suppliers?.name || 'Sem fornecedor',
                         value: entry?.value || 0,
                         process_id: proc.id,
                         process_info: entry?.description || 'Processo Técnico',
@@ -198,8 +204,15 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
     const filteredDocs = documents.filter(doc => {
         const matchesSearch = !filterSearch ||
             doc.name.toLowerCase().includes(filterSearch.toLowerCase()) ||
-            doc.entry_description.toLowerCase().includes(filterSearch.toLowerCase());
-        const matchesCategory = !filterCategory || doc.category === filterCategory;
+            doc.entry_description.toLowerCase().includes(filterSearch.toLowerCase()) ||
+            doc.supplier_name?.toLowerCase().includes(filterSearch.toLowerCase());
+        
+        const matchesCategory = !filterCategory || (
+            filterCategory === 'Certidões'
+                ? (doc.category === 'Certidões' || doc.category?.startsWith('Certidão'))
+                : doc.category === filterCategory
+        );
+        
         const matchesSchool = !filterSchool || doc.school_id === filterSchool;
 
         // Process Filter Logic:
@@ -207,8 +220,40 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
         // The process filter dropdown itself is already filtered by the selected school.
         const matchesProcess = !filterProcess || doc.process_id === filterProcess;
 
-        return matchesSearch && matchesCategory && matchesSchool && matchesProcess;
+        const matchesPeriod = !filterPeriod || (() => {
+            const date = new Date(doc.entry_date);
+            const period = `${String(date.getUTCMonth() + 1).padStart(2, '0')}-${date.getUTCFullYear()}`;
+            return period === filterPeriod;
+        })();
+
+        const matchesDateRange = (!filterStartDate || doc.entry_date >= filterStartDate) &&
+                                 (!filterEndDate || doc.entry_date <= filterEndDate);
+
+        return matchesSearch && matchesCategory && matchesSchool && matchesProcess && matchesPeriod && matchesDateRange;
     });
+
+    const availablePeriods = React.useMemo(() => {
+        const periods = documents.map(doc => {
+            const date = new Date(doc.entry_date);
+            const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const y = date.getUTCFullYear();
+            return {
+                value: `${m}-${y}`,
+                label: date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+            };
+        });
+
+        const seen = new Set();
+        return periods.filter(p => {
+            if (seen.has(p.value)) return false;
+            seen.add(p.value);
+            return true;
+        }).sort((a, b) => {
+            const [am, ay] = a.value.split('-').map(Number);
+            const [bm, by] = b.value.split('-').map(Number);
+            return by - ay || bm - am;
+        });
+    }, [documents]);
 
     const stats = {
         total: documents.length,
@@ -269,7 +314,7 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
             </div>
 
             {/* Filters */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 bg-card-dark/50 p-4 rounded-2xl border border-surface-border">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-4 bg-card-dark/50 p-4 rounded-2xl border border-surface-border">
                 <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Buscar Termo</label>
                     <input
@@ -290,7 +335,7 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                         className="bg-surface-dark border border-surface-border rounded-xl px-4 py-2 text-xs text-white outline-none"
                     >
                         <option value="">Todas</option>
-                        {['Nota Fiscal', 'Espelho da Nota', 'Comprovante', 'Extrato Bancário', 'CNPJ', 'Certidões', 'Certidão Municipal', 'Certidão Estadual', 'Certidão Federal', 'Outros'].map(c => <option key={c} value={c}>{c}</option>)}
+                        {['Nota Fiscal', 'Espelho da Nota', 'Comprovante', 'Extrato Bancário', 'CNPJ', 'Certidões', 'Outros'].map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                 </div>
                 <div className="flex flex-col gap-1">
@@ -326,9 +371,54 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                         })}
                     </select>
                 </div>
-                <div className="flex items-end sm:col-span-2 lg:col-span-1">
+                <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Mês / Ano</label>
+                    <select
+                        title="Filtrar por Mês e Ano"
+                        value={filterPeriod}
+                        aria-label="Filtrar por Mês e Ano"
+                        onChange={e => setFilterPeriod(e.target.value)}
+                        className="bg-surface-dark border border-surface-border rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-indigo-500"
+                    >
+                        <option value="">Todos os Meses</option>
+                        {availablePeriods.map(p => (
+                            <option key={p.value} value={p.value}>{p.label.charAt(0).toUpperCase() + p.label.slice(1)}</option>
+                        ))}
+                    </select>
+                </div>
+                <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Data Início</label>
+                    <input
+                        type="date"
+                        title="Data de Início"
+                        aria-label="Data de Início"
+                        value={filterStartDate}
+                        onChange={e => setFilterStartDate(e.target.value)}
+                        className="bg-surface-dark border border-surface-border rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-indigo-500 [color-scheme:dark]"
+                    />
+                </div>
+                <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Data Fim</label>
+                    <input
+                        type="date"
+                        title="Data de Fim"
+                        aria-label="Data de Fim"
+                        value={filterEndDate}
+                        onChange={e => setFilterEndDate(e.target.value)}
+                        className="bg-surface-dark border border-surface-border rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-indigo-500 [color-scheme:dark]"
+                    />
+                </div>
+                <div className="flex items-end col-span-2 md:col-span-1 lg:col-span-1">
                     <button
-                        onClick={() => { setFilterSearch(''); setFilterCategory(''); setFilterSchool(''); setFilterProcess(''); }}
+                        onClick={() => { 
+                            setFilterSearch(''); 
+                            setFilterCategory(''); 
+                            setFilterSchool(''); 
+                            setFilterProcess(''); 
+                            setFilterPeriod(''); 
+                            setFilterStartDate(''); 
+                            setFilterEndDate(''); 
+                        }}
                         className="w-full h-10 rounded-xl bg-white/5 border border-white/10 text-slate-400 text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
                     >
                         Limpar Filtros
@@ -370,7 +460,15 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                                             </div>
                                             <div className="flex flex-col">
                                                 <span className="text-sm font-bold text-white line-clamp-1">{doc.name}</span>
-                                                <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{doc.category}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{doc.category}</span>
+                                                    {doc.supplier_name && doc.supplier_name !== 'Sem fornecedor' && (
+                                                        <>
+                                                            <span className="text-slate-700">•</span>
+                                                            <span className="text-[10px] text-indigo-400/70 font-bold uppercase truncate max-w-[150px]">{doc.supplier_name}</span>
+                                                        </>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </td>
@@ -439,7 +537,15 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                                     </div>
                                     <div className="min-w-0">
                                         <span className="text-sm font-bold text-white block truncate">{doc.name}</span>
-                                        <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{doc.category}</span>
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                            <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{doc.category}</span>
+                                            {doc.supplier_name && doc.supplier_name !== 'Sem fornecedor' && (
+                                                <>
+                                                    <span className="text-slate-700">•</span>
+                                                    <span className="text-[10px] text-indigo-400/70 font-bold uppercase truncate max-w-[120px]">{doc.supplier_name}</span>
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 <ChecklistBadge doc={doc} />
@@ -507,7 +613,12 @@ const DocumentSafe: React.FC<{ user: User }> = ({ user }) => {
                                 <div className="text-center">
                                     <span className="material-symbols-outlined text-5xl text-indigo-400 opacity-50 mb-2">description</span>
                                     <h4 className="text-sm font-bold text-white line-clamp-2">{selectedDoc.name}</h4>
-                                    <span className="text-[10px] text-slate-500 uppercase tracking-widest font-black">{selectedDoc.category}</span>
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-[10px] text-slate-500 uppercase tracking-widest font-black">{selectedDoc.category}</span>
+                                        {selectedDoc.supplier_name && selectedDoc.supplier_name !== 'Sem fornecedor' && (
+                                            <span className="text-[10px] text-indigo-400 font-bold uppercase mt-0.5">{selectedDoc.supplier_name}</span>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="space-y-3 mt-4 pt-4 border-t border-white/5">
                                     <div className="flex justify-between text-xs gap-4">

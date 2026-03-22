@@ -111,8 +111,8 @@ export const useReports = (user: User, filters: ReportsFilters) => {
                 .from('supplier_contracts')
                 .select(`
                     *,
-                    schools(name),
-                    suppliers(name, cnpj),
+                    schools(*),
+                    suppliers(*),
                     programs(name),
                     financial_entries(value)
                 `)

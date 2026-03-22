@@ -442,13 +442,13 @@ export const generateReciboHTML = (process: any) => {
     // Dates
     const invoiceDate = entry?.date ? new Date(entry.date) : null;
     const paymentDate = entry?.payment_date ? new Date(entry.payment_date) : null;
-    
+
     const dispInvoiceDate = invoiceDate ? invoiceDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '___/___/_____';
     const dispPaymentDate = paymentDate ? paymentDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '___/___/_____';
 
     // Bottom date uses payment date
     const dateLong = (paymentDate || new Date()).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
-    
+
     const totalValue = (winner?.total_value || 0) - (process.discount || 0);
 
     // Payment method label
@@ -724,17 +724,24 @@ export const generateContratoServicoHTML = (process: any) => {
     const monthlyValue = (process as any).monthly_value || (process as any).contract?.monthly_value || totalValue;
     const contractTotalValue = (process as any).contract?.total_value || (monthlyValue * 6); // Default 6 months for fallback
 
-    const docDate = new Date();
+    const docDate = (process as any).contract?.start_date ? new Date((process as any).contract.start_date + 'T12:00:00') : new Date();
     const dateLong = docDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
 
-    const startDate = (process as any).contract?.start_date ? new Date((process as any).contract.start_date).toLocaleDateString('pt-BR') : '01/01/2026';
-    const endDate = (process as any).contract?.end_date ? new Date((process as any).contract.end_date).toLocaleDateString('pt-BR') : '31/12/2026';
+    const startDate = (process as any).contract?.start_date ? new Date((process as any).contract.start_date + 'T12:00:00').toLocaleDateString('pt-BR') : '01/01/2026';
+    const endDate = (process as any).contract?.end_date ? new Date((process as any).contract.end_date + 'T12:00:00').toLocaleDateString('pt-BR') : '31/12/2026';
+
+    const displayValue = (process as any).contract?.total_value || totalValue;
+    const formattedDisplayValue = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(displayValue);
+    const docFormattedDate = (process as any).contract?.start_date ? new Date((process as any).contract.start_date + 'T12:00:00').toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
+    const pageTitle = category === 'INTERNET'
+        ? `Contrato de Prestação de Serviços Contínuos de Internet - ${formattedDisplayValue} - ${docFormattedDate}`
+        : `Contrato de Prestação de Serviços Contínuos - ${formattedDisplayValue} - ${docFormattedDate}`;
 
     return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8"/>
-    <title>Contrato de Prestação de Serviços Contínuos - BRN Suite</title>
+    <title>${pageTitle}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
@@ -793,7 +800,7 @@ export const generateContratoServicoHTML = (process: any) => {
             <p>Os preços unitários serão reajustados anualmente, utilizando-se a variação do Índice Geral de Preços de Mercado – <strong>IGP-M/FGV</strong>, conforme legislação vigente.</p>
 
             <div class="clause">CLÁUSULA SEXTA – DAS PENALIDADES</div>
-            <p>Pelo atraso injustificado na execução do objeto, a CONTRANTE poderá aplicar à CONTRATADA multa de <strong>0,5% (zero vírgula cinco por cento) por dia de atraso</strong>, limitada a 10% sobre o valor da parcela devida.</p>
+            <p>Pelo atraso injustificado na execução do objeto, a CONTRATANTE poderá aplicar à CONTRATADA multa de <strong>0,5% (zero vírgula cinco por cento) por dia de atraso</strong>, limitada a 10% sobre o valor da parcela devida.</p>
 
             <div class="clause">CLÁUSULA SÉTIMA – DA RESCISÃO</div>
             <p>O contrato poderá ser rescindido por infração de cláusula contratual, por paralisação dos serviços sem justa causa ou por conveniência administrativa, mediante aviso prévio de 30 dias.</p>
@@ -811,12 +818,14 @@ export const generateContratoServicoHTML = (process: any) => {
                 <p class="font-black text-[11px]">${school?.director?.toUpperCase() || 'PRESIDENTE'}</p>
                 <p class="text-[9px]">CONTRATANTE</p>
                 <p class="text-[8px]">CPF: ${school?.director_cpf || '___.___.___-__'}</p>
+                <p class="text-[8px]">RG: ${school?.director_rg || '___________'}</p>
             </div>
             <div class="border-t border-black pt-1">
                 <p class="font-black text-[11px]">${supplier?.name?.toUpperCase()}</p>
                 <p class="text-[9px]">CONTRATADA</p>
                 <p class="text-[8px]">Representante: ${(process as any).contract?.representative_name || supplier?.rep_name || '________________'}</p>
                 <p class="text-[7px]">CPF: ${(process as any).contract?.representative_cpf || supplier?.rep_cpf || '___.___.___-__'}</p>
+                <p class="text-[7px]">RG: ${(process as any).contract?.representative_rg || supplier?.rep_rg || '___________'}</p>
             </div>
         </div>
 
@@ -825,12 +834,16 @@ export const generateContratoServicoHTML = (process: any) => {
                 <div class="border-t border-black pt-1">
                     <p class="font-bold text-[9px]">${(process as any).contract?.terms_json?.witness_1_name?.toUpperCase() || '________________________________________'}</p>
                     <p class="text-[8px]">TESTEMUNHA 01</p>
+                    <p class="text-[7px]">CPF: ${(process as any).contract?.terms_json?.witness_1_cpf || '___.___.___-__'}</p>
+                    <p class="text-[7px]">RG: ${(process as any).contract?.terms_json?.witness_1_rg || '___________'}</p>
                 </div>
             </div>
             <div>
                 <div class="border-t border-black pt-1">
                     <p class="font-bold text-[9px]">${(process as any).contract?.terms_json?.witness_2_name?.toUpperCase() || '________________________________________'}</p>
                     <p class="text-[8px]">TESTEMUNHA 02</p>
+                    <p class="text-[7px]">CPF: ${(process as any).contract?.terms_json?.witness_2_cpf || '___.___.___-__'}</p>
+                    <p class="text-[7px]">RG: ${(process as any).contract?.terms_json?.witness_2_rg || '___________'}</p>
                 </div>
             </div>
         </div>
@@ -867,7 +880,7 @@ export const generateContratoGasHTML = (process: any) => {
     const totalValue = (winner?.total_value || 0) - (process.discount || 0);
     const monthlyValue = (process as any).monthly_value || (process as any).contract?.monthly_value || totalValue;
 
-    const docDate = new Date();
+    const docDate = (process as any).contract?.start_date ? new Date((process as any).contract.start_date + 'T12:00:00') : new Date();
     const dateLongArr = docDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }).split(' de ');
 
     const startDate = (process as any).contract?.start_date ? new Date((process as any).contract.start_date).toLocaleDateString('pt-BR') : '01/01/2026';
@@ -875,11 +888,16 @@ export const generateContratoGasHTML = (process: any) => {
 
     const contractNumber = (process as any).contract?.contract_number || '05/2025';
 
+    const displayValue = (process as any).contract?.total_value || totalValue;
+    const formattedDisplayValue = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(displayValue);
+    const docFormattedDate = new Date().toLocaleDateString('pt-BR');
+    const pageTitle = `Contrato de Fornecimento de Gás - ${formattedDisplayValue} - ${docFormattedDate}`;
+
     return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8"/>
-    <title>Contrato de Fornecimento Contínuo de Produtos - BRN Suite</title>
+    <title>${pageTitle}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
@@ -955,12 +973,14 @@ export const generateContratoGasHTML = (process: any) => {
                 <p class="font-black">${school?.director?.toUpperCase()}</p>
                 <p class="text-[9px]">CONTRATANTE</p>
                 <p class="text-[8px]">CPF: ${school?.director_cpf || '___.___.___-__'}</p>
+                <p class="text-[8px]">RG: ${school?.director_rg || '___________'}</p>
             </div>
             <div class="border-t border-black pt-1">
                 <p class="font-black">${supplier?.name?.toUpperCase()}</p>
                 <p class="text-[9px]">CONTRATADA</p>
                 <p class="text-[8px]">Representante: ${(process as any).contract?.representative_name || supplier?.rep_name || '________________'}</p>
                 <p class="text-[7px]">CPF: ${(process as any).contract?.representative_cpf || supplier?.rep_cpf || '___.___.___-__'}</p>
+                <p class="text-[7px]">RG: ${(process as any).contract?.representative_rg || supplier?.rep_rg || '___________'}</p>
             </div>
         </div>
 
@@ -969,12 +989,16 @@ export const generateContratoGasHTML = (process: any) => {
                 <div class="border-t border-black pt-1">
                     <p class="font-bold text-[9px]">${(process as any).contract?.terms_json?.witness_1_name?.toUpperCase() || '________________________________________'}</p>
                     <p class="text-[8px]">TESTEMUNHA 01</p>
+                    <p class="text-[7px]">CPF: ${(process as any).contract?.terms_json?.witness_1_cpf || '___.___.___-__'}</p>
+                    <p class="text-[7px]">RG: ${(process as any).contract?.terms_json?.witness_1_rg || '___________'}</p>
                 </div>
             </div>
             <div>
                 <div class="border-t border-black pt-1">
                     <p class="font-bold text-[9px]">${(process as any).contract?.terms_json?.witness_2_name?.toUpperCase() || '________________________________________'}</p>
                     <p class="text-[8px]">TESTEMUNHA 02</p>
+                    <p class="text-[7px]">CPF: ${(process as any).contract?.terms_json?.witness_2_cpf || '___.___.___-__'}</p>
+                    <p class="text-[7px]">RG: ${(process as any).contract?.terms_json?.witness_2_rg || '___________'}</p>
                 </div>
             </div>
         </div>
@@ -995,13 +1019,17 @@ export const generateAditivoHTML = (process: any) => {
     const school = entry?.schools || entry?.school;
     const supplier = entry?.suppliers || entry?.supplier;
 
-    const docDate = new Date();
+    const docDate = (process as any).contract?.start_date ? new Date((process as any).contract.start_date + 'T12:00:00') : new Date();
     const dateLong = docDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
 
     const contractNumber = (process as any).contract?.contract_number || '___/2025';
-    const startDate = (process as any).contract?.start_date ? new Date((process as any).contract.start_date).toLocaleDateString('pt-BR') : '___/___/_____';
-    const endDate = (process as any).contract?.end_date ? new Date((process as any).contract.end_date).toLocaleDateString('pt-BR') : '___/___/_____';
+    const startDate = (process as any).contract?.start_date ? new Date((process as any).contract.start_date + 'T12:00:00').toLocaleDateString('pt-BR') : '___/___/_____';
+    const endDate = (process as any).contract?.end_date ? new Date((process as any).contract.end_date + 'T12:00:00').toLocaleDateString('pt-BR') : '___/___/_____';
     const monthlyValue = (process as any).monthly_value || (process as any).contract?.monthly_value || 0;
+
+    const formattedTotalValue = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format((process as any).contract?.total_value || 0);
+    const docFormattedDate = docDate.toLocaleDateString('pt-BR');
+    const pageTitle = `Termo Aditivo ao Contrato - ${formattedTotalValue} - ${docFormattedDate}`;
 
     return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -1023,9 +1051,9 @@ export const generateAditivoHTML = (process: any) => {
         <h1>TERMO ADITIVO DE PRORROGAÇÃO E REAJUSTE DE CONTRATO</h1>
 
         <div class="text-justified">
-            <p>Pelo presente instrumento particular, de um lado a <strong>${(school?.conselho_escolar || `CONSELHO ESCOLAR DA ESCOLA ESTADUAL ${school?.name || 'UNIDADE EXECUTORA'}`).toUpperCase()}</strong>, inscrita no CNPJ sob o nº ${school?.cnpj || '___.___.___/____-__'}, com sede na ${school?.address || 'ENDEREÇO NÃO CADASTRADO'}, doravante denominada <strong>CONTRATANTE</strong>, representada neste ato por seu Presidente, o(a) Sr(a). <strong>${school?.director?.toUpperCase() || 'DIRETOR(A)'}</strong>.</p>
+            <p>Pelo presente instrumento particular, de um lado a <strong>${(school?.conselho_escolar || `CONSELHO ESCOLAR DA ESCOLA ESTADUAL ${school?.name || 'UNIDADE EXECUTORA'}`).toUpperCase()}</strong>, inscrita no CNPJ sob o nº ${school?.cnpj || '___.___.___/____-__'}, com sede na ${school?.address || 'ENDEREÇO NÃO CADASTRADO'}, doravante denominada <strong>CONTRATANTE</strong>, representada neste ato por seu Presidente, o(a) Sr(a). <strong>${school?.director?.toUpperCase() || 'DIRETOR(A)'}</strong>, portador(a) do RG nº ${school?.director_rg || '___________'} e CPF nº ${school?.director_cpf || '___________'}, residente e domiciliado(a) na ${school?.director_address?.toUpperCase() || 'ENDEREÇO NÃO INFORMADO'}.</p>
 
-            <p class="mt-4">E de outro lado, a empresa <strong>${supplier?.name?.toUpperCase() || 'RAZÃO SOCIAL DO FORNECEDOR'}</strong>, inscrita no CNPJ sob o nº ${supplier?.cnpj || '___.___.___/____-__'}, com sede na ${supplier?.address || 'ENDEREÇO DO FORNECEDOR'}, doravante denominada <strong>CONTRATADA</strong>.</p>
+            <p class="mt-4">E de outro lado, a empresa <strong>${supplier?.name?.toUpperCase() || 'RAZÃO SOCIAL DO FORNECEDOR'}</strong>, inscrita no CNPJ sob o nº ${supplier?.cnpj || '___.___.___/____-__'}, com sede na ${supplier?.address || 'ENDEREÇO DO FORNECEDOR'}, doravante denominada <strong>CONTRATADA</strong>, neste ato representada por <strong>${(process as any).contract?.representative_name || supplier?.rep_name || '____________________'}</strong>, portador(a) do RG nº ${(process as any).contract?.representative_rg || supplier?.rep_rg || '___________'} e CPF nº ${(process as any).contract?.representative_cpf || supplier?.rep_cpf || '___________'}, residente e domiciliado(a) na ${(process as any).contract?.representative_address || supplier?.rep_address?.toUpperCase() || '____________________'}.</p>
 
             <p class="mt-6">As partes acima qualificadas resolvem, de mútuo acordo, aditar o <strong>Contrato nº ${contractNumber}</strong>, originalmente firmado em ${startDate}, mediante as seguintes cláusulas e condições:</p>
 
@@ -1048,26 +1076,34 @@ export const generateAditivoHTML = (process: any) => {
 
         <div class="mt-20 grid grid-cols-2 gap-12 text-center">
             <div class="border-t border-black pt-2">
-                <p class="font-black">${school?.director?.toUpperCase() || 'PRESIDENTE'}</p>
+                <p class="font-black text-[11px]">${school?.director?.toUpperCase() || 'PRESIDENTE'}</p>
                 <p class="text-[9px]">CONTRATANTE</p>
+                <p class="text-[8px]">CPF: ${school?.director_cpf || '___.___.___-__'}</p>
+                <p class="text-[8px]">RG: ${school?.director_rg || '___________'}</p>
             </div>
             <div class="border-t border-black pt-2">
-                <p class="font-black">${supplier?.name?.toUpperCase()}</p>
+                <p class="font-black text-[11px]">${supplier?.name?.toUpperCase()}</p>
                 <p class="text-[9px]">CONTRATADA</p>
+                <p class="text-[7px]">CPF: ${(process as any).contract?.representative_cpf || supplier?.rep_cpf || '___.___.___-__'}</p>
+                <p class="text-[7px]">RG: ${(process as any).contract?.representative_rg || supplier?.rep_rg || '___________'}</p>
             </div>
         </div>
 
         <div class="mt-24 grid grid-cols-2 gap-12 text-center mb-10">
             <div>
                 <div class="border-t border-black pt-1">
-                    <p class="font-bold">${(process as any).contract?.terms_json?.witness_1_name?.toUpperCase() || '________________________________________'}</p>
+                    <p class="font-bold text-[9px]">${(process as any).contract?.terms_json?.witness_1_name?.toUpperCase() || '________________________________________'}</p>
                     <p class="text-[9px]">TESTEMUNHA 01</p>
+                    <p class="text-[8px]">CPF: ${(process as any).contract?.terms_json?.witness_1_cpf || '___.___.___-__'}</p>
+                    <p class="text-[8px]">RG: ${(process as any).contract?.terms_json?.witness_1_rg || '___________'}</p>
                 </div>
             </div>
             <div>
                 <div class="border-t border-black pt-1">
-                    <p class="font-bold">${(process as any).contract?.terms_json?.witness_2_name?.toUpperCase() || '________________________________________'}</p>
+                    <p class="font-bold text-[9px]">${(process as any).contract?.terms_json?.witness_2_name?.toUpperCase() || '________________________________________'}</p>
                     <p class="text-[9px]">TESTEMUNHA 02</p>
+                    <p class="text-[8px]">CPF: ${(process as any).contract?.terms_json?.witness_2_cpf || '___.___.___-__'}</p>
+                    <p class="text-[8px]">RG: ${(process as any).contract?.terms_json?.witness_2_rg || '___________'}</p>
                 </div>
             </div>
         </div>

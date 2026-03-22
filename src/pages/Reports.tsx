@@ -2,7 +2,16 @@
 import React, { useState } from 'react';
 import { User, AccountabilityProcess, UserRole } from '../types';
 import { printDocument } from '../lib/printUtils';
-import { generateAtaHTML, generateConsolidacaoHTML, generateOrdemHTML, generateReciboHTML, generateCotacaoHTML, generateContratoServicoHTML } from '../lib/documentTemplates';
+import { 
+  generateAtaHTML, 
+  generateConsolidacaoHTML, 
+  generateOrdemHTML, 
+  generateReciboHTML, 
+  generateCotacaoHTML, 
+  generateContratoServicoHTML,
+  generateContratoGasHTML,
+  generateAditivoHTML
+} from '../lib/documentTemplates';
 import { supabase } from '../lib/supabaseClient';
 import { usePermissions, useAccessibleSchools } from '../hooks/usePermissions';
 import { useReports } from '../hooks/useReports';
@@ -100,7 +109,16 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
         category: contract.category
       }]
     };
-    const html = generateContratoServicoHTML(pseudoProcess);
+
+    let html = '';
+    if (contract.terms_json?.is_aditivo) {
+      html = generateAditivoHTML(pseudoProcess);
+    } else if (contract.category === 'GÁS') {
+      html = generateContratoGasHTML(pseudoProcess);
+    } else {
+      html = generateContratoServicoHTML(pseudoProcess);
+    }
+    
     printDocument(html);
   };
 

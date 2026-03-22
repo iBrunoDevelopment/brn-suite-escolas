@@ -31,7 +31,7 @@ const EXIT_CATEGORIES = [
     'Devolução de Recurso (FNDE/Estado)',
     'Outros'
 ];
-const ATTACHMENT_CATEGORIES = ['Nota Fiscal', 'Espelho da Nota', 'Comprovante', 'Extrato Bancário', 'CNPJ', 'Certidões', 'Certidão Municipal', 'Certidão Estadual', 'Certidão Federal', 'FGTS', 'Trabalhista', 'Outros'];
+const ATTACHMENT_CATEGORIES = ['Nota Fiscal', 'Espelho da Nota', 'Comprovante', 'Extrato Bancário', 'CNPJ', 'Certidões', 'FGTS', 'Trabalhista', 'Outros'];
 
 const EntryFormModal: React.FC<EntryFormModalProps> = ({
     isOpen,
