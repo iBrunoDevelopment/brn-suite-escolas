@@ -41,7 +41,7 @@ export const useReports = (user: User, filters: ReportsFilters) => {
         queryFn: async () => {
             let entriesQuery = supabase
                 .from('financial_entries')
-                .select('*, schools(*), programs(name), suppliers(id, name, cnpj)')
+                .select('*, schools(*), programs(name), rubrics(name), suppliers(id, name, cnpj)')
                 .eq('type', 'Saída');
 
             if (user.role !== UserRole.ADMIN && user.role !== UserRole.OPERADOR) {
@@ -76,7 +76,7 @@ export const useReports = (user: User, filters: ReportsFilters) => {
                 .from('accountability_processes')
                 .select(`
                     *, 
-                    financial_entries!inner(*, schools(*), programs(name), suppliers(*), payment_methods(name)),
+                    financial_entries!inner(*, schools(*), programs(name), rubrics(name), suppliers(*), payment_methods(name)),
                     accountability_items(*),
                     accountability_quotes(*, suppliers(*), accountability_quote_items(*))
                 `)
@@ -114,7 +114,8 @@ export const useReports = (user: User, filters: ReportsFilters) => {
                     schools(*),
                     suppliers(*),
                     programs(name),
-                    financial_entries(value)
+                    rubrics(name),
+                    financial_entries(date, description, value)
                 `)
                 .order('created_at', { ascending: false });
 

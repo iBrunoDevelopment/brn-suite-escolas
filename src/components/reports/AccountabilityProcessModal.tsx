@@ -117,7 +117,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
             .from('accountability_processes')
             .select(`
                 *,
-                financial_entries!inner(*, schools(*), programs(name), suppliers(*), payment_methods(name)),
+                financial_entries!inner(*, schools(*), programs(name), rubrics(name), suppliers(*), payment_methods(name)),
                 accountability_items(*),
                 accountability_quotes(*, suppliers(*), accountability_quote_items(*))
             `)
@@ -151,7 +151,17 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
             setCompetitorQuotes(competitors);
 
             if (entry?.contract_id) {
-                const { data: contract } = await supabase.from('supplier_contracts').select('*').eq('id', entry.contract_id).single();
+                const { data: contract } = await supabase
+                    .from('supplier_contracts')
+                    .select(`
+                        *,
+                        schools(*),
+                        suppliers(*),
+                        programs(name),
+                        rubrics(name)
+                    `)
+                    .eq('id', entry.contract_id)
+                    .single();
                 setLinkedContract(contract);
                 setIsContractBased(true);
             }
@@ -495,7 +505,13 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
     useEffect(() => {
         if (selectedEntry?.contract_id) {
             supabase.from('supplier_contracts')
-                .select('*')
+                .select(`
+                    *,
+                    schools(*),
+                    suppliers(*),
+                    programs(name),
+                    rubrics(name)
+                `)
                 .eq('id', selectedEntry.contract_id)
                 .single()
                 .then(({ data }) => {

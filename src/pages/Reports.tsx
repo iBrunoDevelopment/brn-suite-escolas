@@ -104,6 +104,7 @@ const Reports: React.FC<{ user: User }> = ({ user }) => {
         schools: contract.schools,
         suppliers: contract.suppliers,
         programs: contract.programs,
+        rubrics: contract.rubrics,
         description: contract.description,
         date: contract.start_date,
         category: contract.category

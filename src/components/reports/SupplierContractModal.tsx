@@ -57,6 +57,14 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({
     const [rubrics, setRubrics] = useState<any[]>([]);
     const [supplierSearch, setSupplierSearch] = useState('');
     const [schoolSearch, setSchoolSearch] = useState('');
+    const [foroCity, setForoCity] = useState('');
+
+    const FORO_CITIES = [
+        'Maceió', 'Arapiraca', 'Marechal Deodoro', 'Palmeira dos Índios', 
+        'União dos Palmares', 'Murici', 'São Miguel dos Campos', 
+        'Santana do Ipanema', 'Delmiro Gouveia', 'Coruripe', 'Penedo', 
+        'Viçosa', 'Atalaia', 'São Luiz do Quitunde', 'Porto Calvo', 'Maragogi', 'Matriz de Camaragibe'
+    ].sort();
 
     useEffect(() => {
         if (isOpen) {
@@ -135,6 +143,7 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({
             setW2Name(terms.witness_2_name || '');
             setW2Cpf(terms.witness_2_cpf || '');
             setW2Rg(terms.witness_2_rg || '');
+            setForoCity(terms.foro_city || '');
         }
     };
 
@@ -191,7 +200,8 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({
                     witness_1_rg: w1Rg,
                     witness_2_name: w2Name,
                     witness_2_cpf: w2Cpf,
-                    witness_2_rg: w2Rg
+                    witness_2_rg: w2Rg,
+                    foro_city: foroCity
                 }
             };
 
@@ -231,6 +241,7 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({
         setW2Name('');
         setW2Cpf('');
         setW2Rg('');
+        setForoCity('');
     };
 
     if (!isOpen) return null;
@@ -517,6 +528,26 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({
                                             onChange={e => setEndDate(e.target.value)}
                                         />
                                     </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest mb-2 block">Cidade do Foro (Comarca)</label>
+                                    <div className="relative group">
+                                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary text-sm">gavel</span>
+                                        <select
+                                            title="Selecionar Cidade do Foro"
+                                            value={foroCity}
+                                            onChange={e => setForoCity(e.target.value)}
+                                            aria-label="Selecionar Cidade do Foro"
+                                            className="w-full bg-black/40 border border-white/10 rounded-2xl h-14 pl-12 pr-5 text-white outline-none focus:border-primary transition-all appearance-none text-xs font-bold"
+                                        >
+                                            <option value="">Automático (Baseado na Escola)</option>
+                                            {FORO_CITIES.map(city => (
+                                                <option key={city} value={city}>{city}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <p className="text-[9px] text-slate-500 mt-2 font-bold uppercase italic">* Se não selecionado, o sistema usará a cidade polo da região da escola.</p>
                                 </div>
                             </div>
                         </section>
