@@ -76,16 +76,18 @@ export const useReports = (user: User, filters: ReportsFilters) => {
                 .from('accountability_processes')
                 .select(`
                     *, 
-                    financial_entries!inner(*, schools(*), programs(name), rubrics(name), suppliers(*), payment_methods(name)),
+                    financial_entries(*, schools(*), programs(name), rubrics(name), suppliers(*), payment_methods(name)),
                     accountability_items(*),
                     accountability_quotes(*, suppliers(*), accountability_quote_items(*))
                 `)
                 .order('created_at', { ascending: false });
 
             if (filters.schoolId) query = query.eq('school_id', filters.schoolId);
+            // We use or condition to filter by program_id either in entries or in the process itself if we add it, 
+            // but for now let's just make the entry join optional
             if (filters.programId) query = query.eq('financial_entries.program_id', filters.programId);
             if (filters.status) query = query.eq('status', filters.status);
-            if (filters.search) query = query.ilike('financial_entries.description', `%${filters.search}%`);
+            if (filters.search) query = query.or(`description.ilike.%${filters.search}%,financial_entries.description.ilike.%${filters.search}%`);
 
             if (user.role !== UserRole.ADMIN && user.role !== UserRole.OPERADOR) {
                 if (user.role === UserRole.DIRETOR || user.role === UserRole.CLIENTE) {

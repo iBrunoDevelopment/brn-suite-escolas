@@ -117,7 +117,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
             .from('accountability_processes')
             .select(`
                 *,
-                financial_entries!inner(*, schools(*), programs(name), rubrics(name), suppliers(*), payment_methods(name)),
+                financial_entries(*, schools(*), programs(name), rubrics(name), suppliers(*), payment_methods(name)),
                 accountability_items(*),
                 accountability_quotes(*, suppliers(*), accountability_quote_items(*))
             `)
@@ -135,7 +135,6 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
 
             const docItems = process.accountability_items || [];
             setItems(docItems);
-            setIsContractBased(process.is_contract_based || false);
 
             const competitors = (process.accountability_quotes || [])
                 .filter((q: any) => !q.is_winner)
@@ -150,7 +149,9 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
 
             setCompetitorQuotes(competitors);
 
-            if (entry?.contract_id) {
+            const contractIdToFetch = entry?.contract_id || process.contract_id;
+
+            if (contractIdToFetch) {
                 const { data: contract } = await supabase
                     .from('supplier_contracts')
                     .select(`
@@ -160,10 +161,10 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                         programs(name),
                         rubrics(name)
                     `)
-                    .eq('id', entry.contract_id)
+                    .eq('id', contractIdToFetch)
                     .single();
                 setLinkedContract(contract);
-                setIsContractBased(true);
+                if (entry) setIsContractBased(true);
             }
 
             while (competitors.length < 2) {
@@ -214,17 +215,18 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
     };
 
     const handleSave = async () => {
-        if (!selectedEntry) return;
+        if (!selectedEntry && !linkedContract) return;
         if (!isContractBased && competitorQuotes.some(q => !q.supplier_id)) {
             return addToast('Selecione os 2 fornecedores proponentes (ou ative Serviço sob Contrato).', 'warning');
         }
 
         const subtotal = items.reduce((acc, it) => acc + ((it.quantity || 0) * (it.winner_unit_price || 0)), 0);
         const totalAfterDiscount = subtotal - discount;
-        const targetValue = Math.abs(selectedEntry.value);
+        const targetValue = selectedEntry ? Math.abs(selectedEntry.value) : (linkedContract?.total_value || 0);
 
         if (Math.abs(totalAfterDiscount - targetValue) > 0.01) {
-            return addToast(`O valor líquido (${formatCurrency(totalAfterDiscount)}) não corresponde ao valor da nota (${formatCurrency(targetValue)}).`, 'error');
+            const errorLabel = selectedEntry ? 'valor da nota' : 'valor total do contrato';
+            return addToast(`O valor líquido (${formatCurrency(totalAfterDiscount)}) não corresponde ao ${errorLabel} (${formatCurrency(targetValue)}).`, 'error');
         }
 
         setLoading(true);
@@ -238,7 +240,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                     discount,
                     checklist,
                     attachments: processAttachments,
-                    contract_id: selectedEntry.contract_id || null,
+                    contract_id: selectedEntry?.contract_id || linkedContract?.id || null,
                     updated_at: new Date().toISOString()
                 }).eq('id', editingId);
 
@@ -246,13 +248,13 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                 await supabase.from('accountability_quotes').delete().eq('process_id', editingId);
             } else {
                 const { data: process, error: pError } = await supabase.from('accountability_processes').insert({
-                    financial_entry_id: selectedEntry.id,
-                    school_id: selectedEntry.school_id,
+                    financial_entry_id: selectedEntry?.id || null,
+                    school_id: selectedEntry?.school_id || linkedContract?.school_id,
                     status: processStatus,
                     is_contract_based: isContractBased,
                     discount,
                     checklist,
-                    contract_id: selectedEntry.contract_id || null,
+                    contract_id: selectedEntry?.contract_id || linkedContract?.id || null,
                     attachments: processAttachments
                 }).select().single();
                 if (pError) throw pError;
@@ -269,9 +271,9 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
 
             await supabase.from('accountability_quotes').insert({
                 process_id: processId,
-                supplier_id: selectedEntry.supplier_id,
-                supplier_name: (selectedEntry as any).suppliers?.name || 'Vencedor',
-                supplier_cnpj: (selectedEntry as any).suppliers?.cnpj || null,
+                supplier_id: selectedEntry?.supplier_id || linkedContract?.supplier_id,
+                supplier_name: (selectedEntry as any)?.suppliers?.name || linkedContract?.suppliers?.name || 'Vencedor',
+                supplier_cnpj: (selectedEntry as any)?.suppliers?.cnpj || linkedContract?.suppliers?.cnpj || null,
                 is_winner: true,
                 total_value: subtotal
             });
@@ -298,7 +300,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                 }
             }
 
-            if (processStatus === 'Concluído') {
+            if (processStatus === 'Concluído' && selectedEntry) {
                 await supabase.from('financial_entries').update({ status: 'Consolidado' }).eq('id', selectedEntry.id);
             }
 
@@ -524,8 +526,7 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
     }, [selectedEntry]);
 
     const ValueCounter = () => {
-        if (!selectedEntry) return null;
-        const target = Math.abs(selectedEntry.value);
+        const target = selectedEntry ? Math.abs(selectedEntry.value) : (linkedContract?.total_value || 0);
         const subtotal = items.reduce((acc, it) => acc + ((it.quantity || 0) * (it.winner_unit_price || 0)), 0);
         const totalAfterDiscount = subtotal - discount;
         const remaining = target - totalAfterDiscount;
@@ -534,7 +535,9 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
         return (
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 bg-white/[0.02] p-4 md:p-6 rounded-2xl md:rounded-3xl border border-white/5 shadow-2xl">
                 <div className="flex flex-col gap-1.5 p-3 bg-black/20 rounded-xl md:rounded-2xl border border-white/5">
-                    <span className="text-[8px] uppercase font-black text-slate-500 tracking-widest leading-none">Lançamento</span>
+                    <span className="text-[8px] uppercase font-black text-slate-500 tracking-widest leading-none">
+                        {selectedEntry ? 'Lançamento' : 'Valor Contrato'}
+                    </span>
                     <span className="text-[11px] md:text-[13px] font-bold text-white whitespace-nowrap">{formatCurrency(target)}</span>
                 </div>
                 <div className="flex flex-col gap-1.5 p-3 bg-black/20 rounded-xl md:rounded-2xl border border-white/5">
@@ -595,8 +598,8 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                                     <div className="md:col-span-2">
                                         <label htmlFor="entry_select" className="text-[8px] md:text-[10px] font-black uppercase text-primary tracking-widest md:tracking-[0.25em] mb-3 block opacity-60">1. Lançamento Base</label>
                                         <button id="entry_select" onClick={() => setShowEntryModal(true)} className="w-full bg-black/40 border border-white/10 rounded-xl md:rounded-2xl h-12 md:h-14 px-4 md:px-5 flex items-center justify-between hover:border-primary/40 hover:bg-black/60 transition-all group/btn">
-                                            <span className={`text-[11px] truncate uppercase tracking-tight ${selectedEntry ? 'text-white font-black' : 'text-slate-600 italic font-bold'}`}>
-                                                {selectedEntry ? selectedEntry.description : 'Selecionar...'}
+                                            <span className={`text-[11px] truncate uppercase tracking-tight ${selectedEntry || linkedContract ? 'text-white font-black' : 'text-slate-600 italic font-bold'}`}>
+                                                {selectedEntry ? selectedEntry.description : linkedContract ? `COTAÇÃO INICIAL: ${linkedContract.description.substring(0, 30)}...` : 'Selecionar...'}
                                             </span>
                                             <span className="material-symbols-outlined text-primary/30 group-hover/btn:text-primary transition-all text-sm">receipt</span>
                                         </button>
@@ -612,14 +615,16 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 items-end">
                                     <div className="md:col-span-2">
-                                        {selectedEntry && (
+                                        {(selectedEntry || linkedContract) && (
                                             <div className="h-12 md:h-14 px-4 md:px-5 bg-primary/5 border border-primary/10 rounded-xl md:rounded-2xl flex items-center gap-3">
                                                 <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
                                                     <span className="material-symbols-outlined text-sm md:text-[18px] font-black">verified</span>
                                                 </div>
                                                 <div className="truncate">
                                                     <span className="text-[7px] font-black text-primary/60 uppercase tracking-widest block mb-0.5">Vencedor</span>
-                                                    <span className="text-[10px] md:text-[12px] font-black text-white uppercase truncate block">{(selectedEntry as any).suppliers?.name || 'N/A'}</span>
+                                                    <span className="text-[10px] md:text-[12px] font-black text-white uppercase truncate block">
+                                                        {(selectedEntry as any)?.suppliers?.name || linkedContract?.suppliers?.name || 'N/A'}
+                                                    </span>
                                                 </div>
                                             </div>
                                         )}
@@ -682,6 +687,9 @@ const AccountabilityProcessModal: React.FC<AccountabilityProcessModalProps> = ({
                                 <div className="grid grid-cols-1 gap-2.5">
                                     {checklist.map((item, idx) => {
                                         if (isContractBased && item.id === 'quotations') return null;
+                                        // Hide Invoice/Payment items for initial Contract Cotação (Award) processes
+                                        if (!selectedEntry && (item.id === 'invoice' || item.id === 'payment_proof')) return null;
+                                        
                                         return (
                                             <label key={item.id} className="flex items-center gap-3 p-3.5 md:p-4.5 bg-black/30 rounded-xl md:rounded-[24px] border border-white/5 cursor-pointer hover:bg-white/[0.04] transition-all group/check shrink-0">
                                                 <div className={`w-6 h-6 md:w-7 md:h-7 rounded-lg md:rounded-xl flex items-center justify-center border-2 transition-all shrink-0 ${item.checked ? 'bg-primary border-primary text-white' : 'border-white/10 group-hover/check:border-primary/40'}`}>

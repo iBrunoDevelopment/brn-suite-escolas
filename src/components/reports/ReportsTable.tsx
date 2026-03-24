@@ -19,10 +19,17 @@ const ReportsTable: React.FC<ReportsTableProps> = ({ processes, onEdit, onDelete
                     <p>Nenhuma prestação de contas encontrada com os filtros selecionados.</p>
                 </div>
             ) : processes.map(process => {
-                const entry = (process as any).financial_entry || (process as any).financial_entries;
-                const schoolName = entry?.schools?.name || 'Escola não informada';
+                const entry = (process as any).financial_entries;
+                const isAwardProcess = !entry && process.contract_id;
+                const schoolName = entry?.schools?.name || (process as any).schools?.name || '---';
+                const description = entry?.description || (process as any).description || (isAwardProcess ? 'Documentação Inicial de Contrato' : 'Processo sem descrição');
+                const supplierName = entry?.suppliers?.name || (process as any).accountability_quotes?.find((q: any) => q.is_winner)?.supplier_name || '---';
+                const dateStr = entry?.date || (process as any).created_at;
+                const value = Math.abs(entry?.value || (process as any).accountability_quotes?.find((q: any) => q.is_winner)?.total_value || 0);
+
                 return (
-                    <div key={process.id} className="bg-surface-dark border border-surface-border rounded-2xl p-4 md:p-6 hover:border-primary/40 transition-all flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 group overflow-hidden">
+                    <div key={process.id} className={`bg-surface-dark border ${isAwardProcess ? 'border-primary/20 bg-primary/[0.02]' : 'border-surface-border'} rounded-2xl p-4 md:p-6 hover:border-primary/40 transition-all flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 group overflow-hidden`}>
+
                         <div className="flex items-start md:items-center gap-4 w-full lg:flex-1 min-w-0">
                             <div className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center ${process.status === 'Concluído' ? 'bg-green-500/10 text-green-400' : 'bg-primary/10 text-primary'}`}>
                                 <span className="material-symbols-outlined text-3xl font-light">
@@ -31,8 +38,13 @@ const ReportsTable: React.FC<ReportsTableProps> = ({ processes, onEdit, onDelete
                             </div>
                             <div className="flex flex-col gap-1 min-w-0 flex-1">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                    <h3 className="font-bold text-white group-hover:text-primary transition-colors truncate text-sm md:text-base">{entry?.description}</h3>
-                                    <span className="text-[9px] bg-white/5 text-slate-400 px-2 py-0.5 rounded border border-white/10 font-black uppercase whitespace-nowrap">{entry?.nature}</span>
+                                    <h3 className="font-bold text-white group-hover:text-primary transition-colors truncate text-sm md:text-base">{description}</h3>
+                                    {isAwardProcess && (
+                                        <span className="text-[8px] bg-primary/20 text-primary px-2 py-0.5 rounded border border-primary/20 font-black uppercase whitespace-nowrap flex items-center gap-1">
+                                            <span className="material-symbols-outlined text-[10px]">history_edu</span> Cotação de Contrato
+                                        </span>
+                                    )}
+                                    <span className="text-[9px] bg-white/5 text-slate-400 px-2 py-0.5 rounded border border-white/10 font-black uppercase whitespace-nowrap">{entry?.nature || 'LICITAÇÃO'}</span>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:flex lg:flex-wrap gap-x-4 gap-y-2 mt-2">
                                     <span className="text-[10px] uppercase font-black text-slate-300 flex items-center gap-1.5 min-w-0">
@@ -41,23 +53,23 @@ const ReportsTable: React.FC<ReportsTableProps> = ({ processes, onEdit, onDelete
                                     </span>
                                     <span className="text-[10px] uppercase font-black text-slate-500 flex items-center gap-1.5 min-w-0">
                                         <span className="material-symbols-outlined text-sm shrink-0">person</span>
-                                        <span className="truncate">{entry?.suppliers?.name || 'Sem Fornecedor'}</span>
+                                        <span className="truncate">{supplierName}</span>
                                     </span>
                                     <span className="text-[10px] uppercase font-black text-slate-500 flex items-center gap-1.5 whitespace-nowrap">
                                         <span className="material-symbols-outlined text-sm shrink-0">calendar_month</span>
-                                        {entry?.date ? new Date(entry.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '---'}
+                                        {dateStr ? new Date(dateStr).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '---'}
                                     </span>
                                     <span className="text-[10px] uppercase font-black text-primary flex items-center gap-1.5 min-w-0">
                                         <span className="material-symbols-outlined text-sm shrink-0">account_balance</span>
-                                        <span className="truncate">{entry?.programs?.name}</span>
+                                        <span className="truncate">{entry?.programs?.name || (process as any).programs?.name || '---'}</span>
                                     </span>
                                 </div>
                             </div>
                         </div>
 
                         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between lg:justify-end gap-5 w-full lg:w-auto pt-5 lg:pt-0 border-t lg:border-t-0 border-white/5 min-w-0">
-                            <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-1.5 px-1 md:px-0 shrink-0">
-                                <span className="text-xl font-black text-white">{formatCurrency(Math.abs(entry?.value || 0))}</span>
+                             <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-1.5 px-1 md:px-0 shrink-0">
+                                <span className="text-xl font-black text-white">{formatCurrency(value)}</span>
                                 <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${process.status === 'Concluído' ? 'bg-green-500/10 text-green-500' : 'bg-primary/10 text-primary'}`}>
                                     {process.status}
                                 </span>

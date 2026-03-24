@@ -210,8 +210,42 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({
                 if (error) throw error;
                 addToast('Contrato atualizado com sucesso!', 'success');
             } else {
-                const { error } = await supabase.from('supplier_contracts').insert([payload]);
-                if (error) throw error;
+                const { data: newContract, error: cError } = await supabase.from('supplier_contracts').insert([payload]).select().single();
+                if (cError) throw cError;
+
+                // Automatically create initial "Award/Quotation" accountability process
+                if (creationMode === 'NEW') {
+                    const { data: process, error: pError } = await supabase.from('accountability_processes').insert({
+                        school_id: schoolId,
+                        contract_id: newContract.id,
+                        status: 'Em Andamento',
+                        is_contract_based: false, // This is the search-of-prices phase
+                        description: `COTAÇÃO DE PREÇOS: ${description.toUpperCase()}`
+                    }).select().single();
+
+                    if (!pError) {
+                        // Add the main contract item to the process
+                        await supabase.from('accountability_items').insert({
+                            process_id: process.id,
+                            description: description.toUpperCase(),
+                            quantity: parseInt(durationMonths) || 1,
+                            unit: 'Mês',
+                            winner_unit_price: parseFloat(monthlyValue)
+                        });
+
+                        // Add the winner quote
+                        const supplier = auxData.suppliers.find(s => s.id === supplierId);
+                        await supabase.from('accountability_quotes').insert({
+                            process_id: process.id,
+                            supplier_id: supplierId,
+                            supplier_name: supplier?.name || 'Vencedor',
+                            supplier_cnpj: supplier?.cnpj || null,
+                            is_winner: true,
+                            total_value: parseFloat(totalValue) || 0
+                        });
+                    }
+                }
+                
                 addToast('Contrato registrado com sucesso!', 'success');
             }
             onSave();
