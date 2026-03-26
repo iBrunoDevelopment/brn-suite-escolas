@@ -70,18 +70,18 @@ const ReconciliationHistoryModal: React.FC<ReconciliationHistoryModalProps> = ({
                                         <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-[60px] pointer-events-none" />
                                     )}
 
-                                    <div className="flex flex-col md:flex-row justify-between gap-6 relative z-10">
+                                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 relative z-10">
                                         {/* Info Side */}
-                                        <div className="flex gap-6">
-                                            <div className="flex flex-col items-center justify-center min-w-[70px] bg-black/20 rounded-2xl p-2 h-fit border border-white/5">
+                                        <div className="flex gap-4 flex-1">
+                                            <div className="flex flex-col items-center justify-center min-w-[64px] bg-black/20 rounded-xl p-2 h-fit border border-white/5">
                                                 <span className="text-[10px] font-black text-primary uppercase tracking-tighter">
                                                     {new Date(0, record.month - 1).toLocaleString('pt-BR', { month: 'short' }).toUpperCase()}
                                                 </span>
                                                 <span className="text-xl font-black text-white leading-none">{record.year}</span>
                                             </div>
 
-                                            <div className="flex flex-col gap-1">
-                                                <div className="flex items-center gap-2">
+                                            <div className="flex flex-col gap-0.5">
+                                                <div className="flex items-center gap-2 flex-wrap">
                                                     <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${record.account_type === 'Conta Investimento' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
                                                         {record.account_type}
                                                     </span>
@@ -90,7 +90,7 @@ const ReconciliationHistoryModal: React.FC<ReconciliationHistoryModalProps> = ({
                                                         {record.users?.name || 'Sistema'}
                                                     </span>
                                                 </div>
-                                                <h3 className="text-white font-black text-sm uppercase tracking-tight">{record.bank_accounts?.name}</h3>
+                                                <h3 className="text-white font-black text-sm uppercase tracking-tight truncate max-w-[200px]">{record.bank_accounts?.name}</h3>
                                                 <p className="text-slate-500 text-[10px] font-medium flex items-center gap-1">
                                                     <span className="material-symbols-outlined text-[12px]">account_balance</span>
                                                     {record.bank_accounts?.bank_name} • AG: {record.bank_accounts?.agency} • CTA: {record.bank_accounts?.account_number}
@@ -100,22 +100,22 @@ const ReconciliationHistoryModal: React.FC<ReconciliationHistoryModalProps> = ({
 
                                         {/* Data Side (Investment Totals) */}
                                         {record.account_type === 'Conta Investimento' && (
-                                            <div className="flex gap-4 bg-black/20 rounded-2xl p-4 border border-white/5">
-                                                <div className="flex flex-col gap-0.5 min-w-[100px]">
+                                            <div className="flex gap-2 bg-black/20 rounded-xl p-3 border border-white/5 flex-wrap sm:flex-nowrap">
+                                                <div className="flex flex-col gap-0.5 min-w-[80px]">
                                                     <span className="text-[8px] font-black text-slate-500 uppercase">Rendimento</span>
                                                     <span className="text-xs font-black text-emerald-400">
                                                         {Number(record.reported_revenue || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                                     </span>
                                                 </div>
-                                                <div className="w-px h-full bg-white/5" />
-                                                <div className="flex flex-col gap-0.5 min-w-[100px]">
+                                                <div className="w-px h-8 bg-white/5 hidden sm:block" />
+                                                <div className="flex flex-col gap-0.5 min-w-[80px]">
                                                     <span className="text-[8px] font-black text-slate-500 uppercase">Impostos</span>
                                                     <span className="text-xs font-black text-rose-400">
                                                         {Number(record.reported_taxes || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                                     </span>
                                                 </div>
-                                                <div className="w-px h-full bg-white/5" />
-                                                <div className="flex flex-col gap-0.5 min-w-[100px]">
+                                                <div className="w-px h-8 bg-white/5 hidden sm:block" />
+                                                <div className="flex flex-col gap-0.5 min-w-[80px]">
                                                     <span className="text-[8px] font-black text-slate-500 uppercase">Saldo Final</span>
                                                     <span className="text-xs font-black text-white">
                                                         {Number(record.reported_balance || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
@@ -125,16 +125,16 @@ const ReconciliationHistoryModal: React.FC<ReconciliationHistoryModalProps> = ({
                                         )}
 
                                         {/* Actions Side */}
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                                             {record.pdf_url && (
                                                 <a
                                                     href={record.pdf_url}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="flex items-center gap-2 px-4 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-2xl transition-all"
+                                                    className="flex items-center gap-2 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-xl transition-all"
                                                 >
                                                     <span className="material-symbols-outlined text-xl">picture_as_pdf</span>
-                                                    <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Extrato PDF</span>
+                                                    <span className="text-[9px] font-black uppercase tracking-widest whitespace-nowrap">PDF</span>
                                                 </a>
                                             )}
                                             {record.file_url && (
@@ -142,16 +142,16 @@ const ReconciliationHistoryModal: React.FC<ReconciliationHistoryModalProps> = ({
                                                     href={record.file_url}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="flex items-center gap-2 px-4 py-3 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 rounded-2xl transition-all"
+                                                    className="flex items-center gap-2 px-3 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 rounded-xl transition-all"
                                                 >
                                                     <span className="material-symbols-outlined text-xl">database</span>
-                                                    <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Dados (OFX/CSV)</span>
+                                                    <span className="text-[9px] font-black uppercase tracking-widest whitespace-nowrap">DADOS</span>
                                                 </a>
                                             )}
                                             <button
                                                 onClick={() => handleDelete(record.id)}
                                                 disabled={deleteMutation.isPending}
-                                                className="flex items-center justify-center w-11 h-11 bg-white/5 hover:bg-rose-500/10 text-slate-500 hover:text-rose-500 border border-white/5 rounded-2xl transition-all disabled:opacity-50"
+                                                className="flex items-center justify-center w-10 h-10 bg-white/5 hover:bg-rose-500/10 text-slate-500 hover:text-rose-500 border border-white/5 rounded-xl transition-all disabled:opacity-50 shrink-0"
                                                 title="Excluir Extrato"
                                             >
                                                 <span className="material-symbols-outlined text-xl">delete</span>
