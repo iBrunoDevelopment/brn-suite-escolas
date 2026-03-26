@@ -126,7 +126,7 @@ export const useSettings = (user: User) => {
     const { data: billingRecords = [], isLoading: loadingBilling } = useQuery({
         queryKey: ['platform_billing', user.schoolId],
         queryFn: async () => {
-            let query = supabase.from('platform_billing').select('*, schools(name, plan_id, custom_price, discount_value)').order('reference_month', { ascending: false });
+            let query = supabase.from('platform_billing').select('*, schools(name, plan_id, custom_price, discount_value, address, city, uf, cnpj)').order('reference_month', { ascending: false });
 
             // If not admin/operator, filter by assigned school
             if (user.role !== 'Administrador' && user.role !== 'Operador') {
