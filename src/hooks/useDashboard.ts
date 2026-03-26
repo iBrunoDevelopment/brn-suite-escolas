@@ -416,10 +416,12 @@ export const useDashboard = (user: User) => {
 
             if (diff > 0.05) { // More than 5 cents tolerance
                 const monthName = new Date(upload.year, upload.month - 1).toLocaleString('pt-BR', { month: 'long' });
+                const programName = auxData.programs.find((p: any) => p.id === acc?.program_id)?.name || 'N/A';
+                
                 alerts.push({
                     id: `yield-divergence-${upload.id}`,
                     title: 'Divergência de Rendimento',
-                    description: `A escola ${sch?.name || 'Escola'} informou R$ ${Number(upload.reported_revenue).toFixed(2)} de rendimento no extrato de ${monthName}, mas o sistema possui apenas R$ ${totalSystemRevenue.toFixed(2)} lançados.`,
+                    description: `Divergência detectada no programa ${programName} (Conta: ${acc?.name || 'N/A'}). A escola ${sch?.name || 'Escola'} informou R$ ${Number(upload.reported_revenue).toFixed(2)} de rendimento no extrato de ${monthName}, mas o sistema possui apenas R$ ${totalSystemRevenue.toFixed(2)} lançados.`,
                     severity: 'Crítico',
                     category: 'Auditoria',
                     schoolId: upload.school_id,
