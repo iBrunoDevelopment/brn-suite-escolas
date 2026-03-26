@@ -73,6 +73,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
     const [linkedStatement, setLinkedStatement] = React.useState<any>(null);
     const [selectedContractId, setSelectedContractId] = React.useState('');
     const [schoolContracts, setSchoolContracts] = React.useState<any[]>([]);
+    const [auditInfo, setAuditInfo] = React.useState<{ created_by?: string; updated_by?: string; created_at?: string } | null>(null);
 
     const [isSplitMode, setIsSplitMode] = React.useState(false);
     const [splitItems, setSplitItems] = React.useState<SplitItem[]>([]);
@@ -202,6 +203,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                     })));
                     const total = entries.reduce((acc: number, e: any) => acc + Math.abs(e.value), 0);
                     setTotalValue(total.toString());
+                    setAuditInfo({
+                        created_by: first.created_by_name,
+                        updated_by: first.updated_by_name,
+                        created_at: first.created_at
+                    });
                     fetchLinkedStatement(first.bank_account_id, first.payment_date || first.date);
                 }
             } else if (editingId) {
@@ -233,6 +239,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                     setSingleRubricId(data.rubric_id || '');
                     setSelectedContractId(data.contract_id || '');
                     setSingleNature(data.nature);
+                    setAuditInfo({
+                        created_by: data.created_by_name,
+                        updated_by: data.updated_by_name,
+                        created_at: data.created_at
+                    });
                     fetchLinkedStatement(data.bank_account_id, data.payment_date || data.date);
                 }
             }
@@ -251,16 +262,26 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
     }, [selectedBankAccountId, date, paymentDate]);
 
     const fetchLogs = async () => {
-        const id = editingId || (editingBatchId ? editingBatchId : null);
-        if (!id) return;
+        if (!editingId && !editingBatchId) return;
         try {
-            const { data, error } = await supabase
-                .from('audit_logs')
-                .select('*')
-                .or(`entry_id.eq.${editingId},details.ilike.%${editingBatchId}%`)
-                .order('timestamp', { ascending: false });
-            if (error) throw error;
-            setEntryLogs(data || []);
+            let query = supabase.from('audit_logs').select('*');
+            
+            if (editingId && editingBatchId) {
+                query = query.or(`entry_id.eq.${editingId},details.ilike.%${editingBatchId}%`);
+            } else if (editingId) {
+                query = query.eq('entry_id', editingId);
+            } else if (editingBatchId) {
+                query = query.ilike('details', `%${editingBatchId}%`);
+            }
+            
+            const { data, error } = await query.order('timestamp', { ascending: false });
+            if (error) {
+                // Tenta fallback apenas por ID caso a tabela audit_logs ainda não tenha a coluna details
+                const fallback = await supabase.from('audit_logs').select('*').eq('entry_id', editingId).order('timestamp', { ascending: false });
+                setEntryLogs(fallback.data || []);
+            } else {
+                setEntryLogs(data || []);
+            }
         } catch (error) {
             console.error('Erro ao buscar logs:', error);
         }
@@ -407,7 +428,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                     document_number: documentNumber || null, auth_number: authNumber || null,
                     payment_date: paymentDate || null,
                     attachments, batch_id: batchId,
-                    contract_id: selectedContractId || null
+                    contract_id: selectedContractId || null,
+                    created_by_name: editingBatchId ? undefined : user.name,
+                    updated_by_name: user.name
                 }));
                 const { data: savedEntries, error } = await supabase.from('financial_entries').insert(entriesToSave).select();
                 if (error) throw error;
@@ -415,7 +438,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                     await supabase.from('audit_logs').insert({
                         entry_id: savedEntries[0].id, user_name: user.name, action: editingBatchId ? 'UPDATE' : 'CREATE',
                         details: editingBatchId ? `Edição de lote (rateio) - ID Lote: ${batchId}` : `Criação de lote (rateio) - ID Lote: ${batchId}`
-                    });
+                    }).select();
                 }
             } else {
                 const payload = {
@@ -426,7 +449,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                     invoice_date: invoiceDate || null, document_number: documentNumber || null,
                     auth_number: authNumber || null, payment_date: paymentDate || null,
                     attachments, batch_id: null,
-                    contract_id: selectedContractId || null
+                    contract_id: selectedContractId || null,
+                    created_by_name: editingId ? undefined : user.name,
+                    updated_by_name: user.name
                 };
                 const { data: savedData, error } = editingId
                     ? await supabase.from('financial_entries').update(payload).eq('id', editingId).select().single()
@@ -443,7 +468,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                         entry_id: savedId, user_name: user.name, action: editingId ? 'UPDATE' : 'CREATE',
                         changes: editingId ? (Object.keys(changes).length > 0 ? changes : null) : null,
                         details: editingId ? 'Alteração de dados cadastrais' : 'Criação do lançamento'
-                    });
+                    }).select();
                 }
             }
             onSave();
@@ -982,6 +1007,36 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({
                                 </div>
                             )}
                         </div>
+
+                        {/* Audit Info Display */}
+                        {auditInfo && (
+                            <div className="mt-8 pt-6 border-t border-white/5 flex flex-wrap gap-x-8 gap-y-3 opacity-60">
+                                {auditInfo.created_by && (
+                                    <div className="flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-sm text-slate-500">add_circle</span>
+                                        <p className="text-[10px] uppercase font-black tracking-widest text-slate-400">
+                                            Criado por: <span className="text-white ml-1">{auditInfo.created_by}</span>
+                                        </p>
+                                    </div>
+                                )}
+                                {auditInfo.updated_by && auditInfo.updated_by !== auditInfo.created_by && (
+                                    <div className="flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-sm text-slate-500">edit</span>
+                                        <p className="text-[10px] uppercase font-black tracking-widest text-slate-400">
+                                            Última edição: <span className="text-white ml-1">{auditInfo.updated_by}</span>
+                                        </p>
+                                    </div>
+                                )}
+                                {auditInfo.created_at && (
+                                    <div className="flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-sm text-slate-500">calendar_today</span>
+                                        <p className="text-[10px] uppercase font-black tracking-widest text-slate-400">
+                                            Em: <span className="text-white ml-1">{new Date(auditInfo.created_at).toLocaleString('pt-BR')}</span>
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
