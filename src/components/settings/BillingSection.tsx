@@ -210,6 +210,90 @@ const BillingSection: React.FC<BillingSectionProps> = ({
         setCreateModalOpen(false);
         setNewItem({ school_id: '', amount: '', description: '', reference_month: '' });
     };
+    const handlePrintReceipt = (record: PlatformBilling) => {
+        const school = record.schools;
+        const paid = Number(record.paid_amount) || Number(record.amount);
+        const date = record.payment_date ? new Date(record.payment_date) : new Date();
+        const formattedDate = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+
+        const printContent = `
+            <html>
+                <head>
+                    <title>Recibo de Pagamento - ${school?.name || 'Escola'}</title>
+                    <style>
+                        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+                        body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; background: white; }
+                        .receipt-container { max-width: 800px; margin: 0 auto; border: 2px solid #e2e8f0; padding: 40px; position: relative; }
+                        .header { text-align: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 20px; margin-bottom: 30px; }
+                        .brn-logo { font-weight: 900; font-size: 24px; color: #0f172a; margin-bottom: 5px; }
+                        .brn-sub { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 2px; }
+                        .title { font-size: 48px; font-weight: 900; color: #f1f5f9; position: absolute; top: 10px; right: 40px; text-transform: uppercase; z-index: -1; }
+                        .info-row { display: flex; justify-content: space-between; margin-bottom: 40px; }
+                        .val-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px 25px; border-radius: 12px; }
+                        .val-label { font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; margin-bottom: 5px; }
+                        .val-amount { font-size: 24px; font-weight: 900; color: #0f172a; }
+                        .content { line-height: 1.8; font-size: 16px; text-align: justify; margin-bottom: 60px; }
+                        .content b { color: #0f172a; }
+                        .footer { margin-top: 100px; display: flex; flex-direction: column; align-items: center; }
+                        .sig-line { width: 300px; border-top: 1px solid #1e293b; margin-bottom: 10px; }
+                        .sig-name { font-weight: 900; font-size: 12px; text-transform: uppercase; }
+                        .sig-sub { font-size: 10px; color: #64748b; }
+                        .date-line { text-align: right; font-style: italic; font-size: 14px; color: #64748b; margin-bottom: 40px; }
+                        @media print { .no-print { display: none; } }
+                    </style>
+                </head>
+                <body>
+                    <div class="receipt-container">
+                        <div class="title">Recibo</div>
+                        <div class="header">
+                            <div class="brn-logo">BRN GROUP</div>
+                            <div class="brn-sub">Assessoria e Tecnologia Educacional</div>
+                        </div>
+
+                        <div class="info-row">
+                            <div>
+                                <div class="val-label">Documento</div>
+                                <div style="font-weight: 700; font-size: 14px;">#FAT-${record.id.slice(0, 8).toUpperCase()}</div>
+                            </div>
+                            <div class="val-box">
+                                <div class="val-label">Valor Recebido</div>
+                                <div class="val-amount">${formatCurrency(paid)}</div>
+                            </div>
+                        </div>
+
+                        <div class="content">
+                            Recebemos de <b>${school?.name || 'N/A'}</b>, 
+                            ${school?.cnpj ? `inscrito sob o CNPJ <b>${school.cnpj}</b>,` : ''}
+                            localizado em ${school?.address || 'Endereço não informado'}, ${school?.city || ''}/${school?.uf || ''}, 
+                            a importância de <b>${formatCurrency(paid)}</b>, 
+                            referente ao pagamento de <b>${record.description || 'Mensalidade'}</b> 
+                            do período de <b>${record.reference_month.slice(0, 7)}</b>.
+                        </div>
+
+                        <div class="date-line">
+                            ${school?.city || 'João Pessoa'}, ${formattedDate}
+                        </div>
+
+                        <div class="footer">
+                            <div class="sig-line"></div>
+                            <div class="sig-name">BRN GROUP</div>
+                            <div class="sig-sub">Departamento Financeiro</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 30px; text-align: center;" class="no-print">
+                        <button onclick="window.print()" style="padding: 10px 20px; background: #0f172a; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 700;">Imprimir Recibo</button>
+                    </div>
+                </body>
+            </html>
+        `;
+
+        const win = window.open('', '', 'width=900,height=700');
+        if (win) {
+            win.document.write(printContent);
+            win.document.close();
+            win.focus();
+        }
+    };
 
     const handlePrintReport = () => {
         const printContent = `
@@ -524,22 +608,31 @@ const BillingSection: React.FC<BillingSectionProps> = ({
                                     )}
 
                                     {record.status === 'Pago' && (
-                                        <div className="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto">
-                                            <div className="text-right">
-                                                <span className="text-[10px] font-black text-emerald-500/50 uppercase tracking-widest block italic">Pago em</span>
-                                                <span className="text-[10px] font-bold text-emerald-500 italic">
-                                                    {record.payment_date ? new Date(record.payment_date).toLocaleDateString('pt-BR') : '-'}
-                                                </span>
+                                            <div className="flex items-center justify-between md:justify-end gap-2 w-full md:w-auto">
+                                                <div className="text-right">
+                                                    <span className="text-[10px] font-black text-emerald-500/50 uppercase tracking-widest block italic">Pago em</span>
+                                                    <span className="text-[10px] font-bold text-emerald-500 italic">
+                                                        {record.payment_date ? new Date(record.payment_date).toLocaleDateString('pt-BR') : '-'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex gap-1">
+                                                    <button
+                                                        onClick={() => handlePrintReceipt(record)}
+                                                        title="Gerar Recibo"
+                                                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all transition-colors flex-shrink-0"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[16px]">receipt_long</span>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => openPaymentModal(record)}
+                                                        disabled={!isAdmin}
+                                                        title="Editar Pagamento"
+                                                        className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors flex-shrink-0 ${isAdmin ? 'bg-white/5 hover:bg-white/10 text-white/50 hover:text-white' : 'hidden'}`}
+                                                    >
+                                                        <span className="material-symbols-outlined text-xs">edit</span>
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <button
-                                                onClick={() => openPaymentModal(record)}
-                                                disabled={!isAdmin}
-                                                title="Editar Pagamento"
-                                                className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors flex-shrink-0 ${isAdmin ? 'bg-white/5 hover:bg-white/10 text-white/50 hover:text-white' : 'hidden'}`}
-                                            >
-                                                <span className="material-symbols-outlined text-xs">edit</span>
-                                            </button>
-                                        </div>
                                     )}
                                 </div>
                             </div>
