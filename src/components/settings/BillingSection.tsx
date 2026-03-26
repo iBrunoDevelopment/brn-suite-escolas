@@ -244,9 +244,14 @@ const BillingSection: React.FC<BillingSectionProps> = ({
                 </head>
                 <body>
                     <div class="receipt-container">
+                        <!-- Marca d'Água -->
+                        <div style="position: absolute; inset: 0; display: flex; items-center; justify-content: center; opacity: 0.05; pointer-events: none; z-index: 0;">
+                            <img src="/assets/logo/brn-logo-circle.png" style="width: 400px; transform: rotate(-15deg);" />
+                        </div>
+
                         <div class="title">Recibo</div>
                         <div class="header">
-                            <div class="brn-logo">BRN GROUP</div>
+                            <img src="/assets/logo/brn-logo-horizontal.png" style="height: 60px; margin-bottom: 15px;" />
                             <div class="brn-sub">Assessoria e Tecnologia Educacional</div>
                         </div>
 
