@@ -411,8 +411,9 @@ export const useDashboard = (user: User) => {
                 new Date(e.date).getUTCFullYear() === upload.year
             );
 
+            const netReported = Number(upload.reported_revenue) - Number(upload.reported_taxes || 0);
             const totalSystemRevenue = monthEntries.reduce((acc: number, curr: any) => acc + Number(curr.value), 0);
-            const diff = Math.abs(totalSystemRevenue - Number(upload.reported_revenue));
+            const diff = Math.abs(totalSystemRevenue - netReported);
 
             if (diff > 0.05) { // More than 5 cents tolerance
                 const monthName = new Date(upload.year, upload.month - 1).toLocaleString('pt-BR', { month: 'long' });
@@ -421,7 +422,7 @@ export const useDashboard = (user: User) => {
                 alerts.push({
                     id: `yield-divergence-${upload.id}`,
                     title: 'Divergência de Rendimento',
-                    description: `Divergência detectada no programa ${programName} (Conta: ${acc?.name || 'N/A'}). A escola ${sch?.name || 'Escola'} informou R$ ${Number(upload.reported_revenue).toFixed(2)} de rendimento no extrato de ${monthName}, mas o sistema possui apenas R$ ${totalSystemRevenue.toFixed(2)} lançados.`,
+                    description: `Divergência detectada no programa ${programName} (Conta: ${acc?.name || 'N/A'}). A escola ${sch?.name || 'Escola'} informou R$ ${netReported.toFixed(2)} líquido (R$ ${Number(upload.reported_revenue).toFixed(2)} bruto - R$ ${Number(upload.reported_taxes || 0).toFixed(2)} impostos) no extrato de ${monthName}, mas o sistema possui apenas R$ ${totalSystemRevenue.toFixed(2)} lançados.`,
                     severity: 'Crítico',
                     category: 'Auditoria',
                     schoolId: upload.school_id,
