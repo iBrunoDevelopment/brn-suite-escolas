@@ -139,20 +139,70 @@ export const useBankReconciliation = (user: User) => {
 
     // Mutations
     const reconcileMutation = useMutation({
-        mutationFn: async ({ bt, entryId }: { bt: BankTransaction, entryId: string }) => {
-            const { error } = await supabase
-                .from('financial_entries')
-                .update({
-                    is_reconciled: true,
-                    reconciled_at: new Date().toISOString(),
-                    payment_date: bt.date, // Store the bank date as payment date
-                    bank_transaction_ref: bt.fitid,
-                    bank_account_id: selectedBankAccountId, // Ensure account is linked
-                    status: TransactionStatus.CONCILIADO
-                })
-                .eq('id', entryId);
+        mutationFn: async ({ bt, entryIds, splitInfo }: { bt: BankTransaction, entryIds: string[], splitInfo?: { originalEntryId: string, value: number } }) => {
+            if (splitInfo) {
+                // PARTIAL RECONCILIATION (SPLIT LOGIC)
+                const { data: original } = await supabase
+                    .from('financial_entries')
+                    .select('*')
+                    .eq('id', splitInfo.originalEntryId)
+                    .single();
 
-            if (error) throw error;
+                if (!original) throw new Error('Lançamento original não encontrado');
+
+                const remainingValue = Number(original.value) - splitInfo.value;
+                const splitBatchId = original.batch_id || original.id;
+
+                // 1. Create the "remaining balance" entry
+                const { error: insertError } = await supabase
+                    .from('financial_entries')
+                    .insert({
+                        ...original,
+                        id: undefined, // Let DB generate new ID
+                        value: remainingValue,
+                        is_reconciled: false,
+                        reconciled_at: null,
+                        bank_transaction_ref: null,
+                        status: TransactionStatus.PENDENTE,
+                        description: `[SALDO] ${original.description}`,
+                        batch_id: splitBatchId,
+                        created_at: new Date().toISOString()
+                    });
+
+                if (insertError) throw insertError;
+
+                // 2. Update and reconcile the original entry with the paid amount
+                const { error: updateError } = await supabase
+                    .from('financial_entries')
+                    .update({
+                        value: splitInfo.value,
+                        is_reconciled: true,
+                        reconciled_at: new Date().toISOString(),
+                        payment_date: bt.date,
+                        bank_transaction_ref: bt.fitid,
+                        bank_account_id: selectedBankAccountId,
+                        status: TransactionStatus.CONCILIADO,
+                        batch_id: splitBatchId
+                    })
+                    .eq('id', splitInfo.originalEntryId);
+
+                if (updateError) throw updateError;
+            } else {
+                // BULK RECONCILIATION OF MULTIPLE ENTRIES
+                const { error } = await supabase
+                    .from('financial_entries')
+                    .update({
+                        is_reconciled: true,
+                        reconciled_at: new Date().toISOString(),
+                        payment_date: bt.date,
+                        bank_transaction_ref: bt.fitid,
+                        bank_account_id: selectedBankAccountId,
+                        status: TransactionStatus.CONCILIADO
+                    })
+                    .in('id', entryIds);
+
+                if (error) throw error;
+            }
         },
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: ['system_entries'] });
@@ -606,10 +656,10 @@ export const useBankReconciliation = (user: User) => {
         }
     };
 
-    const handleConfirmMatch = async (bt: BankTransaction, customEntryId?: string) => {
-        const entryId = customEntryId || bt.matched_entry_id;
-        if (!entryId) return;
-        reconcileMutation.mutate({ bt, entryId }, {
+    const handleConfirmMatch = async (bt: BankTransaction, entryIds?: string[], splitInfo?: { originalEntryId: string, value: number }) => {
+        const finalIds = entryIds || (bt.matched_entry_id ? [bt.matched_entry_id] : []);
+        if (finalIds.length === 0 && !splitInfo) return;
+        reconcileMutation.mutate({ bt, entryIds: finalIds, splitInfo }, {
             onError: (err: any) => addToast('Erro ao conciliar: ' + err.message, 'error'),
             onSuccess: () => addToast('Conciliado com sucesso!', 'success')
         });
