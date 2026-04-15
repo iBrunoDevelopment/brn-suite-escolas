@@ -144,6 +144,8 @@ export interface School {
     director_address?: string;
     custom_description?: string;
     active?: boolean;
+    gov_password?: string;
+    notes?: string;
 }
 
 export interface Program {

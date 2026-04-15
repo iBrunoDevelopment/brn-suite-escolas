@@ -81,7 +81,9 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
         director_rg: '',
         director_address: '',
         custom_description: '',
-        active: true
+        active: true,
+        gov_password: '',
+        notes: ''
     });
 
     useEffect(() => {
@@ -231,7 +233,9 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
             director_rg: school.director_rg || '',
             director_address: school.director_address || '',
             custom_description: school.custom_description || '',
-            active: school.active !== undefined ? school.active : true
+            active: school.active !== undefined ? school.active : true,
+            gov_password: school.gov_password || '',
+            notes: school.notes || ''
         });
         setShowForm(true);
     };
@@ -350,7 +354,9 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
             director_rg: '',
             director_address: '',
             custom_description: '',
-            active: true
+            active: true,
+            gov_password: '',
+            notes: ''
         });
     };
 
@@ -645,6 +651,13 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                                             <label htmlFor="dir-addr" className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Endereço Residencial</label>
                                             <input id="dir-addr" type="text" placeholder="Rua, nº, Bairro, Cidade..." value={formData.director_address} onChange={e => setFormData({ ...formData, director_address: e.target.value.toUpperCase() })} className="w-full bg-[#0f172a] border-slate-800 rounded-lg text-white p-2 text-sm outline-none focus:border-primary/50" />
                                         </div>
+                                        <div className="md:col-span-2">
+                                            <label htmlFor="gov-pass" className="text-[10px] font-bold text-emerald-500 uppercase mb-1 block flex items-center gap-1">
+                                                <span className="material-symbols-outlined text-xs">key</span>
+                                                Senha gov.br (Representante)
+                                            </label>
+                                            <input id="gov-pass" type="text" placeholder="Sua senha de acesso gov" value={formData.gov_password} onChange={e => setFormData({ ...formData, gov_password: e.target.value })} className="w-full bg-[#0f172a] border-emerald-500/20 rounded-lg text-white p-2 text-sm outline-none focus:border-emerald-500/50" />
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="md:col-span-2">
@@ -668,6 +681,10 @@ const Schools: React.FC<{ user: User }> = ({ user }) => {
                                         <option value="">{isLoadingCities ? 'Carregando...' : 'Selecione...'}</option>
                                         {cities.map(city => <option key={city} value={city}>{city}</option>)}
                                     </select>
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label htmlFor="school-notes" className="text-xs font-bold text-slate-400 uppercase mb-1 block">Observações Gerais</label>
+                                    <textarea id="school-notes" rows={3} placeholder="Alguma observação importante sobre esta escola..." value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} className="w-full bg-[#1e293b] border-slate-700 rounded-lg text-white p-3 focus:border-primary outline-none resize-none" />
                                 </div>
                             </div>
                         </div>
